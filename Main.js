@@ -23,7 +23,7 @@ $(function()
 	// this sets the id of the loading bar:
 	$.loadCallback(function(percent)
 	{
-		$("#loadingBar").width(400*percent);
+		$("#loadingBar").width(400*percent/100);
 	});
 
 	$.playground().startGame(function()
