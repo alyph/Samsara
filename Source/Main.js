@@ -7,29 +7,45 @@ var PLAYGROUND_HEIGHT	= 600;
 // --------------------------------------------------------------------------------------------------------------------
 $(function()
 {
-	// Aniomations declaration: 
-	
-	// The background:
-	var background = new $.gQ.Animation({imageURL: "Content/Images/TestBack.png"});
 
-	// Initialize the game:
-	$("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
-				
-	// Initialize the background
-	$.playground()
-		.addGroup("background", {width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT})
-		.addSprite("background", {animation: background, width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
+	var scripts =
+	[
+		"http://cdn.gamequeryjs.com/jquery.gamequery.js",
+		"Libs/jsface",
+		"Game"
+	];
 
-	// this sets the id of the loading bar:
-	$.loadCallback(function(percent)
+	require(scripts, function()
 	{
-		$("#loadingBar").width(400*percent/100);
+		// Animations declaration:
+
+		// The background:
+		var background = new $.gQ.Animation({imageURL: "Content/Images/TestBack.png"});
+
+		// Initialize the game:
+		$("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
+
+		// Initialize the background
+		$.playground()
+			.addGroup("background", {width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT})
+			.addSprite("background", {animation: background, width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
+
+		// this sets the id of the loading bar:
+		$.loadCallback(function(percent)
+		{
+			$("#loadingBar").width(400*percent/100);
+		});
+
+		$.playground().startGame(function()
+		{
+			$("#welcomeScreen").fadeTo(1000,0,function(){$(this).remove();});
+			$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
+
+			var game = new Game();
+			game.Start();
+		});
+
 	});
 
-	$.playground().startGame(function()
-	{
-		$("#welcomeScreen").fadeTo(1000,0,function(){$(this).remove();});
-		$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
-	});
 });
 

@@ -1,0 +1,7 @@
+Game = Class(
+{
+	Start : function()
+	{
+
+	}
+});
