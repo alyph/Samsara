@@ -7,3 +7,36 @@ a
 {
     color: #FFF;
 }
+
+.cardBack
+{
+    border-radius: 10px;
+    box-shadow: 1px 1px 1px #444;
+    background-color: #999;
+    border: 1px solid #000;
+    width: 100%;
+    height: 100%;
+}
+
+.cardTitle
+{
+    background-color: #eee;
+    width: 100%;
+    padding: 2px 0;
+    text-indent: 8px;
+    position: absolute;
+    top : 16px;
+    font: bold italic 10px Georgia, Serif;
+}
+
+.cardDesc
+{
+    background-color: #eee;
+    width: 100%;
+    height : 40px;
+    top : 100px;
+    padding: 4px 0;
+    text-indent: 8px;
+    position: absolute;
+    font: 8px verdana;
+}

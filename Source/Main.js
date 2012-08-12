@@ -12,6 +12,12 @@ $(function()
 	[
 		"http://cdn.gamequeryjs.com/jquery.gamequery.js",
 		"Libs/jsface",
+		"Utils/MathEx",
+		"Definitions/Cards",
+		"Definitions/Decks",
+		"Entities/Card",
+		"Entities/Deck",
+		"Entities/Player",
 		"Game"
 	];
 
@@ -20,7 +26,7 @@ $(function()
 		// Animations declaration:
 
 		// The background:
-		var background = new $.gQ.Animation({imageURL: "Content/Images/TestBack.png"});
+		var background = new $.gQ.Animation({imageURL: "Content/Images/Background.png"});
 
 		// Initialize the game:
 		$("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
@@ -28,7 +34,7 @@ $(function()
 		// Initialize the background
 		$.playground()
 			.addGroup("background", {width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT})
-			.addSprite("background", {animation: background, width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
+			.addSprite("backgroundImage", {animation: background, width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
 
 		// this sets the id of the loading bar:
 		$.loadCallback(function(percent)
@@ -42,7 +48,7 @@ $(function()
 			$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
 
 			var game = new Game();
-			game.Start();
+			game.start();
 		});
 
 	});
