@@ -9,10 +9,10 @@ var Deck = Class(
 		{
 			if (def.hasOwnProperty(name))
 			{
-				var card = Cards[name];
+				var card = Cards.getCardDefinition(name);
 				var num = def[name];
 				for (var i = 0; i < num; i++)
-					this.cards.push(new CardInfo(card));
+					this.cards.push(new CardInfo(name, card));
 			}
 		}
 	},
@@ -20,6 +20,19 @@ var Deck = Class(
 	draw : function()
 	{
 		return MathEx.randomElementOfArray(this.cards);
+	},
+
+	getCard : function(name)
+	{
+		var l = this.cards.length;
+		for (var i = 0; i < l; i++)
+		{
+			var ci = this.cards[i];
+			if (ci.name === name)
+				return ci;
+		}
+
+		throw ("no card " + name + " found in deck");
 	}
 });
 
@@ -43,8 +56,9 @@ var SceneDeck = Class(Deck,
 
 var CardInfo = Class(
 {
-	constructor : function(def)
+	constructor : function(name, def)
 	{
+		this.name = name;
 		this.definition = def;
 	}
 });

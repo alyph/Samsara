@@ -1,8 +1,10 @@
-var CARD_WIDTH = 100;
-var CARD_HEIGHT = 160;
+var CARD_WIDTH = 106;
+var CARD_HEIGHT = 138;
+var CARD_IMG_WIDTH = 96;
+var CARD_IMG_HEIGHT = 128;
 var TABLE_X = 10;
 var SCENE_CARDS_Y = 60;
-var PLAYER_HAND_Y = 420;
+var PLAYER_HAND_Y = 560;
 
 var Game = Class(
 {
@@ -16,19 +18,12 @@ var Game = Class(
 
 	start : function()
 	{
-		this._sceneDeck = new SceneDeck(Decks.Ruin);
+		this._sceneDeck = new SceneDeck(Decks.City);
 		this.player = new Player(this);
 
-		// draw entrance card
-		this.table.placeInScene(this._sceneDeck.getEntranceCard());
-
-		// put down exploration card
-		for (var i = 1; i < this.encounterSize; i++)
-		{
-			this.table.placeInScene(this._sceneDeck.getExplorationCard());
-		}
-
-		// starting heroes
+		// put down a tavern and city gate
+		this.table.placeInScene(this._sceneDeck.getCard('Tavern'));
+		this.table.placeInScene(this._sceneDeck.getCard('CityGate'));
 
 		// start first turn
 		this.beginTurn();

@@ -12,7 +12,7 @@ a
 {
     border-radius: 10px;
     box-shadow: 1px 1px 1px #444;
-    background-color: #999;
+    background-color: #000;
     border: 1px solid #000;
     width: 100%;
     height: 100%;
@@ -20,23 +20,47 @@ a
 
 .cardTitle
 {
-    background-color: #eee;
-    width: 100%;
-    padding: 2px 0;
-    text-indent: 8px;
+    /*padding: 2px 0;
+    text-indent: 8px;*/
     position: absolute;
-    top : 16px;
-    font: bold italic 10px Georgia, Serif;
+    left : 10px;
+    right : 6px;
+    top : 6px;
+    font: 18px 'KingthingsPetrockRegular', cursive;
+    color: white;
+    /*text-align: center;*/
+    text-shadow: 0 0 0.4em #000, 0 0 0.4em #000, 0 0 0.4em #000;
+    line-height: 90%;
 }
 
 .cardDesc
 {
-    background-color: #eee;
-    width: 100%;
-    height : 40px;
-    top : 100px;
-    padding: 4px 0;
-    text-indent: 8px;
+    /*background-color: #eec;*/
+    left : 3px;
+    right : 3px;
+    bottom : 6px;
+    padding: 2px 0;
+    text-align: center;
+    vertical-align: middle;
     position: absolute;
-    font: 8px verdana;
+    font: 14px 'KingthingsPetrockRegular', cursive;
+    color: white;
+    text-shadow: 0 0 0.6em #000, 0 0 0.6em #000, 0 0 0.6em #000;
 }
+
+@font-face
+{
+    font-family: 'KingthingsPetrockRegular';
+    src: url('../Content/Fonts/Kingthings_Petrock-webfont.ttf');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/*
+@font-face
+{
+    font-family: 'KingthingsPetrockLightRegular';
+    src: url('../Content/Fonts/Kingthings_Petrock_light-webfont.ttf');
+    font-weight: normal;
+    font-style: normal;
+}*/

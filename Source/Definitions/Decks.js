@@ -10,6 +10,13 @@ var Decks =
 		Revolver : 2
 	},
 
+	City:
+	{
+		CityGate: 1,
+		CityStreets: 1,
+		Tavern: 1
+	},
+
 	Ruin:
 	{
 

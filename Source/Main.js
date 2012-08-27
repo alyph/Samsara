@@ -1,6 +1,6 @@
 // Global constants:
-var PLAYGROUND_WIDTH	= 800;
-var PLAYGROUND_HEIGHT	= 600;
+var PLAYGROUND_WIDTH	= 1024;
+var PLAYGROUND_HEIGHT	= 768;
 
 // --------------------------------------------------------------------------------------------------------------------
 // --                                      the main declaration:                                                     --
@@ -15,6 +15,7 @@ $(function()
 		"Utils/MathEx",
 		"Definitions/Cards",
 		"Definitions/Decks",
+		"Definitions/Sprites",
 		"Entities/Card",
 		"Entities/Deck",
 		"Entities/Player",
@@ -24,9 +25,7 @@ $(function()
 	require(scripts, function()
 	{
 		// Animations declaration:
-
-		// The background:
-		var background = new $.gQ.Animation({imageURL: "Content/Images/Background.png"});
+		Sprites.init();
 
 		// Initialize the game:
 		$("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
@@ -34,7 +33,7 @@ $(function()
 		// Initialize the background
 		$.playground()
 			.addGroup("background", {width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT})
-			.addSprite("backgroundImage", {animation: background, width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
+			.addSprite("backgroundImage", {animation: Sprites.background, width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
 
 		// this sets the id of the loading bar:
 		$.loadCallback(function(percent)
