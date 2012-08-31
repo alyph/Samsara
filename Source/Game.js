@@ -41,7 +41,13 @@ var Game = Class(
 		{
 			this.table.placeInHand(this.player.Deck.draw());
 		}
+	},
+
+	setActiveCard : function(card)
+	{
+		this.table.placeActiveCard(card);
 	}
+
 });
 
 var Table = Class(
@@ -49,10 +55,13 @@ var Table = Class(
 	constructor: function(game)
 	{
 		this._game = game;
-		this.Node = $.playground().addGroup("table", {width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
+		this.node = $.playground().addGroup("table", {width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
 		this._nextCardId = 0;
 		this._sceneCards = [];
 		this._playerHand = [];
+
+		this.center = this.node.addGroup("center", {posx : 0, posy : 220, width : PLAYGROUND_WIDTH, height : 320});
+		this.message = $("<div id='message'></div>").appendTo(this.center);
 	},
 
 	placeInHand : function(info)
@@ -71,6 +80,11 @@ var Table = Class(
 		var y = SCENE_CARDS_Y;
 		card.move(x, y);
 		this._sceneCards.push(card);
+	},
+
+	placeActiveCard : function(card)
+	{
+		this.message.html("<p>The deep forest opens in a small passage way</p><p>explore?</p>");
 	},
 
 	_makeCard : function(info)

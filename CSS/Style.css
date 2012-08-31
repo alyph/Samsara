@@ -48,6 +48,26 @@ a
     text-shadow: 0 0 0.6em #000, 0 0 0.6em #000, 0 0 0.6em #000;
 }
 
+#table
+{
+    /*background-color: rgba(0, 0, 0, 0.6);*/
+}
+
+#center
+{
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+#message
+{
+    left: 200px;
+    width: 600px;
+    height: 100%;
+    font: 18px 'KingthingsPetrockLightRegular', cursive;
+    color: white;
+    position: absolute;
+}
+
 @font-face
 {
     font-family: 'KingthingsPetrockRegular';
@@ -56,11 +76,11 @@ a
     font-style: normal;
 }
 
-/*
+
 @font-face
 {
     font-family: 'KingthingsPetrockLightRegular';
     src: url('../Content/Fonts/Kingthings_Petrock_light-webfont.ttf');
     font-weight: normal;
     font-style: normal;
-}*/
+}

@@ -8,8 +8,8 @@ var Card = Class(
 		this._def = info.definition;
 		this._width = CARD_WIDTH;
 		this._height = CARD_HEIGHT;
-		this.Node = this._table.Node.addGroup("card_"+id, {width : this._width, height : this._height});
-		var back = $("<div class='cardBack'></div>").appendTo(this.Node);
+		this.node = this._table.node.addGroup("card_"+id, {width : this._width, height : this._height});
+		var back = $("<div class='cardBack'></div>").appendTo(this.node);
 		var sprite = Sprites[this._def.image];
 		var spriteId = "cardImage_" + id;
 		back.addSprite(spriteId, {animation: sprite, width: CARD_IMG_WIDTH, height: CARD_IMG_HEIGHT, posx:6, posy: 6 });
@@ -27,10 +27,18 @@ var Card = Class(
 
 		var label = $("<div class='cardTitle'></div>").html(this._def.title).appendTo(back);
 		var desc = $("<div class='cardDesc'></div>").html(this._def.desc).appendTo(back);
+
+		var card = this;
+		this.node.click(function(){ card._clicked(); });
 	},
 
 	move : function(x, y)
 	{
-		this.Node.xy(x, y, true);
+		this.node.xy(x, y, true);
+	},
+
+	_clicked : function()
+	{
+		this._game.setActiveCard(this);
 	}
 });
