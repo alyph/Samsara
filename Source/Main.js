@@ -43,11 +43,11 @@ $(function()
 
 		$.playground().startGame(function()
 		{
-			$("#welcomeScreen").fadeTo(1000,0,function(){$(this).remove();});
-			$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
-
 			var game = new Game();
 			game.start();
+
+			$("#welcomeScreen").fadeTo(1000,0,function(){$(this).remove();});
+			$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
 		});
 
 	});

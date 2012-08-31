@@ -10,6 +10,9 @@ var Game = Class(
 {
 	constructor : function()
 	{
+		Cards.init();
+		Decks.init();
+
 		this._sceneDeck = null;
 		this.player = null;
 		this.table = new Table(this);
@@ -18,12 +21,14 @@ var Game = Class(
 
 	start : function()
 	{
-		this._sceneDeck = new SceneDeck(Decks.City);
 		this.player = new Player(this);
 
-		// put down a tavern and city gate
-		this.table.placeInScene(this._sceneDeck.getCard('Tavern'));
-		this.table.placeInScene(this._sceneDeck.getCard('CityGate'));
+		// put down exploration cards
+		var startingMaps = Decks.drawMapDecks(3);
+		for (var i = 0; i < startingMaps.length; i++)
+		{
+			this.table.placeInScene(startingMaps[i].exploreCards[0]);
+		}
 
 		// start first turn
 		this.beginTurn();

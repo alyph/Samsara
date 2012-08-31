@@ -1,18 +1,20 @@
 var Deck = Class(
 {
-	constructor : function(def)
+	constructor : function()
 	{
-		this.definition = def;
 		this.cards = [];
+	},
 
+	_loadDeck : function(def)
+	{
 		for (var name in def)
 		{
 			if (def.hasOwnProperty(name))
 			{
-				var card = Cards.getCardDefinition(name);
+				var card = Cards.getCard(name);
 				var num = def[name];
 				for (var i = 0; i < num; i++)
-					this.cards.push(new CardInfo(name, card));
+					this.cards.push(new CardInfo(card));
 			}
 		}
 	},
@@ -36,29 +38,37 @@ var Deck = Class(
 	}
 });
 
-var SceneDeck = Class(Deck,
+var MapDeck = Class(Deck,
 {
-	constructor : function(def)
+	constructor : function(mapCard, allCards)
 	{
-		SceneDeck.$super.call(this, def);
-	},
+		MapDeck.$super.call(this);
 
-	getEntranceCard : function()
-	{
-		return new CardInfo({});
-	},
+		this.mapCard = new CardInfo(mapCard);
 
-	getExplorationCard : function()
+		this.exploreCards = [];
+		for (var i = 0; i < mapCard.explorations.length; i++)
+		{
+			var exploreCard = Cards.getCard(mapCard.explorations[i]);
+			this.exploreCards.push(new CardInfo(exploreCard));
+		}
+	}
+});
+
+var PlayerDeck = Class(Deck,
+{
+	constructor : function(startingDeck)
 	{
-		return new CardInfo({});
+		MapDeck.$super.call(this);
+
+		this._loadDeck(startingDeck);
 	}
 });
 
 var CardInfo = Class(
 {
-	constructor : function(name, def)
+	constructor : function(def)
 	{
-		this.name = name;
 		this.definition = def;
 	}
 });

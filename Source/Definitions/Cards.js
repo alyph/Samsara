@@ -1,4 +1,34 @@
-var Cards =
+var CardTypes =
+{
+	Map : 0,
+	Common : 2
+};
+
+var MapCards =
+{
+	City:
+	{
+		type : CardTypes.Map,
+		title : "City",
+		explorations : [ 'CityStreets' ]
+	},
+
+	Forest:
+	{
+		type : CardTypes.Map,
+		title : "Forest",
+		explorations : [ 'ForestPassage' ]
+	},
+
+	Battlefield:
+	{
+		type : CardTypes.Map,
+		title : "Battlefield",
+		explorations : [ 'Trench' ]
+	}
+};
+
+var CommonCards =
 {
 	// city locations
 	CityGate:
@@ -16,6 +46,18 @@ var Cards =
 	CityStreets:
 	{
 		title : "Streets",
+		image : 'cardStreets'
+	},
+
+	ForestPassage:
+	{
+		title : "Forest Passage",
+		image : 'cardStreets'
+	},
+
+	Trench:
+	{
+		title : "Trench",
 		image : 'cardStreets'
 	},
 
@@ -67,26 +109,61 @@ var Cards =
 	{
 		title : "Revolver",
 		image : 'cardShortSword'
-	},
+	}
+};
 
+
+var Cards =
+{
 	DefaultCard :
 	{
+		type : CardTypes.Common,
 		title : "Empty Card",
 		image : 'cardShortSword',
 		desc : ""
 	},
 
-	getCardDefinition : function(name)
+	_cards : {},
+
+	init : function()
 	{
-		var def = this[name];
-		if (def === undefined)
+		this._cards = {};
+		this._loadSet(CommonCards);
+		this._loadSet(MapCards);
+	},
+
+	_loadSet : function(set)
+	{
+		for (var name in set)
+		{
+			if (set.hasOwnProperty(name))
+			{
+				if (this._cards.hasOwnProperty(name))
+					throw ("multiple cards have same name "+name);
+
+				var card = $.extend({}, this.DefaultCard, set[name]);
+				card.name = name;
+				this._cards[name] = card;
+			}
+		}
+	},
+
+	getCard : function(name)
+	{
+		if (!this._cards.hasOwnProperty(name))
 			throw ("cannot find card definition " + name);
 
-		if (def._populated)
-			return def;
+		return this._cards[name];
+	},
 
-		def = this[name] = $.extend({}, this.DefaultCard, def);
-		def._populated = true;
-		return def;
+	getCards : function()
+	{
+		var cards = [];
+		for (var name in this._cards)
+		{
+			if (this._cards.hasOwnProperty(name))
+				cards.push(this._cards[name]);
+		}
+		return cards;
 	}
-}
+};

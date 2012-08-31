@@ -1,4 +1,4 @@
-var Decks =
+var CommonDecks =
 {
 	PlayerStartingDeck:
 	{
@@ -21,4 +21,40 @@ var Decks =
 	{
 
 	}
-}
+};
+
+var Decks =
+{
+	init : function()
+	{
+		var cards = Cards.getCards();
+
+		this.mapDecks = [];
+
+		for (var i = 0; i < cards.length; i++)
+		{
+			var card = cards[i];
+			if (card.type === CardTypes.Map)
+			{
+				var deck = new MapDeck(card, cards);
+				this.mapDecks.push(deck);
+			}
+		}
+	},
+
+	drawMapDecks : function(count)
+	{
+		var decks = this.mapDecks.slice();
+		var results = [];
+
+		for (var i = 0; i < count; i++)
+		{
+			var picked = MathEx.randomInt(0, decks.length - 1);
+			var deck = decks[picked];
+			decks.splice(picked, 1);
+			results.push(deck);
+		}
+
+		return results;
+	}
+};
