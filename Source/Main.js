@@ -13,9 +13,12 @@ $(function()
 		"http://cdn.gamequeryjs.com/jquery.gamequery.js",
 		"Libs/jsface",
 		"Utils/MathEx",
+		"Core",
+		"Components/Types",
 		"Definitions/Cards",
 		"Definitions/Decks",
 		"Definitions/Sprites",
+		"Entities/Message",
 		"Entities/Card",
 		"Entities/Deck",
 		"Entities/Player",
@@ -43,6 +46,8 @@ $(function()
 
 		$.playground().startGame(function()
 		{
+			Core.init();
+
 			var game = new Game();
 			game.start();
 

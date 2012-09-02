@@ -11,10 +11,10 @@ var Deck = Class(
 		{
 			if (def.hasOwnProperty(name))
 			{
-				var card = Cards.getCard(name);
+				var card = Core.getCard(name);
 				var num = def[name];
 				for (var i = 0; i < num; i++)
-					this.cards.push(new CardInfo(card));
+					this.cards.push(new CardInstance(card));
 			}
 		}
 	},
@@ -44,13 +44,18 @@ var MapDeck = Class(Deck,
 	{
 		MapDeck.$super.call(this);
 
-		this.mapCard = new CardInfo(mapCard);
+		this.mapCard = new CardInstance(mapCard);
 
 		this.exploreCards = [];
 		for (var i = 0; i < mapCard.explorations.length; i++)
 		{
-			var exploreCard = Cards.getCard(mapCard.explorations[i]);
-			this.exploreCards.push(new CardInfo(exploreCard));
+			var exploreCard = Core.getCard(mapCard.explorations[i]);
+
+			// TODO: maybe we should auto attach explore component in this case!
+			if (!exploreCard.has("Explore"))
+				throw ("Explore card " + exploreCard + " has no Explore component attached!");
+
+			this.exploreCards.push(new CardInstance(exploreCard));
 		}
 	}
 });
@@ -62,13 +67,5 @@ var PlayerDeck = Class(Deck,
 		MapDeck.$super.call(this);
 
 		this._loadDeck(startingDeck);
-	}
-});
-
-var CardInfo = Class(
-{
-	constructor : function(def)
-	{
-		this.definition = def;
 	}
 });

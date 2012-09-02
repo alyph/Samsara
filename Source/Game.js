@@ -10,7 +10,6 @@ var Game = Class(
 {
 	constructor : function()
 	{
-		Cards.init();
 		Decks.init();
 
 		this._sceneDeck = null;
@@ -84,7 +83,21 @@ var Table = Class(
 
 	placeActiveCard : function(card)
 	{
-		this.message.html("<p>The deep forest opens in a small passage way</p><p>explore?</p>");
+		this.setMessage(card.message);
+	},
+
+	setMessage : function(message)
+	{
+		this.message.empty();
+		this.message.append("<p>" + message.text + "</p>");
+
+		var options = $("<ul></ul>").appendTo(this.message);
+
+		for (var i = 0; i < message.options.length; i++)
+		{
+			var option = message.options[i];
+			options.append($("<li class='option'>" + option.text + "</li>"));
+		}
 	},
 
 	_makeCard : function(info)

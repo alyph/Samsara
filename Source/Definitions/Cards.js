@@ -1,34 +1,30 @@
-var CardTypes =
-{
-	Map : 0,
-	Common : 2
-};
-
-var MapCards =
+// Map Cars
+Core.CardSet(
 {
 	City:
 	{
-		type : CardTypes.Map,
+		comps : "Map",
 		title : "City",
 		explorations : [ 'CityStreets' ]
 	},
 
 	Forest:
 	{
-		type : CardTypes.Map,
+		comps : "Map",
 		title : "Forest",
 		explorations : [ 'ForestPassage' ]
 	},
 
 	Battlefield:
 	{
-		type : CardTypes.Map,
+		comps : "Map",
 		title : "Battlefield",
 		explorations : [ 'Trench' ]
 	}
-};
+});
 
-var CommonCards =
+// Others
+Core.CardSet(
 {
 	// city locations
 	CityGate:
@@ -45,20 +41,26 @@ var CommonCards =
 
 	CityStreets:
 	{
+		comps : "Explore",
 		title : "Streets",
-		image : 'cardStreets'
+		image : 'cardStreets',
+		detailed : "Streets in common area appears dirty and dated, full of buzz and noise."
 	},
 
 	ForestPassage:
 	{
+		comps : "Explore",
 		title : "Forest Passage",
-		image : 'cardStreets'
+		image : 'cardStreets',
+		detailed : "A small passage way emerges between the giant sentinel pines, barely visible, leading into deeper darkness."
 	},
 
 	Trench:
 	{
+		comps : "Explore",
 		title : "Trench",
-		image : 'cardStreets'
+		image : 'cardStreets',
+		detailed : "Terrain is completely devastated, leaving trenches like withered vines stretching miles and miles long."
 	},
 
 	// weapons
@@ -110,60 +112,4 @@ var CommonCards =
 		title : "Revolver",
 		image : 'cardShortSword'
 	}
-};
-
-
-var Cards =
-{
-	DefaultCard :
-	{
-		type : CardTypes.Common,
-		title : "Empty Card",
-		image : 'cardShortSword',
-		desc : ""
-	},
-
-	_cards : {},
-
-	init : function()
-	{
-		this._cards = {};
-		this._loadSet(CommonCards);
-		this._loadSet(MapCards);
-	},
-
-	_loadSet : function(set)
-	{
-		for (var name in set)
-		{
-			if (set.hasOwnProperty(name))
-			{
-				if (this._cards.hasOwnProperty(name))
-					throw ("multiple cards have same name "+name);
-
-				var card = $.extend({}, this.DefaultCard, set[name]);
-				card.name = name;
-				this._cards[name] = card;
-			}
-		}
-	},
-
-	getCard : function(name)
-	{
-		if (!this._cards.hasOwnProperty(name))
-			throw ("cannot find card definition " + name);
-
-		return this._cards[name];
-	},
-
-	getCards : function()
-	{
-		var cards = [];
-		for (var name in this._cards)
-		{
-			if (this._cards.hasOwnProperty(name))
-				cards.push(this._cards[name]);
-		}
-		return cards;
-	}
-};
+});

@@ -27,14 +27,14 @@ var Decks =
 {
 	init : function()
 	{
-		var cards = Cards.getCards();
+		var cards = Core.getCards();
 
 		this.mapDecks = [];
 
 		for (var i = 0; i < cards.length; i++)
 		{
 			var card = cards[i];
-			if (card.type === CardTypes.Map)
+			if (card.has('Map'))
 			{
 				var deck = new MapDeck(card, cards);
 				this.mapDecks.push(deck);
