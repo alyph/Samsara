@@ -79,6 +79,6 @@ var Core =
 
 var CardComponent = Class(
 {
-	addOption : function(message) { }
+	addAction : function(game, card, actions) { }
 });
 

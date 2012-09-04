@@ -96,7 +96,11 @@ var Table = Class(
 		for (var i = 0; i < message.options.length; i++)
 		{
 			var option = message.options[i];
-			options.append($("<li class='option'>" + option.text + "</li>"));
+			var optNode = $("<li class='option'>" + option.text + "</li>").appendTo(options);
+			optNode.click({ option : option, game : this._game }, function(evt)
+			{
+				evt.data.option.respond(evt.data.game);
+			});
 		}
 	},
 

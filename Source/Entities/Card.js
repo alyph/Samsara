@@ -4,13 +4,13 @@ var Card = Class(
 	{
 		this._game = game;
 		this._table = game.table;
-		this._inst = info;
-		this._def = info.definition;
+		this.instance = info;
+		this.definition = info.definition;
 		this._width = CARD_WIDTH;
 		this._height = CARD_HEIGHT;
 		this.node = this._table.node.addGroup("card_"+id, {width : this._width, height : this._height});
 		var back = $("<div class='cardBack'></div>").appendTo(this.node);
-		var sprite = Sprites[this._def.image];
+		var sprite = Sprites[this.definition.image];
 		var spriteId = "cardImage_" + id;
 		back.addSprite(spriteId, {animation: sprite, width: CARD_IMG_WIDTH, height: CARD_IMG_HEIGHT, posx:6, posy: 6 });
 
@@ -25,13 +25,12 @@ var Card = Class(
 			"border-radius" : "5px"
 		});
 
-		var label = $("<div class='cardTitle'></div>").html(this._def.title).appendTo(back);
-		var desc = $("<div class='cardDesc'></div>").html(this._def.desc).appendTo(back);
+		var label = $("<div class='cardTitle'></div>").html(this.definition.title).appendTo(back);
+		var desc = $("<div class='cardDesc'></div>").html(this.definition.desc).appendTo(back);
 
-		this.message = this._inst.populateMessage();
+		this._populateMessage();
 
-		var card = this;
-		this.node.click(function(){ card._clicked(); });
+		this.node.click( { card : this }, function(evt){ evt.data.card._clicked(); });
 	},
 
 	move : function(x, y)
@@ -39,9 +38,33 @@ var Card = Class(
 		this.node.xy(x, y, true);
 	},
 
+	_populateMessage: function()
+	{
+		this.message = new Message(this.definition.detailed);
+		var comps = this.definition.getComponents();
+		var actions = [];
+		var last = 0;
+		for (var i = 0; i < comps.length; i++)
+		{
+			var comp = comps[i];
+			comp.addAction(this._game, this, actions);
+			for (; last < actions.length; last++)
+			{
+				var action = actions[last];
+				action.comp = comp;
+				this.message.addOption(action.text, action, this, this._performAction);
+			}
+		}
+	},
+
 	_clicked : function()
 	{
 		this._game.setActiveCard(this);
+	},
+
+	_performAction : function(game, action)
+	{
+		action.handler.call(action.comp, game, this, action.data);
 	}
 });
 
@@ -91,16 +114,5 @@ var CardInstance = Class(
 	constructor : function(def)
 	{
 		this.definition = def;
-	},
-
-	populateMessage: function()
-	{
-		var message = new Message(this.definition.detailed);
-		var comps = this.definition.getComponents();
-		for (var i = 0; i < comps.length; i++)
-		{
-			comps[i].addOption(message);
-		}
-		return message;
 	}
 });

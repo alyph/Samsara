@@ -5,8 +5,16 @@ Core.Component("Map",
 
 Core.Component("Explore",
 {
-	addOption : function(message)
+	addAction : function(game, card, actions)
 	{
-		message.addOption("Explore");
+		actions.push(
+		{
+			text : "Explore",
+			handler : this._doExplore
+		});
+	},
+
+	_doExplore : function(game, card)
+	{
 	}
 });
