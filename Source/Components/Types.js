@@ -16,5 +16,15 @@ Core.Component("Explore",
 
 	_doExplore : function(game, card)
 	{
+		var encounter = card.instance.encounterDeck.drawEncounter();
+		var encounterCard = game.table.placeInScene(encounter, card.slot);
+		game.setActiveCard(encounterCard);
+		card.destroy();
+		game.nextTurn();
 	}
+});
+
+Core.Component("Monster",
+{
+
 });

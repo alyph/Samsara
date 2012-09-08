@@ -33,6 +33,12 @@ var Game = Class(
 		this.beginTurn();
 	},
 
+	nextTurn : function()
+	{
+		this.endTurn();
+		this.beginTurn();
+	},
+
 	beginTurn : function()
 	{
 		// player draw cards
@@ -40,6 +46,11 @@ var Game = Class(
 		{
 			this.table.placeInHand(this.player.Deck.draw());
 		}
+	},
+
+	endTurn : function()
+	{
+		this.table.clearPlayerHand();
 	},
 
 	setActiveCard : function(card)
@@ -63,27 +74,43 @@ var Table = Class(
 		this.message = $("<div id='message'></div>").appendTo(this.center);
 	},
 
-	placeInHand : function(info)
+	placeInHand : function(info, slot)
 	{
-		var card = this._makeCard(info);
-		var x = TABLE_X + this._playerHand.length * (CARD_WIDTH + 10);
+		var i = (arguments.length >= 2 && slot >= 0) ? slot : this._playerHand.length;
+		var card = this._makeCard(info, i);
+		var x = TABLE_X + i * (CARD_WIDTH + 10);
 		var y = PLAYER_HAND_Y;
 		card.move(x, y);
-		this._playerHand.push(card);
+		this._playerHand[i] = card;
+		return card;
 	},
 
-	placeInScene : function(info)
+	placeInScene : function(info, slot)
 	{
-		var card = this._makeCard(info);
-		var x = TABLE_X + this._sceneCards.length * (CARD_WIDTH + 10);
+		var i = (arguments.length >= 2 && slot >= 0) ? slot : this._sceneCards.length;
+		var card = this._makeCard(info, i);
+		var x = TABLE_X + i * (CARD_WIDTH + 10);
 		var y = SCENE_CARDS_Y;
 		card.move(x, y);
-		this._sceneCards.push(card);
+		this._sceneCards[i] = card;
+		return card;
 	},
 
 	placeActiveCard : function(card)
 	{
 		this.setMessage(card.message);
+	},
+
+	clearPlayerHand : function()
+	{
+		for (var i = 0; i < this._playerHand.length; i++)
+		{
+			var card = this._playerHand[i];
+			if (card !== undefined && card !== null)
+				card.destroy();
+		}
+
+		this._playerHand.length = 0;
 	},
 
 	setMessage : function(message)
@@ -104,8 +131,8 @@ var Table = Class(
 		}
 	},
 
-	_makeCard : function(info)
+	_makeCard : function(info, slot)
 	{
-		return new Card(this._game, info, this._nextCardId++);
+		return new Card(this._game, info, this._nextCardId++, slot);
 	}
 });

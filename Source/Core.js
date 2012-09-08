@@ -17,7 +17,7 @@ var Core =
 		if (name in this._components)
 			throw ("Component" + name + "already registered!");
 
-		var comp = new (Class(cls))();
+		var comp = new (Class(CardComponent, cls))();
 		comp.name = name;
 		this._components[name] = comp;
 	},

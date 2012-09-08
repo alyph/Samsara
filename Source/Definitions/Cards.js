@@ -5,21 +5,64 @@ Core.CardSet(
 	{
 		comps : "Map",
 		title : "City",
-		explorations : [ 'CityStreets' ]
+		explorations : [ 'CityStreets' ],
+		inhabitants : []
 	},
 
 	Forest:
 	{
 		comps : "Map",
 		title : "Forest",
-		explorations : [ 'ForestPassage' ]
+		explorations : [ 'ForestPassage' ],
+		inhabitants : [ 'ZephiraCorrupted' ]
 	},
 
 	Battlefield:
 	{
 		comps : "Map",
 		title : "Battlefield",
-		explorations : [ 'Trench' ]
+		explorations : [ 'Trench' ],
+		inhabitants : [ 'Berserk' ]
+	}
+});
+
+// Monsters
+Core.CardSet(
+{
+	SoulReaver:
+	{
+		comps : "Monster",
+		title : "Soul Reaver",
+		image : 'cardSoulReaver',
+		habitats: [ 'Berserk' ],
+		density : 2
+	},
+
+	BerserkVanguard:
+	{
+		comps : "Monster",
+		title : "Berserk Vanguard",
+		image : 'cardBerserkVanguard',
+		habitats: [ 'Berserk' ],
+		density : 6
+	},
+
+	PuppetBorn:
+	{
+		comps : "Monster",
+		title : "Puppet Born",
+		image : 'cardPuppetBorn',
+		habitats: [ 'ZephiraCorrupted' ],
+		density : 2
+	},
+
+	GreenCorruption:
+	{
+		comps : "Monster",
+		title : "Green Corruption",
+		image : 'cardGreenCorruption',
+		habitats: [ 'ZephiraCorrupted' ],
+		density : 4
 	}
 });
 

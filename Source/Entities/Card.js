@@ -1,11 +1,12 @@
 var Card = Class(
 {
-	constructor : function(game, info, id)
+	constructor : function(game, info, id, slot)
 	{
 		this._game = game;
 		this._table = game.table;
 		this.instance = info;
 		this.definition = info.definition;
+		this.slot = slot;
 		this._width = CARD_WIDTH;
 		this._height = CARD_HEIGHT;
 		this.node = this._table.node.addGroup("card_"+id, {width : this._width, height : this._height});
@@ -36,6 +37,15 @@ var Card = Class(
 	move : function(x, y)
 	{
 		this.node.xy(x, y, true);
+	},
+
+	destroy : function()
+	{
+		if (this.node != null)
+		{
+			this.node.remove();
+			this.node = null;
+		}
 	},
 
 	_populateMessage: function()

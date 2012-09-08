@@ -23,6 +23,22 @@ var SpriteDefinitions =
 		cardStreets : [ 0, 0 ],
 		cardCityGate : [ 1, 0 ],
 		cardTavern : [ 2, 0 ]
+	},
+
+	{
+		image : "Content/Images/MonsterCards.png",
+		w : 192,
+		h : 256,
+		cardSoulReaver : [ 0, 0 ],
+		cardBerserkMarauder : [ 1, 0 ],
+		cardBerserkChampion : [ 3, 0 ],
+		cardBerserkVanguard : [ 0, 1 ],
+		cardGreenCorruption : [ 3, 1 ],
+		cardTwigjack : [ 0, 2 ],
+		cardKillerVine : [ 1, 2 ],
+		cardPixieOrphan : [ 2, 2 ],
+		cardMadRoot : [ 3, 2 ],
+		cardPuppetBorn : [ 1, 3 ]
 	}
 ]
 
