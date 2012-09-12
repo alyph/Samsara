@@ -23,10 +23,11 @@ var Game = Class(
 		this.player = new Player(this);
 
 		// put down exploration cards
-		var startingMaps = Decks.drawMapDecks(3);
+		var startingMaps = Decks.drawMapDecks(1, true);
 		for (var i = 0; i < startingMaps.length; i++)
 		{
-			this.table.placeInScene(startingMaps[i].exploreCards[0]);
+			var card = this.table.placeInScene(startingMaps[i].exploreCards[0].encounterDeck.drawEncounter());
+			this.setActiveCard(card);
 		}
 
 		// start first turn

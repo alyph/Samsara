@@ -3,6 +3,11 @@ Core.Component("Map",
 
 });
 
+Core.Component("City",
+{
+
+});
+
 Core.Component("Explore",
 {
 	addAction : function(game, card, actions)

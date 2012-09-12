@@ -42,9 +42,18 @@ var Decks =
 		}
 	},
 
-	drawMapDecks : function(count)
+	drawMapDecks : function(count, noCity)
 	{
 		var decks = this.mapDecks.slice();
+		if (noCity)
+		{
+			for (var i = decks.length - 1; i >= 0; i--)
+			{
+				if (decks[i].mapCard.definition.has("City"))
+					decks.splice(i, 1);
+			}
+		}
+
 		var results = [];
 
 		for (var i = 0; i < count; i++)

@@ -3,7 +3,7 @@ Core.CardSet(
 {
 	City:
 	{
-		comps : "Map",
+		comps : "Map City",
 		title : "City",
 		explorations : [ 'CityStreets' ],
 		inhabitants : []
