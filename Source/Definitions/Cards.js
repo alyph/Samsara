@@ -26,6 +26,34 @@ Core.CardSet(
 	}
 });
 
+// Heroes
+Core.CardSet(
+{
+	WarMaiden:
+	{
+		title : "War Maiden",
+		image : 'cardBarbarian'
+	},
+
+	Wanderer:
+	{
+		title : "Wanderer",
+		image : 'cardBard'
+	},
+
+	Outcast:
+	{
+		title : "Outcast",
+		image : 'cardRogue'
+	},
+
+	Acolyte:
+	{
+		title : "Ess Acolyte",
+		image : 'cardSorceress'
+	}
+});
+
 // Monsters
 Core.CardSet(
 {

@@ -39,6 +39,17 @@ var SpriteDefinitions =
 		cardPixieOrphan : [ 2, 2 ],
 		cardMadRoot : [ 3, 2 ],
 		cardPuppetBorn : [ 1, 3 ]
+	},
+
+	{
+		image : "Content/Images/CharacterCards.png",
+		w : 192,
+		h : 256,
+		cardBarbarian : [ 0, 0 ],
+		cardBard : [ 1, 0 ],
+		cardRogue : [ 2, 0 ],
+		cardSorceress : [ 3, 0 ],
+		cardWizard : [ 0, 1 ]
 	}
 ]
 

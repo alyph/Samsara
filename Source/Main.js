@@ -31,6 +31,7 @@ $(function()
 		"Definitions/Cards",
 		"Definitions/Decks",
 		"Definitions/Sprites",
+		"Entities/Table",
 		"Entities/Message",
 		"Entities/Card",
 		"Entities/Deck",

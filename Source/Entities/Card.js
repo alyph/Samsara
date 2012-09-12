@@ -7,9 +7,9 @@ var Card = Class(
 		this.instance = info;
 		this.definition = info.definition;
 		this.slot = slot;
-		this._width = CARD_WIDTH;
-		this._height = CARD_HEIGHT;
-		this.node = this._table.node.addGroup("card_"+id, {width : this._width, height : this._height});
+		this.width = CARD_WIDTH;
+		this.height = CARD_HEIGHT;
+		this.node = this._table.node.addGroup("card_"+id, {width : this.width, height : this.height});
 		var back = $("<div class='cardBack'></div>").appendTo(this.node);
 		var sprite = Sprites[this.definition.image];
 		var spriteId = "cardImage_" + id;

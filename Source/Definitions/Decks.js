@@ -10,6 +10,14 @@ var CommonDecks =
 		Revolver : 2
 	},
 
+	PlayerStartingHeroes:
+	{
+		WarMaiden : 1,
+		Wanderer : 1,
+		Outcast : 1,
+		Acolyte : 1
+	},
+
 	City:
 	{
 		CityGate: 1,
