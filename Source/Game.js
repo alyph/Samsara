@@ -18,7 +18,7 @@ var Game = Class(
 		var startingMaps = Decks.drawMapDecks(1, true);
 		for (var i = 0; i < startingMaps.length; i++)
 		{
-			var card = this.table.placeInScene(startingMaps[i].exploreCards[0].encounterDeck.drawEncounter());
+			var card = this.table.placeInScene(startingMaps[i].exploreCards[0]);
 			this.setActiveCard(card);
 		}
 

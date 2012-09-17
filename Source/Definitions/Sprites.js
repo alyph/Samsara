@@ -22,7 +22,8 @@ var SpriteDefinitions =
 		h : 256,
 		cardStreets : [ 0, 0 ],
 		cardCityGate : [ 1, 0 ],
-		cardTavern : [ 2, 0 ]
+		cardTavern : [ 2, 0 ],
+		cardForestPath : [ 3, 0 ]
 	},
 
 	{
@@ -32,13 +33,20 @@ var SpriteDefinitions =
 		cardSoulReaver : [ 0, 0 ],
 		cardBerserkMarauder : [ 1, 0 ],
 		cardBerserkChampion : [ 3, 0 ],
-		cardBerserkVanguard : [ 0, 1 ],
-		cardGreenCorruption : [ 3, 1 ],
-		cardTwigjack : [ 0, 2 ],
-		cardKillerVine : [ 1, 2 ],
-		cardPixieOrphan : [ 2, 2 ],
-		cardMadRoot : [ 3, 2 ],
-		cardPuppetBorn : [ 1, 3 ]
+		cardBerserkVanguard : [ 4, 0 ],
+		cardGreenCorruption : [ 7, 0 ],
+		cardTwigjack : [ 0, 1 ],
+		cardKillerVine : [ 1, 1 ],
+		cardPixieOrphan : [ 2, 1 ],
+		cardMadRoot : [ 3, 1 ],
+		cardPuppetBorn : [ 5, 1 ],
+		cardBlackBear : [ 6, 1 ],
+		cardBoarWarrior : [ 7, 1 ],
+		cardGiantSpider : [ 0, 2 ],
+		cardCynoPriest : [ 1, 2 ],
+		cardFungiHarvester : [ 2, 2 ],
+		cardWargBerserk : [ 3, 2 ],
+		cardCynoAvenger : [ 4, 2 ]
 	},
 
 	{
@@ -49,7 +57,7 @@ var SpriteDefinitions =
 		cardBard : [ 1, 0 ],
 		cardRogue : [ 2, 0 ],
 		cardSorceress : [ 3, 0 ],
-		cardWizard : [ 0, 1 ]
+		cardWizard : [ 4, 0 ]
 	}
 ]
 

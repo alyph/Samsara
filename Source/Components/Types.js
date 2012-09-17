@@ -31,5 +31,16 @@ Core.Component("Explore",
 
 Core.Component("Monster",
 {
+	addAction : function(game, card, actions)
+	{
+		actions.push(
+		{
+			text : "Attack",
+			handler : this._doAttack
+		});
+	},
 
+	_doAttack : function(game, card)
+	{
+	}
 });
