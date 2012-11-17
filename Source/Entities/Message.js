@@ -40,4 +40,4 @@ var Option = Class(
 
 		this._handler.call(this._caller, game, this._data);
 	}
-})
+});

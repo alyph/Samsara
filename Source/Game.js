@@ -7,27 +7,30 @@ var Game = Class(
 		this._sceneDeck = null;
 		this.player = null;
 		this.table = new Table(this);
-		this.encounterSize = 7;
+		this.maxNumAdventures = 7;
+		this.maxAdvencturesPerQuest = 3;
+        this.adventures = [];
+
+        this._cardPool = new CardPool(this);
 	},
 
 	start : function()
 	{
 		this.player = new Player(this);
 
-		// put down exploration cards
-		var startingMaps = Decks.drawMapDecks(1, true);
-		for (var i = 0; i < startingMaps.length; i++)
+		// draw adventures for the starting exploration
+		for (var i = 0; i < this.maxAdvencturesPerQuest; i++)
 		{
-			var card = this.table.placeInScene(startingMaps[i].exploreCards[0]);
-			this.setActiveCard(card);
+			var quest = new Quest(this, this.makeCard(Decks.questDeck.explorationQuestCard));
+			var adventure = new Adventure(this, i);
+			adventure.quest = quest;
+			adventure.map = this.makeCard(Decks.mapDeck.draw());
+			this.adventures.push(adventure);
+
+			adventure.begin();
 		}
 
-		// put down heroes
-		var heroCards = this.player.heroDeck.cards;
-		for (var i = 0; i < heroCards.length; i++)
-		{
-			this.table.placeHero(heroCards[i]);
-		}
+		// TODO: draw starting hero and follower for the quest
 
 		// start first turn
 		this.beginTurn();
@@ -44,7 +47,7 @@ var Game = Class(
 		// player draw cards
 		for (var i = 0; i < this.player.handSize; i++)
 		{
-			this.table.placeInHand(this.player.deck.draw());
+			this.table.placeInHand(this.makeCard(this.player.deck.draw()));
 		}
 	},
 
@@ -56,6 +59,15 @@ var Game = Class(
 	setActiveCard : function(card)
 	{
 		this.table.placeActiveCard(card);
-	}
+	},
 
+	onNewEncounter : function(adventure)
+	{
+		this.table.placeAdventure(adventure);
+	},
+
+	makeCard : function(cardInst)
+	{
+		return this._cardPool.makeCard(cardInst);
+	}
 });

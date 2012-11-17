@@ -1394,14 +1394,14 @@ var requirejs, require, define;
             },
 
             makeShimExports: function (exports) {
-                var tempFunc;
+                var temp;
                 if (typeof exports === 'string') {
-	                tempFunc = function () {
+                    temp = function () {
                         return getGlobal(exports);
                 };
                     //Save the exports for use in nodefine checking.
-	                tempFunc.exports = exports;
-                    return tempFunc;
+                    temp.exports = exports;
+                    return temp;
                 } else {
                     return function () {
                         return exports.apply(global, arguments);

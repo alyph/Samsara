@@ -1,6 +1,67 @@
 // Map Cars
 Core.CardSet(
 {
+	Zion:
+	{
+		comps : "Map",
+		title : "City of Zion"
+	},
+
+	TiberusRiverSide:
+	{
+		comps : "Map",
+		title : "Tiberus River Side"
+	},
+
+	MistForest:
+	{
+		comps : "Map",
+		title : "Mist Forest"
+	},
+
+	SolomonsFooting:
+	{
+		comps : "Map",
+		title : "Solomon's Footing"
+	},
+
+	StonefellMarch:
+	{
+		comps : "Map",
+		title : "Stonefell March"
+	},
+
+	ValeOfSerpents:
+	{
+		comps : "Map",
+		title : "Vale of Serpents"
+	},
+
+	GodsHighSeat:
+	{
+		comps : "Map",
+		title : "Gods High Seat"
+	},
+
+	Silverwood:
+	{
+		comps : "Map",
+		title : "Silverwood"
+	},
+
+	SwansRest:
+	{
+		comps : "Map",
+		title : "Swan's Rest"
+	},
+
+	SunstoneRidges:
+	{
+		comps : "Map",
+		title : "Sunstone Ridges"
+	}
+
+/*
 	City:
 	{
 		comps : "Map City",
@@ -15,7 +76,7 @@ Core.CardSet(
 		title : "Forest",
 		explorations : [ 'ForestPassage' ],
 		inhabitants : [ 'Forest', 'Warg' ]
-	}/*,
+	},
 
 
 	Battlefield:
@@ -30,12 +91,6 @@ Core.CardSet(
 // Heroes
 Core.CardSet(
 {
-	WarMaiden:
-	{
-		title : "War Maiden",
-		image : 'cardBarbarian'
-	},
-
 	Wanderer:
 	{
 		title : "Wanderer",
@@ -54,6 +109,136 @@ Core.CardSet(
 		image : 'cardSorceress'
 	}
 });
+
+var BaseFollowerCard =
+{
+	comps : "Follower"
+};
+
+// Followers
+Core.CardSet(
+{
+	Base : BaseFollowerCard,
+
+	WardenArc:
+	{
+		title : "Warden of Arc",
+		image : 'SwordsmenCaptain'
+	},
+
+	MoonGladeWhisper:
+	{
+		title : "Moon Glade Whisper",
+		image : 'Druid'
+	},
+
+	ThylonWorshiper:
+	{
+		title : "Thylon Worshiper",
+		image : 'BattleCleric'
+	},
+
+	Skald:
+	{
+		title : "Skald",
+		image : 'Skald'
+	},
+
+	WindSpireApprentice:
+	{
+		title : "Wind Spire Apprentice",
+		image : 'ApprenticeMage'
+	},
+
+	MoonGladeRanger:
+	{
+		title : "Moon Glade Ranger",
+		image : 'Ranger'
+	},
+
+	MystAgent:
+	{
+		title : "Myst Agent",
+		image : 'Assassin'
+	},
+
+	FlameSentinel:
+	{
+		title : "Flame Sentinel",
+		image : 'TempleAcolyte'
+	},
+
+	ThracianMilitia:
+	{
+		title : "Thracian Militia",
+		image : 'ElfGuardsman'
+	},
+
+	StarSpireAcolyte:
+	{
+		title : "Star Spire Acolyte",
+		image : 'FemaleApprenticeMage'
+	},
+
+	QuietIsleWanderer:
+	{
+		title : "Quiet Isle Wanderer",
+		image : 'FemaleWanderer'
+	},
+
+	WarMaiden:
+	{
+		title : "War Maiden",
+		image : 'BattleMaiden'
+	},
+
+	SkySinger:
+	{
+		title : "Sky Singer",
+		image : 'FemaleBard'
+	},
+
+	ThracianScout:
+	{
+		title : "Thracian Scout",
+		image : 'Huntress'
+	},
+
+	ConclaveObserver:
+	{
+		title : "Conclave Observer",
+		image : 'Doctor'
+	},
+
+	SorrowsHunter:
+	{
+		title : "Sorrows Hunter",
+		image : 'Hunter'
+	},
+
+	StepStoneCourier:
+	{
+		title : "StepStone Courier",
+		image : 'Pirate'
+	},
+
+	Gunslinger:
+	{
+		title : "Gunslinger",
+		image : 'Gunslinger'
+	}
+});
+
+
+Core.CardSet(
+{
+	Exploration:
+	{
+		title : "Exploration",
+		comps : "Exploration"
+	}
+});
+
 
 // Monsters
 Core.CardSet(
@@ -160,7 +345,205 @@ Core.CardSet(
 		title : "Cyno Avenger",
 		image : 'cardCynoAvenger',
 		habitats: [ 'Warg' ],
-		density : "Several Cyro Avengers are on their mission of hunting, likely looking for fresh sacrifices for their three headed god."
+		density : 2,
+		detailed : "Several Cyro Avengers are on their mission of hunting, likely looking for fresh sacrifices for their three headed god."
+	}
+});
+
+var BaseItemCard =
+{
+	comps : "Item"
+};
+
+// Items
+Core.CardSet(
+{
+	Base : BaseItemCard,
+
+	FineBlade :
+	{
+		title : "Fine Blade",
+		image : 'ShortSword'
+	},
+
+	PoisonDagger :
+	{
+		title : "Poison Dagger",
+		image : 'PoisonDagger'
+	},
+
+	Spear :
+	{
+		title : "Spear",
+		image : 'Spear'
+	},
+
+	Buckler :
+	{
+		title : "Buckler",
+		image : 'Buckler'
+	},
+
+	ShortBow :
+	{
+		title : "Short Bow",
+		image : 'ShortBow'
+	},
+
+	WarHammer :
+	{
+		title : "WarHammer",
+		image : 'WarHammer'
+	},
+
+	LightCrossbow :
+	{
+		title : "LightCrossbow",
+		image : 'LightCrossbow'
+	},
+
+	RodIce :
+	{
+		title : "Rod of Ice Shards",
+		image : 'RodOfMissiles'
+	},
+
+	FireStaff :
+	{
+		title : "Fire Staff",
+		image : 'FireStaff'
+	},
+
+	Pistol :
+	{
+		title : "Pistol",
+		image : 'Pistol'
+	},
+
+	PaddedArmor :
+	{
+		title : "Padded Armor",
+		image : 'PaddedVest'
+	},
+
+	ChainMail :
+	{
+		title : "Chain Mail",
+		image : 'ChainMail'
+	},
+
+	GoldCoins :
+	{
+		title : "Gold Coins",
+		image : 'HandfulGold'
+	}
+});
+
+
+BaseAbilityCard =
+{
+	comps : "Ability"
+};
+
+// Abilities
+Core.CardSet(
+{
+	Base : BaseAbilityCard,
+
+	Parry:
+	{
+		title : "Parry",
+		image : 'Parry'
+	},
+
+	BackStab:
+	{
+		title : "Back Stab",
+		image : 'BackStab'
+	},
+
+	MagicShield:
+	{
+		title : "Magic Shield",
+		image : 'MagicShield'
+	},
+
+	BackStab:
+	{
+		title : "Back Stab",
+		image : 'BackStab'
+	},
+
+	PiercingBlow:
+	{
+		title : "Piercing Blow",
+		image : 'ArmorPiercing'
+	},
+
+	PiercingShot:
+	{
+		title : "Piercing Shot",
+		image : 'PiercingShot'
+	},
+
+	CripplingBlow:
+	{
+		title : "Crippling Blow",
+		image : 'CripplingBlow'
+	},
+
+	RainOfFire:
+	{
+		title : "Rain of Fire",
+		image : 'RainOfFire'
+	},
+
+	LightningStrike:
+	{
+		title : "Lightning Strike",
+		image : 'LightningStrike'
+	},
+
+	HealWound:
+	{
+		title : "Heal Wound",
+		image : 'Healing'
+	},
+
+	Disarm:
+	{
+		title : "Disarm",
+		image : 'Disarm'
+	},
+
+	AimedShot:
+	{
+		title : "Aimed Shot",
+		image : 'AimedShot'
+	},
+
+	PointBlankShot:
+	{
+		title : "Point Blank Shot",
+		image : 'PointBlankShot'
+	},
+
+	ChargeAttack:
+	{
+		title : "Charge Attack",
+		image : 'Charge'
+	},
+
+	PoisonWeapon:
+	{
+		title : "Poison Weapon",
+		image : 'PoisonWeapon'
+	},
+
+	RainOfArrows:
+	{
+		title : "Rain of Arrows",
+		image : 'RainOfArrows'
 	}
 });
 
@@ -202,55 +585,5 @@ Core.CardSet(
 		title : "Trench",
 		image : 'cardStreets',
 		detailed : "Terrain is completely devastated, leaving trenches like withered vines stretching miles and miles long."
-	},
-
-	// weapons
-
-	ShortSword :
-	{
-		title : "Short Sword",
-		image : 'cardShortSword'
-	},
-
-	Dagger :
-	{
-		title : "Dagger",
-		image : 'cardDagger'
-	},
-
-	WoodenShield :
-	{
-		title : "Wooden Shield",
-		image : 'cardShortSword'
-	},
-
-	ShortBow :
-	{
-		title : "Short Bow",
-		image : 'cardBow'
-	},
-
-	Hammer :
-	{
-		title : "Hammer",
-		image : 'cardHammer'
-	},
-
-	Crossbow :
-	{
-		title : "Crossbow",
-		image : 'cardCrossbow'
-	},
-
-	FireBolt :
-	{
-		title : "Fire Bolt",
-		image : 'cardShortSword'
-	},
-
-	Revolver :
-	{
-		title : "Revolver",
-		image : 'cardShortSword'
 	}
 });

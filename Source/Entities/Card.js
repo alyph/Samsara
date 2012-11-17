@@ -4,39 +4,41 @@ var Card = Class(
 	{
 		this._game = game;
 		this._table = game.table;
-		this.instance = info;
+        this.instance = info;
 		this.definition = info.definition;
-		this.slot = slot;
+        this._id = id;
+        this.slot = slot;
 		this.width = CARD_WIDTH;
 		this.height = CARD_HEIGHT;
-		this.node = this._table.node.addGroup("card_"+id, {width : this.width, height : this.height});
-		var back = $("<div class='cardBack'></div>").appendTo(this.node);
-		var sprite = Sprites[this.definition.image];
-		var spriteId = "cardImage_" + id;
-		back.addSprite(spriteId, {animation: sprite, width: CARD_IMG_WIDTH, height: CARD_IMG_HEIGHT, posx:6, posy: 6 });
+        this.visible = false;
+        this.node = null;
+        this._populateMessage();
+    },
 
-		var backSize = Math.round(sprite.domO.naturalWidth / sprite.delta) * CARD_IMG_WIDTH;
-		var offsetX = -Math.round(sprite.offsetx / sprite.delta) * CARD_IMG_WIDTH;
-		var offsetY = -Math.round(sprite.offsety / sprite.distance) * CARD_IMG_HEIGHT;
+    show : function(x, y)
+    {
+        if (!this.visible)
+        {
+            if (this.node == null)
+                this._initNode();
+            else
+                this.node.appendTo(this._table.node);
 
-		$("#"+spriteId).css(
-		{
-			"background-size" : backSize + "px",
-			"background-position" : offsetX + "px " + offsetY + "px",
-			"border-radius" : "5px"
-		});
+            this.visible = true;
+        }
 
-		var label = $("<div class='cardTitle'></div>").html(this.definition.title).appendTo(back);
-		var desc = $("<div class='cardDesc'></div>").html(this.definition.desc).appendTo(back);
-
-		this._populateMessage();
-
-		this.node.click( { card : this }, function(evt){ evt.data.card._clicked(); });
-	},
+        if (arguments.length >= 2)
+            this.moveTo(x, y);
+    },
 
 	move : function(x, y)
 	{
 		this.node.xy(x, y, true);
+	},
+
+	moveTo : function(x, y)
+	{
+		this.node.xy(x, y, false);
 	},
 
 	destroy : function()
@@ -47,6 +49,31 @@ var Card = Class(
 			this.node = null;
 		}
 	},
+
+    _initNode : function()
+    {
+        this.node = this._table.node.addGroup("card_"+this._id, {width : this.width, height : this.height});
+        var back = $("<div class='cardBack'></div>").appendTo(this.node);
+        var sprite = Sprites[this.definition.image];
+        var spriteId = "cardImage_" + this._id;
+        back.addSprite(spriteId, {animation: sprite, width: CARD_IMG_WIDTH, height: CARD_IMG_HEIGHT, posx:6, posy: 6 });
+
+        var backSize = Math.round(sprite.domO.naturalWidth / sprite.delta) * CARD_IMG_WIDTH;
+        var offsetX = -Math.round(sprite.offsetx / sprite.delta) * CARD_IMG_WIDTH;
+        var offsetY = -Math.round(sprite.offsety / sprite.distance) * CARD_IMG_HEIGHT;
+
+        $("#"+spriteId).css(
+            {
+                "background-size" : backSize + "px",
+                "background-position" : offsetX + "px " + offsetY + "px",
+                "border-radius" : "5px"
+            });
+
+        var label = $("<div class='cardTitle'></div>").html(this.definition.title).appendTo(back);
+        var desc = $("<div class='cardDesc'></div>").html(this.definition.desc).appendTo(back);
+
+        this.node.click( { card : this }, function(evt){ evt.data.card._clicked(); });
+    },
 
 	_populateMessage: function()
 	{
@@ -94,11 +121,28 @@ var CardDefinition = Class(
 		this._components = [];
 		for (var i = 0; i < components.length; i++)
 		{
-			var comp = components[i];
-			if (comp === "")
+			var name = components[i];
+			if (name === "")
 				continue;
 
-			this._components[i] = Core.getComponent(comp);
+			var comp = Core.getComponent(name);
+			var superComp = comp.superComponent;
+
+			while (superComp != null)
+			{
+				this._addComponent(superComp);
+				superComp = superComp.superComponent;
+			}
+
+			this._addComponent(comp);
+		}
+	},
+
+	_addComponent : function(comp)
+	{
+		if (this._components.indexOf(comp) < 0)
+		{
+			this._components.push(comp);
 		}
 	},
 
@@ -124,5 +168,19 @@ var CardInstance = Class(
 	constructor : function(def)
 	{
 		this.definition = def;
+	}
+});
+
+var CardPool = Class(
+{
+    constructor : function(game)
+    {
+        this._game = game;
+        this._nextCardId = 0;
+    },
+
+	makeCard : function(cardInst)
+	{
+		return new Card(this._game, cardInst, this._nextCardId++, 0);
 	}
 });

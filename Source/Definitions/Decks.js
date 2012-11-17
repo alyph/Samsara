@@ -37,41 +37,8 @@ var Decks =
 	{
 		var cards = Core.getCards();
 
-		this.mapDecks = [];
-
-		for (var i = 0; i < cards.length; i++)
-		{
-			var card = cards[i];
-			if (card.has('Map'))
-			{
-				var deck = new MapDeck(card, cards);
-				this.mapDecks.push(deck);
-			}
-		}
-	},
-
-	drawMapDecks : function(count, noCity)
-	{
-		var decks = this.mapDecks.slice();
-		if (noCity)
-		{
-			for (var i = decks.length - 1; i >= 0; i--)
-			{
-				if (decks[i].mapCard.definition.has("City"))
-					decks.splice(i, 1);
-			}
-		}
-
-		var results = [];
-
-		for (var i = 0; i < count; i++)
-		{
-			var picked = MathEx.randomInt(0, decks.length - 1);
-			var deck = decks[picked];
-			decks.splice(picked, 1);
-			results.push(deck);
-		}
-
-		return results;
+		this.questDeck = new QuestDeck(cards);
+		this.mapDeck = new MapDeck(cards);
+		this.encounterDeck = new EncounterDeck(cards);
 	}
 };

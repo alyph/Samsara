@@ -14,9 +14,16 @@ var Deck = Class(
 				var card = Core.getCard(name);
 				var num = def[name];
 				for (var i = 0; i < num; i++)
-					this.cards.push(new CardInstance(card));
+					this._addCard(card);
 			}
 		}
+	},
+
+	_addCard : function(cardDef)
+	{
+		var cardInst = new CardInstance(cardDef);
+		this.cards.push(cardInst);
+		return cardInst;
 	},
 
 	draw : function()
@@ -41,71 +48,66 @@ var Deck = Class(
 	}
 });
 
+var QuestDeck = Class(Deck,
+{
+	constructor : function(cards)
+	{
+		QuestDeck.$super.call(this);
+
+		this.explorationQuestCard = null;
+
+		for (var i = 0; i < cards.length; i++)
+		{
+			var card = cards[i];
+			if (card.has("Quest"))
+			{
+				var cardInst = this._addCard(card);
+
+				if (card.has("Exploration"))
+					this.explorationQuestCard = cardInst;
+			}
+		}
+	}
+});
+
 var MapDeck = Class(Deck,
 {
-	constructor : function(mapCard, allCards)
+	constructor : function(cards)
 	{
 		MapDeck.$super.call(this);
 
-		this.mapCard = new CardInstance(mapCard);
-
-		this.exploreCards = [];
-		for (var i = 0; i < mapCard.explorations.length; i++)
+		for (var i = 0; i < cards.length; i++)
 		{
-			var exploreCard = Core.getCard(mapCard.explorations[i]);
-
-			// TODO: maybe we should auto attach explore component in this case!
-			if (!exploreCard.has("Explore"))
-				throw ("Explore card " + exploreCard + " has no Explore component attached!");
-
-			var exploreInst = new CardInstance(exploreCard);
-			exploreInst.encounterDeck = new EncounterDeck(mapCard, exploreCard, allCards);
-			this.exploreCards.push(exploreInst);
+			var card = cards[i];
+			if (card.has('Map'))
+			{
+				this._addCard(card);
+			}
 		}
 	}
 });
 
 var EncounterDeck = Class(Deck,
 {
-	constructor : function(mapCard, exploreCard, allCards)
+	constructor : function(cards)
 	{
 		EncounterDeck.$super.call(this);
 
-		var inhabitants = mapCard.inhabitants.concat(exploreCard.inhabitants);
-
-		for (var i = 0; i < allCards.length; i++)
+		for (var i = 0; i < cards.length; i++)
 		{
-			var card = allCards[i];
-			if (card.has('Monster') && this._canInhabit(card, inhabitants))
+			var card = cards[i];
+			if (card.has('Encounter'))
 			{
-				for (var c = 0; c < card.density; c++)
-				{
-					this.cards.push(new CardInstance(card));
-				}
+				this.cards.push(new CardInstance(card));
 			}
 		}
-	},
-
-	_canInhabit : function(monster, inhabitants)
-	{
-		if (inhabitants.length === 0)
-			return false;
-
-		for (var i = 0; i < monster.habitats.length; i++)
-		{
-			if (inhabitants.indexOf(monster.habitats[0]) >= 0)
-			{
-				return true;
-			}
-		}
-		return false;
 	},
 
 	drawEncounter : function()
 	{
 		return this.draw();
 	}
-})
+});
 
 var PlayerDeck = Class(Deck,
 {
@@ -113,6 +115,18 @@ var PlayerDeck = Class(Deck,
 	{
 		MapDeck.$super.call(this);
 
-		this._loadDeck(startingDeck);
+		this.drawStartingCards('Follower', 10)
+		this.drawStartingCards('Item', 15);
+		this.drawStartingCards('Ability', 20);
+	},
+
+	drawStartingCards : function(comp, count)
+	{
+		var cards = Core.getCards(comp);
+		for (var i = 0; i < count; i++)
+		{
+			var card = MathEx.randomElementOfArray(cards);
+			this._addCard(card);
+		}
 	}
 });

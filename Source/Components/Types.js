@@ -8,6 +8,21 @@ Core.Component("City",
 
 });
 
+Core.Component("Follower",
+{
+
+});
+
+Core.Component("Item",
+{
+
+});
+
+Core.Component("Ability",
+{
+
+});
+
 Core.Component("Explore",
 {
 	addAction : function(game, card, actions)
@@ -43,4 +58,16 @@ Core.Component("Monster",
 	_doAttack : function(game, card)
 	{
 	}
+});
+
+Core.Component("Quest",
+{
+});
+
+Core.Component("Exploration", "Quest",
+{
+});
+
+Core.Component("Encounter",
+{
 });

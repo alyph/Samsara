@@ -6,6 +6,13 @@ var TABLE_X = 10;
 var SCENE_CARDS_Y = 20;
 var PLAYER_HAND_Y = 624;
 var HERO_ZONE_Y = 480;
+var PARTY_AREA_Y = 400
+var ACTIVE_CARD_X = 20;
+var ACTIVE_CARD_Y = 48;
+var ADVENTURE_Y = 20;
+var CENTER_X = 0;
+var CENTER_Y = 64;
+var CENTER_HEIGHT = 480;
 
 var Table = Class(
 {
@@ -18,19 +25,22 @@ var Table = Class(
 		this._playerHand = [];
 		this._heroes = [];
 
-		this.center = this.node.addGroup("center", {posx : 0, posy : 172, width : PLAYGROUND_WIDTH, height : 320});
+		this.center = this.node.addGroup("center", {posx : CENTER_X, posy : CENTER_Y, width : PLAYGROUND_WIDTH, height : CENTER_HEIGHT});
 		this.message = $("<div id='message'></div>").appendTo(this.center);
+
+		this._playerHand = new PlayArea(TABLE_X, PLAYER_HAND_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
+		this._adventures = new PlayArea(TABLE_X, ADVENTURE_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
+		this._partyArea = new PlayArea(TABLE_X, PARTY_AREA_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
 	},
 
-	placeInHand : function(info, slot)
+	placeInHand : function(card, slot)
 	{
-		var i = (arguments.length >= 2 && slot >= 0) ? slot : this._playerHand.length;
-		var card = this._makeCard(info, i);
-		var x = TABLE_X + i * (CARD_WIDTH + 10);
-		var y = PLAYER_HAND_Y;
-		card.move(x, y);
-		this._playerHand[i] = card;
-		return card;
+		this._playerHand.placeCard(card, slot);
+	},
+
+	placeAdventure : function(adventure)
+	{
+		this._adventures.placeCard(adventure.encounter.encounterCard, adventure.slot);
 	},
 
 	placeInScene : function(info, slot)
@@ -61,7 +71,18 @@ var Table = Class(
 
 	placeActiveCard : function(card)
 	{
+        card.show(ACTIVE_CARD_X, ACTIVE_CARD_Y);
 		this.setMessage(card.message);
+	},
+
+	placeStory : function(story)
+	{
+		this.placeActiveCard(story.encounter.encounterCard);
+
+		for (var i = 0; i < story.heroes.length; i++)
+		{
+		    this._partyArea.placeCard(story.heroes[i]);
+		}
 	},
 
 	clearPlayerHand : function()
@@ -97,6 +118,27 @@ var Table = Class(
 	_makeCard : function(info, slot)
 	{
 		return new Card(this._game, info, this._nextCardId++, slot);
+	}
+});
+
+var PlayArea = Class(
+{
+	constructor : function(x, y, w, h)
+	{
+		this.x = x;
+		this.y = y;
+		this.w = w;
+		this.h = h;
+		this.cards = [];
+	},
+
+	placeCard : function(card, slot)
+	{
+		var i = (arguments.length >= 2 && slot >= 0) ? slot : this.cards.length;
+		var x = this.x + i * (CARD_WIDTH + 10);
+		var y = this.y;
+		card.show(x, y);
+		this.cards[i] = card;
 	}
 });
 

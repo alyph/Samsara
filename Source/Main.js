@@ -30,12 +30,14 @@ $(function()
 		"Components/Types",
 		"Definitions/Cards",
 		"Definitions/Decks",
+		"Definitions/Encounters",
 		"Definitions/Sprites",
 		"Entities/Table",
 		"Entities/Message",
 		"Entities/Card",
 		"Entities/Deck",
 		"Entities/Player",
+		"Entities/Adventure",
 		"Game"
 	];
 
