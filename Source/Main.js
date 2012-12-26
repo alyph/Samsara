@@ -11,7 +11,8 @@ $(function()
 	{
 		paths:
 		{
-			jqueryui: 'Libs/jquery-ui-1.8.23.custom.min'
+			jqueryui: 'Libs/jquery-ui-1.8.23.custom.min',
+			gamequery: 'Libs/jquery.gamequery' //"http://cdn.gamequeryjs.com/jquery.gamequery.js"
 		}
 
 	});
@@ -20,7 +21,7 @@ $(function()
 	[
 		"jquery",
 		"jqueryui",
-		"http://cdn.gamequeryjs.com/jquery.gamequery.js",
+		"gamequery",
 		"Libs/jsface",
 		"Utils/MathEx"
 	];
@@ -29,7 +30,6 @@ $(function()
 	[
 		"Components/Types",
 		"Definitions/Cards",
-		"Definitions/Decks",
 		"Definitions/Encounters",
 		"Definitions/Sprites",
 		"Entities/Table",
@@ -37,7 +37,8 @@ $(function()
 		"Entities/Card",
 		"Entities/Deck",
 		"Entities/Player",
-		"Entities/Adventure",
+		"Entities/Party",
+		"Entities/Activity",
 		"Game"
 	];
 

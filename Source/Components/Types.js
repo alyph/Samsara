@@ -60,6 +60,15 @@ Core.Component("Monster",
 	}
 });
 
+Core.Component("Story",
+{
+});
+
+Core.Component("Location",
+{
+});
+
+
 Core.Component("Quest",
 {
 });

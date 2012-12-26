@@ -43,7 +43,20 @@ var SpriteDefinitions =
 		cardStreets : [ 0, 0 ],
 		cardCityGate : [ 1, 0 ],
 		cardTavern : [ 2, 0 ],
-		cardForestPath : [ 3, 0 ]
+		cardForestPath : [ 3, 0 ],
+		Scouting : [ 4, 0 ],
+		Cavern : [ 5, 0 ],
+		Outpost : [ 6, 0 ],
+		MilitaryBase : [ 7, 0 ],
+		AbandonedFactory : [ 0, 1 ],
+		AbandonedMansion : [ 1, 1 ],
+		TempleRuin : [ 4, 1 ],
+		AbandonedMine : [ 7, 1 ],
+		BanditsCamp : [ 0, 2 ],
+		Bar : [ 1, 2 ],
+		WeaponStore : [ 2, 2 ],
+		MysticalForest : [ 4, 2 ],
+		AbandonedTrainStation : [ 5, 2 ]
 	},
 
 	{

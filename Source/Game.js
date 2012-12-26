@@ -2,38 +2,29 @@ var Game = Class(
 {
 	constructor : function()
 	{
-		Decks.init();
-
-		this._sceneDeck = null;
-		this.player = null;
 		this.table = new Table(this);
-		this.maxNumAdventures = 7;
-		this.maxAdvencturesPerQuest = 3;
-        this.adventures = [];
+		this.currentParty = null;
 
         this._cardPool = new CardPool(this);
 	},
 
 	start : function()
 	{
+		this.initDecks();
 		this.player = new Player(this);
-
-		// draw adventures for the starting exploration
-		for (var i = 0; i < this.maxAdvencturesPerQuest; i++)
-		{
-			var quest = new Quest(this, this.makeCard(Decks.questDeck.explorationQuestCard));
-			var adventure = new Adventure(this, i);
-			adventure.quest = quest;
-			adventure.map = this.makeCard(Decks.mapDeck.draw());
-			this.adventures.push(adventure);
-
-			adventure.begin();
-		}
 
 		// TODO: draw starting hero and follower for the quest
 
+		this.changeParty(new Party(this));
+
 		// start first turn
-		this.beginTurn();
+		this.beginFirstTurn();
+	},
+
+	initDecks : function()
+	{
+		var cards = Core.getCards();
+		this.locationDeck = new LocationDeck(this, cards);
 	},
 
 	nextTurn : function()
@@ -42,12 +33,17 @@ var Game = Class(
 		this.beginTurn();
 	},
 
+	beginFirstTurn : function()
+	{
+		this.currentParty.drawAgenda(3);
+	},
+
 	beginTurn : function()
 	{
 		// player draw cards
 		for (var i = 0; i < this.player.handSize; i++)
 		{
-			this.table.placeInHand(this.makeCard(this.player.deck.draw()));
+			this.table.placeInHand(this.player.deck.draw());
 		}
 	},
 
@@ -56,14 +52,23 @@ var Game = Class(
 		this.table.clearPlayerHand();
 	},
 
+	changeParty : function(party)
+	{
+		this.currentParty = party;
+		this.updateScene();
+		Events.delegate(this.currentParty, "ActivityChanged", this.updateScene, this);
+	},
+
+	updateScene : function()
+	{
+		this.table.placeScene(this.currentParty.currentActivity.scene);
+		Events.delegate(this.currentParty.currentActivity, "SceneChanged", this.updateScene, this);
+		Events.delegate(this.currentParty.currentActivity.scene, "SceneUpdated", this.updateScene, this);
+	},
+
 	setActiveCard : function(card)
 	{
 		this.table.placeActiveCard(card);
-	},
-
-	onNewEncounter : function(adventure)
-	{
-		this.table.placeAdventure(adventure);
 	},
 
 	makeCard : function(cardInst)

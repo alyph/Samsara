@@ -1,7 +1,8 @@
 var Deck = Class(
 {
-	constructor : function()
+	constructor : function(game)
 	{
+		this._game = game;
 		this.cards = [];
 	},
 
@@ -19,6 +20,18 @@ var Deck = Class(
 		}
 	},
 
+	_loadCardsWithComp : function(cards, comp)
+	{
+		for (var i = 0; i < cards.length; i++)
+		{
+			var card = cards[i];
+			if (card.has(comp))
+			{
+				this._addCard(card);
+			}
+		}
+	},
+
 	_addCard : function(cardDef)
 	{
 		var cardInst = new CardInstance(cardDef);
@@ -31,7 +44,8 @@ var Deck = Class(
 		if (this.cards.length === 0)
 			throw ("There are no cards in deck!");
 
-		return MathEx.randomElementOfArray(this.cards);
+		var drawnCard = MathEx.randomElementOfArray(this.cards);
+		return this._game.makeCard(drawnCard);
 	},
 
 	getCard : function(name)
@@ -50,9 +64,9 @@ var Deck = Class(
 
 var QuestDeck = Class(Deck,
 {
-	constructor : function(cards)
+	constructor : function(game, cards)
 	{
-		QuestDeck.$super.call(this);
+		QuestDeck.$super.call(this, game);
 
 		this.explorationQuestCard = null;
 
@@ -72,9 +86,9 @@ var QuestDeck = Class(Deck,
 
 var MapDeck = Class(Deck,
 {
-	constructor : function(cards)
+	constructor : function(game, cards)
 	{
-		MapDeck.$super.call(this);
+		MapDeck.$super.call(this, game);
 
 		for (var i = 0; i < cards.length; i++)
 		{
@@ -87,11 +101,20 @@ var MapDeck = Class(Deck,
 	}
 });
 
+var LocationDeck = Class(Deck,
+{
+	constructor :function(game, cards)
+	{
+		LocationDeck.$super.call(this, game);
+		this._loadCardsWithComp(cards, 'Location');
+	}
+});
+
 var EncounterDeck = Class(Deck,
 {
-	constructor : function(cards)
+	constructor : function(game, cards)
 	{
-		EncounterDeck.$super.call(this);
+		EncounterDeck.$super.call(this, game);
 
 		for (var i = 0; i < cards.length; i++)
 		{
@@ -111,11 +134,11 @@ var EncounterDeck = Class(Deck,
 
 var PlayerDeck = Class(Deck,
 {
-	constructor : function(startingDeck)
+	constructor : function(game)
 	{
-		MapDeck.$super.call(this);
+		PlayerDeck.$super.call(this, game);
 
-		this.drawStartingCards('Follower', 10)
+		this.drawStartingCards('Follower', 10);
 		this.drawStartingCards('Item', 15);
 		this.drawStartingCards('Ability', 20);
 	},

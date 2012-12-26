@@ -13,10 +13,10 @@ Core.CardSet(
 		title : "Tiberus River Side"
 	},
 
-	MistForest:
+	PrimalForest:
 	{
 		comps : "Map",
-		title : "Mist Forest"
+		title : "Primal Forest"
 	},
 
 	SolomonsFooting:
@@ -107,6 +107,80 @@ Core.CardSet(
 	{
 		title : "Ess Acolyte",
 		image : 'cardSorceress'
+	}
+});
+
+var BaseStoryCard =
+{
+	comps : "Story"
+};
+
+Core.CardSet(
+{
+	Base : BaseStoryCard,
+
+	Scouting:
+	{
+		title : "Scouting",
+		image : "Scouting"
+	}
+});
+
+var BaseLocationCard =
+{
+	comps : "Location"
+};
+
+Core.CardSet(
+{
+	Base : BaseLocationCard,
+
+	Outpost:
+	{
+		title : "Outpost",
+		image : "Outpost"
+	},
+
+	DesertedMilitaryBase:
+	{
+		title : "Deserted Military Base",
+		image : "MilitaryBase"
+	},
+
+	AbandonedFactory:
+	{
+		title : "Abandoned Factory",
+		image : "AbandonedFactory"
+	},
+
+	TempleRuin:
+	{
+		title : "Temple Ruin",
+		image : "TempleRuin"
+	},
+
+	BanditsCamp:
+	{
+		title : "Bandits Camp",
+		image : "BanditsCamp"
+	},
+
+	Cantina:
+	{
+		title : "Cantina",
+		image : "Bar"
+	},
+
+	MistForest:
+	{
+		title : "Mist Forest",
+		image : "MysticalForest"
+	},
+
+	MetroStation:
+	{
+		title : "Metro Station",
+		image : "AbandonedTrainStation"
 	}
 });
 

@@ -3,16 +3,14 @@ var CARD_HEIGHT = 138;
 var CARD_IMG_WIDTH = 96;
 var CARD_IMG_HEIGHT = 128;
 var TABLE_X = 10;
-var SCENE_CARDS_Y = 20;
 var PLAYER_HAND_Y = 624;
-var HERO_ZONE_Y = 480;
 var PARTY_AREA_Y = 400
-var ACTIVE_CARD_X = 20;
-var ACTIVE_CARD_Y = 48;
-var ADVENTURE_Y = 20;
+var ENTITY_AREA_Y = 300
 var CENTER_X = 0;
 var CENTER_Y = 64;
 var CENTER_HEIGHT = 480;
+var SCENE_X = 64;
+var SCENE_Y = 96;
 
 var Table = Class(
 {
@@ -21,16 +19,16 @@ var Table = Class(
 		this._game = game;
 		this.node = $.playground().addGroup("table", {width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
 		this._nextCardId = 0;
-		this._sceneCards = [];
 		this._playerHand = [];
-		this._heroes = [];
 
 		this.center = this.node.addGroup("center", {posx : CENTER_X, posy : CENTER_Y, width : PLAYGROUND_WIDTH, height : CENTER_HEIGHT});
 		this.message = $("<div id='message'></div>").appendTo(this.center);
 
-		this._playerHand = new PlayArea(TABLE_X, PLAYER_HAND_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
-		this._adventures = new PlayArea(TABLE_X, ADVENTURE_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
+		this._playerHand = new PlayArea(this, TABLE_X, PLAYER_HAND_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
 		this._partyArea = new PlayArea(TABLE_X, PARTY_AREA_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
+
+		this._sceneCardForm = new CardForm(this, null);
+		this._entityArea = new PlayArea(this, TABLE_X, ENTITY_AREA_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
 	},
 
 	placeInHand : function(card, slot)
@@ -38,51 +36,13 @@ var Table = Class(
 		this._playerHand.placeCard(card, slot);
 	},
 
-	placeAdventure : function(adventure)
+	placeScene : function(scene)
 	{
-		this._adventures.placeCard(adventure.encounter.encounterCard, adventure.slot);
-	},
+		this._sceneCardForm.changeCard(scene.sceneCard);
+		if (!this._sceneCardForm.visible)
+			this._sceneCardForm.show(SCENE_X, SCENE_Y)
 
-	placeInScene : function(info, slot)
-	{
-		var i = (arguments.length >= 2 && slot >= 0) ? slot : this._sceneCards.length;
-		var card = this._makeCard(info, i);
-		var x = TABLE_X + i * (CARD_WIDTH + 10);
-		var y = SCENE_CARDS_Y;
-		card.move(x, y);
-		this._sceneCards[i] = card;
-		return card;
-	},
-
-	placeHero : function(inst)
-	{
-		var x = 0;
-		var y = HERO_ZONE_Y;
-		var newIdx = this._heroes.length;
-
-		for (var i = 0; i < this._heroes.length; i++)
-			x += this._heroes[i].width + 10;
-
-		var card = this._makeCard(inst, newIdx);
-		card.move(x, y)
-		var zone = new HeroZone(this, card, x, y);
-		this._heroes[newIdx] = zone;
-	},
-
-	placeActiveCard : function(card)
-	{
-        card.show(ACTIVE_CARD_X, ACTIVE_CARD_Y);
-		this.setMessage(card.message);
-	},
-
-	placeStory : function(story)
-	{
-		this.placeActiveCard(story.encounter.encounterCard);
-
-		for (var i = 0; i < story.heroes.length; i++)
-		{
-		    this._partyArea.placeCard(story.heroes[i]);
-		}
+		this._entityArea.replaceCards(scene.entityCards);
 	},
 
 	clearPlayerHand : function()
@@ -113,23 +73,20 @@ var Table = Class(
 				evt.data.option.respond(evt.data.game);
 			});
 		}
-	},
-
-	_makeCard : function(info, slot)
-	{
-		return new Card(this._game, info, this._nextCardId++, slot);
 	}
 });
 
 var PlayArea = Class(
 {
-	constructor : function(x, y, w, h)
+	constructor : function(table, x, y, w, h)
 	{
+		this._table = table;
 		this.x = x;
 		this.y = y;
 		this.w = w;
 		this.h = h;
-		this.cards = [];
+		this.cardForms = [];
+		this.numSlots = 0;
 	},
 
 	placeCard : function(card, slot)
@@ -137,8 +94,144 @@ var PlayArea = Class(
 		var i = (arguments.length >= 2 && slot >= 0) ? slot : this.cards.length;
 		var x = this.x + i * (CARD_WIDTH + 10);
 		var y = this.y;
-		card.show(x, y);
-		this.cards[i] = card;
+
+		if (this.cardForms[i] === null || this.cardForms[i] === undefined)
+			this.cardForms[i] = new CardForm(this._table, card);
+		else
+			this.cardForms[i].changeCard(card);
+
+		this.cardForms[i].show(x, y);
+		this.numSlots = Math.max(this.numSlots, i + 1);
+	},
+
+	replaceCards : function(cards)
+	{
+		for (var i = 0; i < cards.length; i++)
+		{
+			this.placeCard(cards[i], i);
+		}
+
+		for (var i = cards.length; i < this.numSlots; i++)
+		{
+			if (this.cardForms[i])
+				this.cardForms[i].hide();
+		}
+
+		this.numSlots = cards.length;
+	}
+});
+
+var CardForm = Class(
+{
+	$statics:
+	{
+		nextId : 0
+	},
+
+	constructor : function(table, card)
+	{
+		this._table = table;
+		this._id = CardForm.nextId++;
+		this.width = CARD_WIDTH;
+		this.height = CARD_HEIGHT;
+		this.visible = false;
+		this.node = null;
+		this._card = null;
+		this._def = null;
+
+		if (card)
+			this.changeCard(card);
+	},
+
+	changeCard : function(card)
+	{
+		if (this._card !== card)
+		{
+			this._card = card;
+			this._def = card.definition;
+
+			if (this.node !== null)
+			{
+				$("#"+ "cardImage_" + this._id).css("background-image", "url("+Sprites[this._def.image].imageURL+")");
+				$("#"+ "cardLabel_" + this._id).html(this._def.title);
+				$("#"+ "cardDesc_" + this._id).html(this._def.desc);
+			}
+		}
+	},
+
+	show : function(x, y)
+	{
+		if (!this.visible)
+		{
+			if (this.node == null)
+				this._initNode();
+			else
+				this.node.appendTo(this._table.node);
+
+			this.visible = true;
+		}
+
+		if (arguments.length >= 2)
+			this.moveTo(x, y);
+	},
+
+	hide : function()
+	{
+		if (this.visible)
+		{
+			if (this.node != null)
+				this.node.remove();
+
+			this.visible = false;
+		}
+	},
+
+	move : function(x, y)
+	{
+		this.node.xy(x, y, true);
+	},
+
+	moveTo : function(x, y)
+	{
+		this.node.xy(x, y, false);
+	},
+
+	destroy : function()
+	{
+		if (this.node != null)
+		{
+			this.node.remove();
+			this.node = null;
+		}
+	},
+
+	_initNode : function()
+	{
+		this.node = this._table.node.addGroup("card_"+this._id, {width : this.width, height : this.height});
+		var back = $("<div class='cardBack'></div>").appendTo(this.node);
+		var sprite = Sprites[this._def.image];
+		var spriteId = "cardImage_" + this._id;
+		back.addSprite(spriteId, {animation: sprite, width: CARD_IMG_WIDTH, height: CARD_IMG_HEIGHT, posx:6, posy: 6 });
+
+		var backSize = Math.round(sprite.domO.naturalWidth / sprite.delta) * CARD_IMG_WIDTH;
+		var offsetX = -Math.round(sprite.offsetx / sprite.delta) * CARD_IMG_WIDTH;
+		var offsetY = -Math.round(sprite.offsety / sprite.distance) * CARD_IMG_HEIGHT;
+
+		$("#"+spriteId).css(
+			{
+				"background-size" : backSize + "px",
+				"background-position" : offsetX + "px " + offsetY + "px",
+				"border-radius" : "5px"
+			});
+
+		var label = $("<div class='cardTitle'></div>").attr("id","cardLabel_" + this._id).html(this._def.title).appendTo(back);
+		var desc = $("<div class='cardDesc'></div>").attr("id","cardDesc_" + this._id).html(this._def.desc).appendTo(back);
+
+		this.node.click( { card : this }, function(evt){ evt.data.card._clicked(); });
+	},
+
+	_clicked : function()
+	{
 	}
 });
 
