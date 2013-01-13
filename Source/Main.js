@@ -28,25 +28,38 @@ $(function()
 
 	var scripts =
 	[
-		"Components/Types",
-		"Definitions/Cards",
-		"Definitions/Encounters",
-		"Definitions/Sprites",
+		"Components/CardComponent",
 		"Entities/Table",
 		"Entities/Message",
 		"Entities/Card",
 		"Entities/Deck",
 		"Entities/Player",
 		"Entities/Party",
+		"Entities/Stage",
+		"Entities/Story",
 		"Entities/Activity",
+		"Core",
 		"Game"
+	];
+
+	var definitions =
+	[
+		"Components/Types",
+		"Definitions/Activities",
+		"Definitions/Cards",
+		"Definitions/Companies",
+		"Definitions/Encounters",
+		"Definitions/Sprites",
+		"Definitions/Stages",
+		"Definitions/Stories"
+
 	];
 
 	require(libs, function()
 	{
-		require(["Core"], function()
+		require(scripts, function()
 		{
-			require(scripts, function()
+			require(definitions, function()
 			{
 				// Animations declaration:
 				Sprites.init();

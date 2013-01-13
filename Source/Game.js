@@ -24,7 +24,8 @@ var Game = Class(
 	initDecks : function()
 	{
 		var cards = Core.getCards();
-		this.locationDeck = new LocationDeck(this, cards);
+		this.siteDeck = new SiteDeck(this, cards);
+		this.companyDeck = new CompanyDeck(this, cards);
 	},
 
 	nextTurn : function()
@@ -52,18 +53,27 @@ var Game = Class(
 		this.table.clearPlayerHand();
 	},
 
+	getContext : function()
+	{
+		return this.currentParty.story.context;
+	},
+
 	changeParty : function(party)
 	{
 		this.currentParty = party;
-		this.updateScene();
-		Events.delegate(this.currentParty, "ActivityChanged", this.updateScene, this);
+		this._updateStory();
+		Events.delegate(this.currentParty, "StoryChanged", this._updateStory, this);
 	},
 
-	updateScene : function()
+	_updateStory : function()
 	{
-		this.table.placeScene(this.currentParty.currentActivity.scene);
-		Events.delegate(this.currentParty.currentActivity, "SceneChanged", this.updateScene, this);
-		Events.delegate(this.currentParty.currentActivity.scene, "SceneUpdated", this.updateScene, this);
+		this._updateScene();
+		Events.delegate(this.currentParty.story.scene, "SceneUpdated", this._updateStory, this);
+	},
+
+	_updateScene : function()
+	{
+		this.table.placeScene(this.currentParty.story.scene);
 	},
 
 	setActiveCard : function(card)

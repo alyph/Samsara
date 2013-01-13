@@ -60,14 +60,39 @@ Core.Component("Monster",
 	}
 });
 
+Core.Component("Company",
+{
+});
+
 Core.Component("Story",
 {
+});
+
+Core.Component("Site",
+{
+	postLoad : function(def)
+	{
+		if (def.location === undefined)
+			return;
+
+		if ((typeof def.location === 'string') && Core.hasCard(def.location))
+			return;
+
+		var locDef = $.extend({}, def, def.location);
+		var name = "LocationOf" + this.name;
+		this.location = name;
+		Core.addCard(name, locDef);
+	},
+
+	addActivity : function(game, card, activites)
+	{
+		activites.push(card.definition.visiting);
+	}
 });
 
 Core.Component("Location",
 {
 });
-
 
 Core.Component("Quest",
 {

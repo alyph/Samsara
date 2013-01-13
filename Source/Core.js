@@ -7,10 +7,13 @@ var Core =
 	_cardSets : [],
 	_cards : {},
 
+	_definitions : {},
+
 	init : function()
 	{
 		this._hasInit = true;
 		this._loadCardSets();
+		this._initDefinitions();
 	},
 
 	Component : function(name, base, cls)
@@ -61,6 +64,19 @@ var Core =
 		return this._cards[name];
 	},
 
+	findCard : function(name)
+	{
+		if (!this._cards.hasOwnProperty(name))
+			return null;
+
+		return this._cards[name];
+	},
+
+	hasCard : function(name)
+	{
+		return this._cards.hasOwnProperty(name);
+	},
+
 	getCards : function(comp)
 	{
 		if (arguments.length <= 0)
@@ -82,10 +98,25 @@ var Core =
 		return cards;
 	},
 
+	addCard : function(name, def)
+	{
+		if (this._cards.hasOwnProperty(name))
+			throw ("trying to add card with duplicated name "+name);
+
+		var card =  new CardDefinition(def);
+		card.name = name;
+		this._cards[name] = card;
+		card.postLoad();
+	},
+
 	_loadCardSets : function()
 	{
 		for (var i = 0; i < this._cardSets.length; i++)
 			this._loadCardSet(this._cardSets[i]);
+
+		var cards = this.getCards();
+		for (i = 0; i < cards.length; i++)
+			cards[i].postLoad();
 	},
 
 	_loadCardSet : function(set)
@@ -121,19 +152,87 @@ var Core =
 			def.comps = base.comps + " " + child.comps;
 
 		return def;
-	}
-};
-
-var CardComponent = Class(
-{
-	constructor : function()
-	{
-		this.name = "NoName";
-		this.superComponent = null;
 	},
 
-	addAction : function(game, card, actions) { }
-});
+
+	Definitions : function(base, defs)
+	{
+		for (var name in defs)
+		{
+			var def = defs[name];
+			if (!def.hasOwnProperty("_base"))
+				def._base = base;
+			if (this._definitions.hasOwnProperty(name))
+				throw ("duplicated definition name: " + name);
+			this._definitions[name] = def;
+		}
+	},
+
+	getDef : function(name)
+	{
+		if (!this._definitions.hasOwnProperty(name))
+			throw ("cannot find definition: " + name);
+
+		return this._definitions[name];
+	},
+
+	findDef : function(name)
+	{
+		if (!this._definitions.hasOwnProperty(name))
+			return null;
+
+		return this._definitions[name];
+	},
+
+	_initDefinitions : function()
+	{
+		var defs = {};
+		for (name in this._definitions)
+		{
+			var def = this._extendDefinition(name);
+			var defObj = new def._base();
+			$.extend(defObj, def);
+			defObj.name = name;
+			delete defObj._base;
+			delete defObj._extended;
+			defs[name] = defObj;
+		}
+
+		this._definitions = defs;
+	},
+
+	_extendDefinition : function(name, children)
+	{
+		var def = this._definitions[name];
+		if (def === undefined)
+			throw ("cannot find definition: " + name);
+
+		if (def._extended)
+			return def;
+
+		if (typeof def._base == 'string')
+		{
+			children = children || {};
+			if (children[name])
+				throw ("circular definition hierarchy: " + name);
+			children[name] = true;
+			var base = this._extendDefinition(def._base, children);
+			def = $.extend({}, base, def);
+			def._base = base._base;
+			def._extended = true;
+			this._definitions[name] = def;
+			return def;
+		}
+		else
+		{
+			if (typeof def._base != 'function')
+				throw ("definition must have constructor or another definition as base, given:" + this._base);
+
+			def._extended = true;
+			return def;
+		}
+	}
+};
 
 var Events =
 {
@@ -156,7 +255,7 @@ var Events =
 		if (source.__eventHub.triggering > 0)
 			source.__eventHub.pendings.push([false, name, target]);
 		else
-			this.doUnbind(source, name, target);
+			this._doUnbind(source, name, target);
 	},
 
 	delegate : function(source, name, handler, target)

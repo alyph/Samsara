@@ -121,7 +121,7 @@ Core.CardSet(
 
 	Scouting:
 	{
-		title : "Scouting",
+		title : "",
 		image : "Scouting"
 	}
 });
@@ -131,9 +131,17 @@ var BaseLocationCard =
 	comps : "Location"
 };
 
+var BaseSiteCard =
+{
+	comps : "Site",
+	visiting : "Activity_VisitSite",
+	stage : "Stage_Base",
+	location : BaseLocationCard
+};
+
 Core.CardSet(
 {
-	Base : BaseLocationCard,
+	Base : BaseSiteCard,
 
 	Outpost:
 	{
@@ -150,7 +158,8 @@ Core.CardSet(
 	AbandonedFactory:
 	{
 		title : "Abandoned Factory",
-		image : "AbandonedFactory"
+		image : "AbandonedFactory",
+		stage : "Stage_AbandonedFactory"
 	},
 
 	TempleRuin:

@@ -157,6 +157,16 @@ var SpriteDefinitions =
 	},
 
 	{
+		image : "Content/Images/CharacterCardsWW.png",
+		w : 192,
+		h : 256,
+		Wehrmacht : [ 0, 0 ],
+		SovietTrooper : [ 1, 0 ],
+		SovietForager : [ 2, 0 ],
+		Viking : [ 3, 0 ]
+	},
+
+	{
 		image : "Content/Images/AbilityCards.png",
 		w : 192,
 		h : 256,

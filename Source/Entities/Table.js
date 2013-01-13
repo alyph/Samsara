@@ -16,10 +16,13 @@ var Table = Class(
 {
 	constructor: function(game)
 	{
-		this._game = game;
+		this.game = game;
 		this.node = $.playground().addGroup("table", {width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT});
 		this._nextCardId = 0;
 		this._playerHand = [];
+
+		this._scene = null;
+		this._entity = null;
 
 		this.center = this.node.addGroup("center", {posx : CENTER_X, posy : CENTER_Y, width : PLAYGROUND_WIDTH, height : CENTER_HEIGHT});
 		this.message = $("<div id='message'></div>").appendTo(this.center);
@@ -28,7 +31,9 @@ var Table = Class(
 		this._partyArea = new PlayArea(TABLE_X, PARTY_AREA_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
 
 		this._sceneCardForm = new CardForm(this, null);
-		this._entityArea = new PlayArea(this, TABLE_X, ENTITY_AREA_Y, PLAYGROUND_WIDTH, CARD_HEIGHT);
+		this._entityArea = new PlayArea(this, TABLE_X, ENTITY_AREA_Y, PLAYGROUND_WIDTH, CARD_HEIGHT, EntityCardForm);
+
+		this.node.click(this._clicked.bind(this));
 	},
 
 	placeInHand : function(card, slot)
@@ -38,11 +43,71 @@ var Table = Class(
 
 	placeScene : function(scene)
 	{
-		this._sceneCardForm.changeCard(scene.sceneCard);
-		if (!this._sceneCardForm.visible)
-			this._sceneCardForm.show(SCENE_X, SCENE_Y)
+		this._scene = scene;
+		if (this._entity === null)
+			this.setScene(scene, true);
+	},
 
-		this._entityArea.replaceCards(scene.entityCards);
+	placeEntity : function(entity)
+	{
+		if (this._entity !== null)
+			this._entity.unselected();
+
+		this._entity = entity;
+		this.setScene(entity.scene, false);
+	},
+
+	removeEntity : function(entity)
+	{
+		this._entity = null;
+		if (this._scene !== null)
+			this.setScene(this._scene, true);
+	},
+
+	setScene : function(scene, replaceEntities)
+	{
+		if (scene.portrait === null)
+		{
+			this._sceneCardForm.hide();
+		}
+		else
+		{
+			this._sceneCardForm.changeCard(scene.portrait);
+			if (!this._sceneCardForm.visible)
+				this._sceneCardForm.show(SCENE_X, SCENE_Y)
+		}
+
+		if (replaceEntities)
+			this._entityArea.replaceCards(scene.entities);
+
+		this.message.empty();
+		for (var i = 0; i < scene.paragraphs.length; i++)
+			this.message.append("<p>" + scene.paragraphs[i] + "</p>");
+
+		if (scene.choices.length > 0)
+		{
+			var choices = $("<ul></ul>").appendTo(this.message);
+
+			for (i = 0; i < scene.choices.length; i++)
+			{
+				var choice = scene.choices[i];
+				var choiceNode = $("<li class='option'>" + choice.text + "</li>").appendTo(choices);
+				choiceNode.click({ choice : choice }, this._choiceClicked);
+			}
+		}
+	},
+
+	_choiceClicked : function(e)
+	{
+		e.stopPropagation();
+		var choice = e.data.choice;
+		choice.handler(choice.data);
+	},
+
+	_clicked : function(e)
+	{
+		if (this._scene.isPaused())
+			this._scene.resume();
 	},
 
 	clearPlayerHand : function()
@@ -68,7 +133,7 @@ var Table = Class(
 		{
 			var option = message.options[i];
 			var optNode = $("<li class='option'>" + option.text + "</li>").appendTo(options);
-			optNode.click({ option : option, game : this._game }, function(evt)
+			optNode.click({ option : option, game : this.game }, function(evt)
 			{
 				evt.data.option.respond(evt.data.game);
 			});
@@ -78,13 +143,14 @@ var Table = Class(
 
 var PlayArea = Class(
 {
-	constructor : function(table, x, y, w, h)
+	constructor : function(table, x, y, w, h, cardFormClass)
 	{
 		this._table = table;
 		this.x = x;
 		this.y = y;
 		this.w = w;
 		this.h = h;
+		this._cardFormClass = cardFormClass || CardForm;
 		this.cardForms = [];
 		this.numSlots = 0;
 	},
@@ -96,7 +162,7 @@ var PlayArea = Class(
 		var y = this.y;
 
 		if (this.cardForms[i] === null || this.cardForms[i] === undefined)
-			this.cardForms[i] = new CardForm(this._table, card);
+			this.cardForms[i] = new this._cardFormClass(this._table, card);
 		else
 			this.cardForms[i].changeCard(card);
 
@@ -150,12 +216,10 @@ var CardForm = Class(
 			this._card = card;
 			this._def = card.definition;
 
-			if (this.node !== null)
-			{
-				$("#"+ "cardImage_" + this._id).css("background-image", "url("+Sprites[this._def.image].imageURL+")");
-				$("#"+ "cardLabel_" + this._id).html(this._def.title);
-				$("#"+ "cardDesc_" + this._id).html(this._def.desc);
-			}
+			if (this.visible)
+				this._refreshContent();
+
+			this._onCardChanged();
 		}
 	},
 
@@ -164,9 +228,15 @@ var CardForm = Class(
 		if (!this.visible)
 		{
 			if (this.node == null)
+			{
 				this._initNode();
+			}
 			else
+			{
 				this.node.appendTo(this._table.node);
+				this._refreshContent();
+				this._setupEvents();
+			}
 
 			this.visible = true;
 		}
@@ -205,6 +275,11 @@ var CardForm = Class(
 		}
 	},
 
+	_onCardChanged : function()
+	{
+
+	},
+
 	_initNode : function()
 	{
 		this.node = this._table.node.addGroup("card_"+this._id, {width : this.width, height : this.height});
@@ -213,6 +288,32 @@ var CardForm = Class(
 		var spriteId = "cardImage_" + this._id;
 		back.addSprite(spriteId, {animation: sprite, width: CARD_IMG_WIDTH, height: CARD_IMG_HEIGHT, posx:6, posy: 6 });
 
+		this._setupImage();
+
+		$("#"+spriteId).css(
+			{
+				"border-radius" : "5px"
+			});
+
+
+		var label = $("<div class='cardTitle'></div>").attr("id","cardLabel_" + this._id).html(this._def.title).appendTo(back);
+		var desc = $("<div class='cardDesc'></div>").attr("id","cardDesc_" + this._id).html(this._def.desc).appendTo(back);
+
+		this._setupEvents();
+	},
+
+	_refreshContent : function()
+	{
+		$("#"+ "cardImage_" + this._id).css("background-image", "url("+Sprites[this._def.image].imageURL+")");
+		$("#"+ "cardLabel_" + this._id).html(this._def.title);
+		$("#"+ "cardDesc_" + this._id).html(this._def.desc);
+		this._setupImage();
+	},
+
+	_setupImage : function()
+	{
+		var sprite = Sprites[this._def.image];
+		var spriteId = "cardImage_" + this._id;
 		var backSize = Math.round(sprite.domO.naturalWidth / sprite.delta) * CARD_IMG_WIDTH;
 		var offsetX = -Math.round(sprite.offsetx / sprite.delta) * CARD_IMG_WIDTH;
 		var offsetY = -Math.round(sprite.offsety / sprite.distance) * CARD_IMG_HEIGHT;
@@ -220,18 +321,84 @@ var CardForm = Class(
 		$("#"+spriteId).css(
 			{
 				"background-size" : backSize + "px",
-				"background-position" : offsetX + "px " + offsetY + "px",
-				"border-radius" : "5px"
+				"background-position" : offsetX + "px " + offsetY + "px"
 			});
+	},
 
-		var label = $("<div class='cardTitle'></div>").attr("id","cardLabel_" + this._id).html(this._def.title).appendTo(back);
-		var desc = $("<div class='cardDesc'></div>").attr("id","cardDesc_" + this._id).html(this._def.desc).appendTo(back);
-
-		this.node.click( { card : this }, function(evt){ evt.data.card._clicked(); });
+	_setupEvents : function()
+	{
+		this.node.click(this._clicked.bind(this));
 	},
 
 	_clicked : function()
 	{
+	}
+});
+
+var EntityCardForm = Class(CardForm,
+{
+	constructor : function(table, card)
+	{
+		this._selected = false;
+		this.scene = null;
+		EntityCardForm.$super.call(this, table, card);
+	},
+
+	selected : function()
+	{
+		this._selected = true;
+	},
+
+	unselected : function()
+	{
+		this._selected = false;
+	},
+
+	_clicked : function()
+	{
+		if (this._selected)
+		{
+			this.unselected();
+			this._table.removeEntity(this);
+		}
+		else
+		{
+			this.scene.refresh();
+			this.selected();
+			this._table.placeEntity(this);
+		}
+	},
+
+	_onCardChanged : function()
+	{
+		EntityCardForm.$superp._onCardChanged.call(this);
+		this.scene = this._generateScene();
+	},
+
+	_generateScene : function()
+	{
+		var context = {};
+		var scene = new Scene(context);
+		scene.portrait = this._card;
+		scene.setPortrait(this._card.definition.name)
+		scene.addText(this._card.definition.detailed);
+
+		var activities = this._card.activities;
+		var activityClicked = this._activityClicked.bind(this);
+
+		for (var i = 0; i < activities.length; i++)
+		{
+			var activity = activities[i];
+			scene.addChoice(activity.displayName, activityClicked, { activity : activity });
+		}
+
+		return scene;
+	},
+
+	_activityClicked : function(data)
+	{
+		this._table.removeEntity(this);
+		this._table.game.currentParty.startActivity(data.activity, this._card);
 	}
 });
 

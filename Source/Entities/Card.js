@@ -4,15 +4,17 @@ var Card = Class(
 	{
 		this._game = game;
 		this._table = game.table;
-        this.instance = info;
+		this.instance = info;
 		this.definition = info.definition;
-        this._id = id;
-        this.slot = slot;
+		this._id = id;
+		this.slot = slot;
 		this.width = CARD_WIDTH;
 		this.height = CARD_HEIGHT;
-        this.visible = false;
-        this.node = null;
-        this._populateMessage();
+		this.visible = false;
+		this.node = null;
+		this.activities = [];
+		this._populateMessage();
+		this._populateActivities();
     },
 
     show : function(x, y)
@@ -94,6 +96,23 @@ var Card = Class(
 		}
 	},
 
+	_populateActivities : function()
+	{
+		var activities = [];
+		var comps = this.definition.getComponents();
+		for (var i = 0; i < comps.length; i++)
+		{
+			var comp = comps[i];
+			comp.addActivity(this._game, this, activities);
+		}
+
+		this.activities = [];
+		for (var i = 0; i < activities.length; i++)
+		{
+			this.activities.push(Core.getDef(activities[i]));
+		}
+	},
+
 	_clicked : function()
 	{
 		this._game.setActiveCard(this);
@@ -107,6 +126,7 @@ var Card = Class(
 
 var CardDefinition = Class(
 {
+	// TODO: should probably use the base card system now, move these into the ultimate base card
 	comps : "",
 	title : "[NO TITLE]",
 	image : 'cardShortSword',
@@ -117,6 +137,7 @@ var CardDefinition = Class(
 	{
 		$.extend(this, def);
 
+		this._raw = def;
 		var components = this.comps.split(' ');
 		this._components = [];
 		for (var i = 0; i < components.length; i++)
@@ -128,6 +149,10 @@ var CardDefinition = Class(
 			var comp = Core.getComponent(name);
 			var superComp = comp.superComponent;
 
+			// TODO: this is wrong, shouldn't add superComp to comps
+			// otherwise some function will be called multiple times
+			// should probably have another variable just to flag whether
+			// a component exists in this card, maybe just use a dictionary
 			while (superComp != null)
 			{
 				this._addComponent(superComp);
@@ -135,6 +160,21 @@ var CardDefinition = Class(
 			}
 
 			this._addComponent(comp);
+		}
+	},
+
+	postLoad : function()
+	{
+		this.eachComp("postLoad", this._raw);
+		delete this._raw;
+	},
+
+	eachComp : function(func)
+	{
+		var comps = this._components;
+		for (var i = 0; i < comps.length; i++)
+		{
+			comps[i][func].apply(this, Array.prototype.slice.call(arguments, 1));
 		}
 	},
 

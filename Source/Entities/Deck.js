@@ -101,12 +101,21 @@ var MapDeck = Class(Deck,
 	}
 });
 
-var LocationDeck = Class(Deck,
+var SiteDeck = Class(Deck,
 {
 	constructor :function(game, cards)
 	{
-		LocationDeck.$super.call(this, game);
-		this._loadCardsWithComp(cards, 'Location');
+		SiteDeck.$super.call(this, game);
+		this._loadCardsWithComp(cards, 'Site');
+	}
+});
+
+var CompanyDeck = Class(Deck,
+{
+	constructor :function(game, cards)
+	{
+		CompanyDeck.$super.call(this, game);
+		this._loadCardsWithComp(cards, 'Company');
 	}
 });
 
