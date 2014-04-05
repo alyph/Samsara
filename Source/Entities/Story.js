@@ -3,6 +3,7 @@ var StoryDefinition = Class(
 	script : ["INSERT STORY HERE"],
 	focus : [],
 	portrait : "No Portrait",
+	background : "No Background",
 
 	constructor : function() {}
 
@@ -47,6 +48,7 @@ var Story = Class(
 		var scene = new Scene(context);
 		scene.focus = def.focus;
 		scene.setPortrait(this.def.portrait);
+		scene.setBackground(this.def.background);
 		this.scene = scene;
 
 		this._line = -1;
@@ -92,6 +94,7 @@ var Story = Class(
 		}
 		else if (token === '?')
 		{
+			this.write(line.substr(1));
 			this.awaitForActions();
 			return false;
 		}
@@ -141,6 +144,12 @@ var Story = Class(
 		return true;
 	},
 
+	battle : function(target)
+	{
+		target = this.context.eval(target);
+		this._game.startBattle(this._party, target);
+	},
+
 	newStory : function(line, sub)
 	{
 		var name = line;
@@ -188,184 +197,3 @@ var Story = Class(
 	}
 });
 
-
-var Scene = Class(
-{
-	constructor : function(context)
-	{
-		this._context = context;
-		this.focus = [];
-		this.portrait = null;
-		this._portraitName = "";
-		this.entities = [];
-		this._text = "";
-		this.paragraphs = [];
-		this.choices = [];
-		this.pausedHandler = null;
-	},
-
-	refresh : function()
-	{
-		this._setupPortrait();
-		this._populateParagraphs();
-		this._populateEntities();
-		Events.trigger(this, "SceneUpdated");
-	},
-
-	setPortrait : function(name)
-	{
-		this._portraitName = name;
-	},
-
-	addText : function(text)
-	{
-		if (this._text.length > 0 && this._text.charAt(this._text.length - 1) !== '\n')
-			this._text += ' ';
-
-		this._text += text;
-	},
-
-	addChoice : function(text, handler, data)
-	{
-		this.choices.push({
-			text : text,
-			handler : handler,
-			data : data
-		});
-	},
-
-	isPaused : function()
-	{
-		return this.pausedHandler !== null;
-	},
-
-	pause : function(handler)
-	{
-		this.pausedHandler = handler;
-		this.refresh();
-	},
-
-	resume : function()
-	{
-		var handler = this.pausedHandler;
-		this.pausedHandler = null;
-		handler();
-	},
-
-	_setupPortrait : function()
-	{
-		if (this._portraitName === "")
-		{
-			this.portrait = null;
-			return;
-		}
-
-		if (this.portrait !== null && this.portrait.definition.name === this._portraitName)
-			return;
-
-		var game = this._context.game;
-		var def = Core.findCard(this._portraitName);
-		if (def !== null)
-		{
-			this.portrait = game.makeCard(new CardInstance(def));
-		}
-		else
-		{
-			var portrait = this._context.eval(this._portraitName);
-			if (typeof portrait === 'string')
-				this.portrait = game.makeCard(new CardInstance(Core.getCard(portrait)));
-			else if (portrait.constructor === Card)
-				this.portrait = portrait;
-			else
-				throw ("Cannot setup portrait with name: " + this._portraitName + ", evaluated to " + portrait);
-		}
-	},
-
-	_populateParagraphs : function()
-	{
-		var tokens = [];
-		var index = 0;
-		var prev = 0;
-		var text = this._text;
-		var l = text.length;
-		while (index < l)
-		{
-			var c = text.charAt(index);
-			if (c == '%')
-			{
-				if (text.charAt(index+1) == '%')
-				{
-					tokens.push('s' + text.substr(prev, index - prev + 1));
-					prev = index += 2;
-				}
-				else
-				{
-					if (index > prev)
-						tokens.push('s' + text.substr(prev, index - prev));
-					prev = index + 1;
-					index += 2;
-					while (index < l)
-					{
-						if (text.charAt(index) == '%')
-						{
-							tokens.push('p' + text.substr(prev, index - prev));
-							prev = ++index;
-							break;
-						}
-						index++;
-					}
-				}
-			}
-			else if (c == '\n')
-			{
-				if (index > prev)
-					tokens.push('s' + text.substr(prev, index - prev));
-				tokens.push('b');
-				prev = ++index;
-			}
-			else
-			{
-				index++;
-			}
-		}
-
-		if (prev < text.length && index >= prev)
-			tokens.push('s' + text.substr(prev, index - prev + 1));
-
-		this.paragraphs.length = 0;
-		var paragraph = "";
-		var ctx = this._context;
-		l = tokens.length;
-		for (var i = 0; i < l; i++)
-		{
-			var token = tokens[i];
-			var tag = token.charAt(0);
-			var line = token.substr(1);
-			if (tag == 's')
-			{
-				paragraph += line;
-			}
-			else if (tag == 'p')
-			{
-				paragraph += ctx.eval(line);
-			}
-			else if (tag == 'b')
-			{
-				this.paragraphs.push(paragraph);
-				paragraph = "";
-			}
-		}
-
-		if (paragraph.length > 0)
-			this.paragraphs.push(paragraph);
-	},
-
-	_populateEntities : function()
-	{
-		this.entities.length = 0;
-		for (var i = 0; i < this.focus.length; i++)
-		{
-			this.entities = this.entities.concat(this._context.eval(this.focus[i]));
-		}
-	}
-});

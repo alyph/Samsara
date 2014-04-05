@@ -1,0 +1,166 @@
+
+
+TODO:
+	✔	create all locals @done (14-04-01 22:54)
+	✔	activities @done (14-04-01 22:54)
+	✔	states @done (14-04-01 22:54)
+	✔	quests @done (14-04-01 22:54)
+	✔	fix quest.goal parsing code @done (14-04-01 23:15)
+	✔	update definition code @done (14-04-01 22:54)
+
+	✔	make $p more friendly just put function in param list and make it $ref @done (14-04-01 22:54)
+	✔	hasExplored func (can just return false for now) @done (14-04-02 20:47)
+	✔	getPotentialTravelOrigins @done (14-04-02 21:39)
+	✔	Player.beginPlanPhase, UI, interaction @done (14-04-05 00:14)
+
+	✔	activity merge @done (14-04-05 00:14)
+	☐	add sprites ref func $img()
+	☐	replace isatlocal with partylocal : local, since it s exclusive, or make isatlocal exclusive
+
+Future:
+	☐	better expression($e) imp
+	☐	hasExplored real imp
+
+
+
+
+
+
+
+
+
+
+
+
+Other Nodes:
+ 
+Rosvel March:
+{
+	Local:
+	{
+		Desc: "Wild of Rosvel"
+	},
+
+	Region:
+	{
+
+	}
+
+}
+
+
+exploration:
+{
+	params:
+	[
+		region : region
+	]
+
+	goals:
+	[
+		"explored region.areas"
+	]
+}
+
+explored
+{
+	params:
+	[
+		area : area
+	]
+}
+
+
+explore:
+{
+	params:
+	{
+		area : area
+	}
+
+	effects:
+	[
+		"explored"
+		area : "area"
+	]
+
+	preconditions
+	[
+		"at local"
+	]
+}
+
+visit:
+{
+	params:
+	{
+		person : person
+	}
+
+	preconditions:
+	[
+		"at person.area"
+	]
+}
+
+travel:
+{
+	params:
+	{
+		from : local
+		to : local
+	}
+
+	satisfies:
+	{
+		precondition: "at",
+		from : "local.adjacents"
+		to : "local"
+		cost : travelcost
+	}
+
+	effects
+	[
+		at(to) : true | from : local.adjacents, to : local
+	]
+
+	restrictions
+	{
+		from : to.adjacents
+	}
+	
+	preconditions:
+	[
+		at(from) : true
+	]
+}
+
+Plan(goal, actions, context)
+{
+	goal --> states ? statements?
+	open.push(goal)
+	visited.push(goal) 
+
+	while (open not empty)
+	{
+		states = open.pop()
+		states.eval(context) returns true --> finish
+
+		foreach state in states  find actions that satisfies the state (effects -> state) actions.findActions(state, context) --> potential actions that can solve the problem
+			accept action whose effects making at least one of the state true --> such states will be removed from the set
+			reject action if effects affects but does not satisfy one of the state
+				or preconditions contradict one of the state, related preconditions must be merged
+
+			* effect.satisfies(state) ->> state is necessary condition for effect,  effect is sufficient condition for state
+			** precondition.contradicts(state) -> reject
+			*** ?? what if state has conjuction --> merge? => no precondition will be merged with existing condition as long as not completely contradictory
+
+		new node excludes states achieved by the action 
+			contains states unchanged, 
+			and action's preconditions
+			record action and its cost
+
+		find new node in visited,
+			if found, compare cost, pop and re-push if cost is lower with action and previous node updated
+	}
+}

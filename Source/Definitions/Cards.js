@@ -1,4 +1,5 @@
 // Map Cars
+/*
 Core.CardSet(
 {
 	Zion:
@@ -61,7 +62,6 @@ Core.CardSet(
 		title : "Sunstone Ridges"
 	}
 
-/*
 	City:
 	{
 		comps : "Map City",
@@ -85,8 +85,10 @@ Core.CardSet(
 		title : "Battlefield",
 		explorations : [ 'Trench' ],
 		inhabitants : [ 'Berserk' ]
-	}*/
+	}
 });
+
+
 
 // Heroes
 Core.CardSet(
@@ -627,7 +629,13 @@ Core.CardSet(
 	{
 		title : "Rain of Arrows",
 		image : 'RainOfArrows'
-	}
+	},
+
+	SchrodingerSequence:
+	{
+		title : "Schrödinger Sequence",
+		image : 'MechanicalEye'
+	}	
 });
 
 // Others
@@ -669,4 +677,4 @@ Core.CardSet(
 		image : 'cardStreets',
 		detailed : "Terrain is completely devastated, leaving trenches like withered vines stretching miles and miles long."
 	}
-});
+});*/

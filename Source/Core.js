@@ -1,8 +1,8 @@
 var Core =
 {
 	_hasInit : false,
-	_components : {},
-	_componentClasses : {},
+	//_components : {},
+	//_componentClasses : {},
 
 	_cardSets : [],
 	_cards : {},
@@ -11,10 +11,12 @@ var Core =
 
 	init : function()
 	{
-		this._hasInit = true;
 		this._loadCardSets();
 		this._initDefinitions();
+		this._hasInit = true;
 	},
+
+	/*
 
 	Component : function(name, base, cls)
 	{
@@ -50,7 +52,7 @@ var Core =
 
 		return this._components[name];
 	},
-
+*/
 	CardSet : function(set)
 	{
 		this._cardSets.push(set);
@@ -151,6 +153,12 @@ var Core =
 		if (base.comps && child.comps)
 			def.comps = base.comps + " " + child.comps;
 
+		if (base.tags && child.tags)
+			def.tags = base.tags + ", " + child.tags;
+
+		// TODO: need real card extension handling that can trace base of the base
+		def._base = base;
+
 		return def;
 	},
 
@@ -184,10 +192,21 @@ var Core =
 		return this._definitions[name];
 	},
 
+	addDef : function(name, def)
+	{
+		if (this._hasInit)
+			throw ("add definition after initialized is not supported yet!");
+
+		if (this._definitions.hasOwnProperty(name))
+			throw ("duplicated definition name: " + name);
+
+		this._definitions[name] = def;
+	},
+
 	_initDefinitions : function()
 	{
 		var defs = {};
-		for (name in this._definitions)
+		for (var name in this._definitions)
 		{
 			var def = this._extendDefinition(name);
 			var defObj = new def._base();
@@ -199,6 +218,11 @@ var Core =
 		}
 
 		this._definitions = defs;
+
+		for (var i = defs.length - 1; i >= 0; i--) 
+		{
+			defs[i].init();
+		};
 	},
 
 	_extendDefinition : function(name, children)
@@ -285,8 +309,16 @@ var Events =
 
 		source.__eventHub.triggering++;
 
+		var args = arguments.length > 3 ? 
+			Array.prototype.slice.call(arguments, 2) :
+			(arguments.length === 3 ? [data] : []);
+
+		args.push(source);
+
 		for (var i = 0; i < binding.length; i++)
-			binding[i][0].call(binding[i][1], data, source);
+		{
+			binding[i][0].apply(binding[i][1], args);
+		}
 
 		source.__eventHub.triggering--;
 

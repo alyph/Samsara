@@ -5,18 +5,23 @@ var StageDefinition = Class(
 
 var Stage = Class(
 {
-	constructor : function(game, party, def, site)
+	constructor : function(game, def)
 	{
 		this._game = game;
-		this._party = party;
-		this._site = site || null;
+		//this._party = party;
+		//this._site = site || null;
 		this.def = def;
 		this.entities = [];
 	},
 
 	populate : function()
 	{
-		this.entities.push(this._game.companyDeck.draw());
+		//this.entities.push(this._game.companyDeck.draw());
+	},
+
+	addEntity : function(entity)
+	{
+		this.entities.push(entity);
 	},
 
 	scouting : function()

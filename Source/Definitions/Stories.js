@@ -1,3 +1,5 @@
+
+/*
 Core.Definitions(StoryDefinition,
 {
 	Story_Base:
@@ -16,6 +18,16 @@ Core.Definitions("Story_Base",
 			"You approached the %_site.definition.title%\n^",
 			"$enter _site",
 			"=>stage.def.story"
+		]
+	},
+
+	Story_AttackEnemy:
+	{
+		portrait : "_company",
+		script :
+		[
+			"You engaged the %_company.definition.title%\n^",
+			"$battle _company"
 		]
 	},
 
@@ -48,6 +60,36 @@ Core.Definitions("Story_Base",
 				"Anything you can find here is critical to the community, but first of all, you need to live.",
 
 			"?free"
+		],
+
+		"!(somethint hapened)" : []
+	},
+
+	Story_EncounterBase:
+	{
+		focus : ["stage.entities"],
+		portrait : "encounter",
+
+		script :
+		[
+			"?%stage.def.desc%\n"
+		]
+	},
+
+	Story_Assembly:
+	{
+		script :
+		[
+			"$show dream.availableTasks",
+			
+			"# party leader",
+			"Personally I would prefer studying in the Great Alexendria Libarary. But still the decision is yours. What tasks do you want me to take?",
+			
+			"? Nothing for now.", 
+			[
+				"As you say, I will attempt to gather more information in the mean time." 
+				"$end" 
+			]
 		]
 	}
-});
+});*/

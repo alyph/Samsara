@@ -13,85 +13,34 @@ var Card = Class(
 		this.visible = false;
 		this.node = null;
 		this.activities = [];
-		this._populateMessage();
+		this._initFromTemplates();
 		this._populateActivities();
     },
 
-    show : function(x, y)
-    {
-        if (!this.visible)
-        {
-            if (this.node == null)
-                this._initNode();
-            else
-                this.node.appendTo(this._table.node);
-
-            this.visible = true;
-        }
-
-        if (arguments.length >= 2)
-            this.moveTo(x, y);
-    },
-
-	move : function(x, y)
+	beginPlay : function()
 	{
-		this.node.xy(x, y, true);
+		this.eachComp('beginPlay', this._game);
 	},
 
-	moveTo : function(x, y)
+	clicked : function()
 	{
-		this.node.xy(x, y, false);
+		this.eachComp('clicked', this._game);
 	},
 
-	destroy : function()
+	_initFromTemplates : function()
 	{
-		if (this.node != null)
-		{
-			this.node.remove();
-			this.node = null;
-		}
-	},
-
-    _initNode : function()
-    {
-        this.node = this._table.node.addGroup("card_"+this._id, {width : this.width, height : this.height});
-        var back = $("<div class='cardBack'></div>").appendTo(this.node);
-        var sprite = Sprites[this.definition.image];
-        var spriteId = "cardImage_" + this._id;
-        back.addSprite(spriteId, {animation: sprite, width: CARD_IMG_WIDTH, height: CARD_IMG_HEIGHT, posx:6, posy: 6 });
-
-        var backSize = Math.round(sprite.domO.naturalWidth / sprite.delta) * CARD_IMG_WIDTH;
-        var offsetX = -Math.round(sprite.offsetx / sprite.delta) * CARD_IMG_WIDTH;
-        var offsetY = -Math.round(sprite.offsety / sprite.distance) * CARD_IMG_HEIGHT;
-
-        $("#"+spriteId).css(
-            {
-                "background-size" : backSize + "px",
-                "background-position" : offsetX + "px " + offsetY + "px",
-                "border-radius" : "5px"
-            });
-
-        var label = $("<div class='cardTitle'></div>").html(this.definition.title).appendTo(back);
-        var desc = $("<div class='cardDesc'></div>").html(this.definition.desc).appendTo(back);
-
-        this.node.click( { card : this }, function(evt){ evt.data.card._clicked(); });
-    },
-
-	_populateMessage: function()
-	{
-		this.message = new Message(this.definition.detailed);
 		var comps = this.definition.getComponents();
-		var actions = [];
-		var last = 0;
 		for (var i = 0; i < comps.length; i++)
 		{
-			var comp = comps[i];
-			comp.addAction(this._game, this, actions);
-			for (; last < actions.length; last++)
+			var template = comps[i]._template;
+			if (template !== undefined && template !== null)
 			{
-				var action = actions[last];
-				action.comp = comp;
-				this.message.addOption(action.text, action, this, this._performAction);
+				for (name in template)
+				{
+					if (this.hasOwnProperty(name))
+						throw ("Conflicting template property: " + name + ", new: " + template[name] + ", existing: " + this[name]);
+					this[name] = template[name];
+				}
 			}
 		}
 	},
@@ -113,14 +62,15 @@ var Card = Class(
 		}
 	},
 
-	_clicked : function()
+	eachComp : function(func)
 	{
-		this._game.setActiveCard(this);
-	},
-
-	_performAction : function(game, action)
-	{
-		action.handler.call(action.comp, game, this, action.data);
+		var comps = this.definition.getComponents();
+		var args = Array.prototype.slice.call(arguments, 1);
+		args.unshift(this);
+		for (var i = 0; i < comps.length; i++)
+		{
+			comps[i][func].apply(comps[i], args);
+		}
 	}
 });
 
@@ -132,6 +82,7 @@ var CardDefinition = Class(
 	image : 'cardShortSword',
 	desc : "",
 	detailed : "[NO DETAILED DESC]",
+	tags : "",
 
 	constructor : function(def)
 	{
@@ -140,27 +91,24 @@ var CardDefinition = Class(
 		this._raw = def;
 		var components = this.comps.split(' ');
 		this._components = [];
+		this._hasComps = {};
 		for (var i = 0; i < components.length; i++)
 		{
 			var name = components[i];
 			if (name === "")
 				continue;
 
-			var comp = Core.getComponent(name);
-			var superComp = comp.superComponent;
-
-			// TODO: this is wrong, shouldn't add superComp to comps
-			// otherwise some function will be called multiple times
-			// should probably have another variable just to flag whether
-			// a component exists in this card, maybe just use a dictionary
-			while (superComp != null)
-			{
-				this._addComponent(superComp);
-				superComp = superComp.superComponent;
-			}
-
+			var comp = Components.get(name);
 			this._addComponent(comp);
 		}
+
+		var tags = this.tags.split(',');
+		this._tags = {};
+		for (i = 0; i < tags.length; i++)
+		{
+			this._tags[tags[i].trim()] = true;
+		}
+
 	},
 
 	postLoad : function()
@@ -183,23 +131,30 @@ var CardDefinition = Class(
 		if (this._components.indexOf(comp) < 0)
 		{
 			this._components.push(comp);
+			this._hasComps[comp.name] = 1;
+
+			var superComp = comp.base;
+			while (superComp !== null)
+			{
+				this._hasComps[superComp.name] = 1;
+				superComp = superComp.base;
+			}
 		}
 	},
 
 	has : function(name)
 	{
-		var l = this._components.length;
-		for (var i = 0; i < l; i++)
-		{
-			if (this._components[i].name === name)
-				return true;
-		}
-		return false;
+		return this._hasComps[name];
 	},
 
 	getComponents : function()
 	{
 		return this._components;
+	},
+
+	hasTag : function(tag)
+	{
+		return this._tags[tag] !== undefined;
 	}
 });
 
@@ -223,4 +178,58 @@ var CardPool = Class(
 	{
 		return new Card(this._game, cardInst, this._nextCardId++, 0);
 	}
+});
+
+Component('Card',
+{
+	constructor : function()
+	{
+		this.name = "NoName";
+		this.superComponent = null;
+	},
+
+	postLoad : function(def) {},
+
+	beginPlay : function(card, game) {},
+
+	clicked : function(card, game) {},
+
+	addAction : function(game, card, actions) {},
+
+	addActivity : function(game, card, activites) {}
+});
+
+Component('Item', 'Card',
+{
+
+});
+
+Component('Ability', 'Card',
+{
+
+});
+
+Component('Entity', 'Card',
+{
+	beginPlay : function(card, game)
+	{
+		card.hand = [];
+		var defHand = card.definition.hand;
+		var l = defHand.length;
+		for (var i = 0; i < l; i++)
+		{
+			var def = Core.getCard(defHand[i]);
+			card.hand.push(game.makeCard(new CardInstance(def)));
+		}
+	}
+});
+
+Component('Character', 'Card',
+{
+
+});
+
+Component('Map', 'Card',
+{
+
 });

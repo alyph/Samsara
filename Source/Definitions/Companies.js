@@ -1,8 +1,12 @@
+
+/*
 Core.CardSet(
 {
 	Base :
 	{
-		comps : "Company"
+		comps : "Company",
+		attacking: "Activity_AttackEnemy",
+		tags : "company"
 	},
 
 	Reds:
@@ -21,5 +25,20 @@ Core.CardSet(
 	{
 		title : "Vikings",
 		image : 'Viking'
+	},
+
+	ShadowBlades:
+	{
+		title : "Shadow Blades",
+		image : 'ShadowBlade',
+		tags : "assassin"
+	},
+
+	Salamanders:
+	{
+		title : "Salamanders",
+		image : 'Salamander',
+		tags : "dweller"
 	}
 });
+*/

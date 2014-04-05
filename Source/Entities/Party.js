@@ -2,71 +2,83 @@ var Party = Class(
 {
 	constructor : function(game)
 	{
-		this._game = game;
-		this.agenda = [];
-		this.stories = [];
-		this.story = null;
+		this.game = game;
+		this.members = [];
+		this.Locale = null;
+		this.quests = [];
 
-		this.startMainStory();
+		this.questActivities = [];
+		this.localActivities = [];
 	},
 
-	drawAgenda : function(count)
+	enter : function(loc)
 	{
-		for (var i = 0; i < count; i++)
-			this.agenda.push(this._game.siteDeck.draw());
-
-		this.contextUpdated();
+		this.Locale = loc;
+		this.updateActivities();
 	},
 
-	startMainStory : function()
+	isAt : function(loc)
 	{
-		this.startStory("Story_Main");
+		return this.Locale === loc;
 	},
 
-	startStory : function(name, params)
+	isInside : function(loc)
 	{
-		var story = this._newStory(name, params);
-		this.stories = [ story ];
-		this._onStoryChanged();
-		story.begin();
+		return this.Locale !== null && this.Locale.isInside(loc);
 	},
 
-	pushStory : function(name, params)
+	accepts : function(quest)
 	{
-		var story = this._newStory(name, params);
-		if (this.story !== null)
-			this.story.pause();
-		this.stories.push(story);
-		this._onStoryChanged();
-		story.begin();
+		this.quests.push(quest);
+		quest.accepted(this);
+		if (this.Locale !== null)
+			this.addQuestActivities(quest);
 	},
 
-	_newStory : function(name, params)
+	updateActivities : function()
 	{
-		var def = Core.getDef(name);
-		var pretext = this.story != null ? this.story.context : undefined;
-		var story = new Story(this._game, this, def, pretext);
-		for (var name in params)
-			story.context["_" + name] = params[name];
-		return story;
+		this.questActivities = [];
+		this.localActivities = [];
+
+		for (var i = 0; i < this.quests.length; i++) 
+		{
+			this.addQuestActivities(this.quests[i]);
+		};
 	},
 
-	_onStoryChanged : function()
+	addQuestActivities : function(quest)
 	{
-		var l = this.stories.length;
-		this.story = l > 0 ? this.stories[l-1] : null;
-		Events.trigger(this, "StoryChanged");
+		context = {};
+		context.party = this;
+
+		for (var i = 0; i < quest.goals.length; i++)
+		{
+			var firstStep = Planner.plan([quest.goals[i]], context);
+			if (firstStep === null)
+				continue;
+
+			this.addUniqueActivity(this.questActivities, firstStep.action);
+		}
 	},
 
-	startActivity : function(def, entity)
+	addUniqueActivity : function(activities, activity)
 	{
-		var params = {};
-		params[def.entityParamName] = entity;
-		this.pushStory(def.story, params);
+		for (var i = activities.length - 1; i >= 0; i--) 
+		{
+			if (activities[i].equals(activity))
+				return;
+		};
+
+		activities.push(activity);
 	},
 
-	contextUpdated : function()
+	getActivities : function()
 	{
-		this.story.contextUpdated();
+		return this.questActivities.concat(this.localActivities);
+	},
+
+	hasExplored : function(Locale)
+	{
+		return false;
 	}
 });

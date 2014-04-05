@@ -2,87 +2,159 @@ var Game = Class(
 {
 	constructor : function()
 	{
-		this.table = new Table(this);
-		this.currentParty = null;
-
-        this._cardPool = new CardPool(this);
 	},
 
 	start : function()
 	{
-		this.initDecks();
+		this.world = new World(this);
+
+		this.table = new Table(this);
+
 		this.player = new Player(this);
+		var party = this.player.party;
+		var quest = new Quest(Definition.get("Quests.Exploration"));
+		quest.params.set("region", this.world.getEntity("Region.Greenbelt"));
+		party.accepts(quest);
+		party.enter(this.world.getEntity("Locale.OlegTradingPost"));
+		this.player.beginPlay();
 
-		// TODO: draw starting hero and follower for the quest
+		//var world = new World(this);
+		//var openingScene = new Scene(this, Core.getDef("Scene_Opening"));
+		//openingScene.play();
+		//this.currentDream = new Dream(this, world);
+		//this.currentDream.begin();
 
-		this.changeParty(new Party(this));
 
-		// start first turn
-		this.beginFirstTurn();
-	},
+		// var camp = new Location();
+		// camp.setDef(Definition.get('Locations.ExpiditionCamp'));
 
-	initDecks : function()
-	{
-		var cards = Core.getCards();
-		this.siteDeck = new SiteDeck(this, cards);
-		this.companyDeck = new CompanyDeck(this, cards);
-	},
+		// var explore = new Activity();
+		// explore.setDef(Definition.get('Activities.Explore'));
 
-	nextTurn : function()
-	{
-		this.endTurn();
-		this.beginTurn();
-	},
+		// var bulletin = new Activity();
+		// bulletin.setDef(Definition.get('Activities.BulletinBoard'));
 
-	beginFirstTurn : function()
-	{
-		this.currentParty.drawAgenda(3);
-	},
+		// var visitBar = new Activity();
+		// visitBar.setDef(Definition.get('Activities.VisitBar'));		
 
-	beginTurn : function()
-	{
-		// player draw cards
-		for (var i = 0; i < this.player.handSize; i++)
-		{
-			this.table.placeInHand(this.player.deck.draw());
-		}
-	},
+		// var visitAgora = new Activity();
+		// visitAgora.setDef(Definition.get('Activities.VisitAgora'));
 
-	endTurn : function()
-	{
-		this.table.clearPlayerHand();
-	},
+		// camp.addActivities(explore, bulletin, visitBar, visitAgora);
 
-	getContext : function()
-	{
-		return this.currentParty.story.context;
-	},
-
-	changeParty : function(party)
-	{
-		this.currentParty = party;
-		this._updateStory();
-		Events.delegate(this.currentParty, "StoryChanged", this._updateStory, this);
-	},
-
-	_updateStory : function()
-	{
-		this._updateScene();
-		Events.delegate(this.currentParty.story.scene, "SceneUpdated", this._updateStory, this);
-	},
-
-	_updateScene : function()
-	{
-		this.table.placeScene(this.currentParty.story.scene);
-	},
-
-	setActiveCard : function(card)
-	{
-		this.table.placeActiveCard(card);
-	},
-
-	makeCard : function(cardInst)
-	{
-		return this._cardPool.makeCard(cardInst);
+		// this.enterLocation(camp);
 	}
+
+	// initDecks : function()
+	// {
+	// 	var cards = Core.getCards();
+	// 	this.entityDeck = new EntityDeck(this, cards);
+	// 	this.encounterDeck = new EncounterDeck(this, cards);
+	// 	this.siteDeck = new SiteDeck(this, cards);
+	// 	this.companyDeck = new CompanyDeck(this, cards);
+	// 	this.unitDeck = new UnitDeck(this, cards);
+	// 	this.characterDeck = new CharacterDeck(this, cards);
+	// },
+
+	// nextTurn : function()
+	// {
+	// 	this.endTurn();
+	// 	this.turns++;
+	// 	this.beginTurn();
+	// },
+
+	// beginFirstTurn : function()
+	// {
+	// 	this.currentParty.drawAgenda(3);
+	// },
+
+	// beginTurn : function()
+	// {
+	// 	if (this.turns === 0)
+	// 		this.currentParty.drawEncounter(3);
+
+	// 	this.table.placeEncounters(this.currentParty);
+
+	// 	// player draw cards
+	// 	for (var i = 0; i < this.player.handSize; i++)
+	// 	{
+	// 		this.table.placeInHand(this.player.deck.draw());
+	// 	}
+	// },
+
+	// endTurn : function()
+	// {
+	// 	this.table.clearPlayerHand();
+	// },
+
+	// enterLocation : function(loc)
+	// {
+	// 	this.table.setupLocation(loc);
+	// },
+
+	// enterScene : function(name)
+	// {
+	// 	this.scene = new Scene(this, Core.getDef(name));
+	// 	this.table.placeScene(scene);
+	// 	openingScene.play();
+	// },
+
+	// getContext : function()
+	// {
+	// 	return this.currentParty.story.context;
+	// },
+
+	// selectEncounter : function(encounter)
+	// {
+	// 	this.table.hideEncounters();
+	// 	this.currentParty.startEncounter(encounter);
+	// },
+
+	// _assembleParty : function()
+	// {
+	// 	var party = new Party(this);
+	// 	for (var i = 0; i < 4; i++)
+	// 		party.addMember(this.characterDeck.draw());
+	// 	return party;
+	// },
+
+	// changeParty : function(party)
+	// {
+	// 	this.currentParty = party;
+	// 	this._updateStory();
+	// 	Events.delegate(this.currentParty, "StoryChanged", this._updateStory, this);
+	// },
+
+	// _updateStory : function()
+	// {
+	// 	if (this.currentParty.story === null)
+	// 		return;
+
+	// 	this._updateScene();
+	// 	Events.delegate(this.currentParty.story.scene, "SceneUpdated", this._updateStory, this);
+	// },
+
+	// _updateScene : function()
+	// {
+	// 	this.table.placeScene(this.currentParty.story.scene);
+	// },
+
+	// startBattle : function(party, target, callback)
+	// {
+	// 	var battle = new Battle(this, party, target);
+	// 	this.battleground.playBattle(battle, callback);
+	// },
+
+	// setActiveCard : function(card)
+	// {
+	// 	this.table.placeActiveCard(card);
+	// },
+
+	// makeCard : function(cardInst)
+	// {
+	// 	var card = this._cardPool.makeCard(cardInst);
+	// 	card.beginPlay();
+	// 	return card;
+	// }
 });
+

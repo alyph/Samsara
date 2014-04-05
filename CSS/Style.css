@@ -8,12 +8,26 @@ a
     color: #FFF;
 }
 
+p
+{
+    -webkit-margin-before: 0em;
+    -webkit-margin-after: 1em;
+}
+
+.spriteElement
+{
+    display: block; 
+    overflow: hidden;
+    background-repeat: no-repeat;
+}
+
 .cardBack
 {
+    position: absolute;
     border-radius: 10px;
-    box-shadow: 1px 1px 1px #444;
+    box-shadow: 1px 1px 2px 2px rgba(0, 0, 0, 0.6);
     background-color: #000;
-    border: 1px solid #000;
+    border: 1px solid #111;
     width: 100%;
     height: 100%;
 }
@@ -76,6 +90,89 @@ a
 .option:hover
 {
     color: red;
+}
+
+.narrativeText
+{
+    left: 256px;
+    top: 576px;
+    width: 512px;   
+}
+
+.speechBubble
+{
+    max-width: 256px;
+}
+
+.dialogBlocker
+{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 300;
+}
+
+.dialogBox 
+{
+    position: absolute;
+    background-image:url(../Content/Images/UI/DialogBack.png);
+    padding: 5px 5px 5px 5px;
+    /*position:absolute !important;
+    max-width: 30em;*/
+    /*-webkit-box-shadow: 3px 6px 14px 8px #333; 
+    box-shadow: 3px 6px 14px 8px #333; */
+    /*-webkit-box-shadow: 1px 2px 4px 2px #111; */
+    box-shadow: 1px 2px 4px 2px #111;
+    writing-mode: lr-tb; 
+    border: 1px solid grey;
+    font: 18px 'Bubblegum Sans', cursive;
+    word-wrap: break-word;
+    //word-break: break-all;
+    z-index:200;
+}
+
+@-webkit-keyframes tickAnim
+{
+    from { bottom: 0px; }
+    to { bottom: 5px; }
+}
+
+.dialogTick
+{
+    position: absolute;
+    right: 24px;
+    bottom: 2px;
+    -webkit-animation: tickAnim 0.5s ease 0s infinite alternate;
+}
+
+.activity 
+{
+    writing-mode: lr-tb; 
+    font: 18px 'Bubblegum Sans', cursive;
+    color: white;
+}
+
+.location
+{
+    position: relative;
+    height: 120px;
+}
+
+.entity
+{
+    position: relative;
+    width: 200px;
+    min-height: 80px;
+}
+
+.actions
+{
+    position: relative;
+    left: 40px;
+    font: 18px 'Bubblegum Sans', cursive;
+    color: white; 
+    -webkit-margin-before: 0px;
+    -webkit-margin-after: 0px; 
 }
 
 @font-face

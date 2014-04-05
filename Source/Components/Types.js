@@ -1,9 +1,21 @@
+
+/*
 Core.Component("Map",
 {
 
 });
 
 Core.Component("City",
+{
+
+});
+
+Core.Component("Unit",
+{
+
+});
+
+Core.Component("Character",
 {
 
 });
@@ -60,8 +72,41 @@ Core.Component("Monster",
 	}
 });
 
-Core.Component("Company",
+Core.Component("Entity",
 {
+	beginPlay : function(card, game)
+	{
+		card.hand = [];
+		var defHand = card.definition.hand;
+		var l = defHand.length;
+		for (var i = 0; i < l; i++)
+		{
+			var def = Core.getCard(defHand[i]);
+			card.hand.push(game.makeCard(new CardInstance(def)));
+		}
+	}
+});
+
+Core.Component("Company", "Entity",
+{
+	beginPlay : function(card, game)
+	{
+		card.members = [];
+		for (var i = 0; i < 6; i++)
+			card.members.push(card._game.unitDeck.drawFromFaction('Nazi'));
+	},
+
+	addActivity : function(game, card, activites)
+	{
+		activites.push(card.definition.attacking);
+	}
+});
+
+Core.Component("Action",
+{
+	clicked : function(card, game)
+	{
+	}
 });
 
 Core.Component("Story",
@@ -101,7 +146,4 @@ Core.Component("Quest",
 Core.Component("Exploration", "Quest",
 {
 });
-
-Core.Component("Encounter",
-{
-});
+*/

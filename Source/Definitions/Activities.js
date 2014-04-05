@@ -1,9 +1,51 @@
-Core.Definitions(ActivityDefinition,
+Definition.register(
 {
-	Activity_VisitSite:
+	base : ActivityDefinition,
+	group : "Activities"
+},
+
+{
+	TravelTo:
 	{
-		displayName : "Enter",
-		story : "Story_VisitSite",
-		entityParamName : "site"
+		title : "Travel",
+		params : $p("origin", "destination"),
+		effects : [ "Goals.PartyIsAt(destination)" ],
+		restrictions : { origin : $e("destination.getPotentialTravelOrigins(party)") },
+		preconditions : [ "Goals.PartyIsAt(origin)" ]
+	},
+
+	Explore:
+	{
+		title : "Explore",
+		params : $p("locale"),
+		effects : [ "Goals.PartyHasExplored(locale)" ],
+		preconditions : [ "Goals.PartyIsAt(locale)" ]
 	}
-});
+
+	/*
+	Visit:
+	{
+		
+	},
+
+	Explore:
+	{
+		description: "Explore the area"
+	},
+
+	BulletinBoard:
+	{
+		description: "What's on the bulletin board?"
+	},
+
+	VisitBar:
+	{
+		description: "Enter the tavern"
+	},
+
+	VisitAgora:
+	{
+		description: "Shopping at the Aqora"
+	}
+	*/
+})

@@ -1,3 +1,5 @@
+
+/*
 var CardComponent = Class(
 {
 	constructor : function()
@@ -8,7 +10,13 @@ var CardComponent = Class(
 
 	postLoad : function(def) {},
 
+	beginPlay : function(card, game) {},
+
+	clicked : function(card, game) {},
+
 	addAction : function(game, card, actions) {},
 
 	addActivity : function(game, card, activites) {}
 });
+
+*/

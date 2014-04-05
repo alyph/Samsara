@@ -6,6 +6,28 @@ var SpriteDefinitions =
 	},
 
 	{
+		image : "Content/Images/BattleBack.png",
+		BattleBack : [ 0, 0 ]
+	},
+
+	{
+		folder : "Content/Images/Backgrounds",
+		extension : "png",
+		Back_Arena : "Arena",
+		Back_Ambush : "Ambush",
+		Back_HeartMountain : "HeartMountain",
+		Back_Pyre : "Pyre",
+		Overlay_Stage : "Stage"
+	},
+
+	{
+		folder : "Content/Images/Locations",
+		extension : "png",
+		Loc_Camp : "Camp",
+		Loc_Outpost : "Outpost"
+	},
+
+	{
 		image : "Content/Images/WeaponCards.png",
 		w : 144,
 		h : 192,
@@ -56,7 +78,10 @@ var SpriteDefinitions =
 		Bar : [ 1, 2 ],
 		WeaponStore : [ 2, 2 ],
 		MysticalForest : [ 4, 2 ],
-		AbandonedTrainStation : [ 5, 2 ]
+		AbandonedTrainStation : [ 5, 2 ],
+		DarkWoods : [ 7, 2 ],
+		Arena : [ 1, 3 ],
+		Dungeon : [ 2, 3 ]
 	},
 
 	{
@@ -85,6 +110,7 @@ var SpriteDefinitions =
 		OniNightHunter : [ 3, 6 ],
 		OniEnforcer : [ 4, 6 ],
 		RakshasaAssassin : [ 2, 7 ],
+		Salamander : [ 6, 7 ],
 		SkeletalTombGuardian : [ 2, 8 ],
 		Spider : [ 6, 8 ],
 		Wight : [ 0, 9 ],
@@ -115,7 +141,8 @@ var SpriteDefinitions =
 		cardBard : [ 1, 0 ],
 		cardRogue : [ 2, 0 ],
 		cardSorceress : [ 3, 0 ],
-		cardWizard : [ 4, 0 ]
+		cardWizard : [ 4, 0 ],
+		Stalker : [ 4, 2 ]
 	},
 
 	{
@@ -124,6 +151,7 @@ var SpriteDefinitions =
 		h : 256,
 		SwordsmenCaptain : [ 3, 0 ],
 		NorthernGuardian : [ 4, 0 ],
+		ShadowBlade : [ 5, 0 ],
 		Druid : [ 6, 0 ],
 		MercenarySkirmisher : [ 7, 0 ],
 		BattleCleric : [ 2, 1 ],
@@ -163,7 +191,27 @@ var SpriteDefinitions =
 		Wehrmacht : [ 0, 0 ],
 		SovietTrooper : [ 1, 0 ],
 		SovietForager : [ 2, 0 ],
-		Viking : [ 3, 0 ]
+		Viking : [ 3, 0 ],
+		Scavenger : [ 4, 0 ],
+		Soldier : [ 5, 0 ],
+		Engineer : [ 6, 0 ],
+		Schutze : [ 7, 0 ],
+		MachineGunner : [ 0, 1 ],
+		K9 : [ 1, 1 ]
+	},
+
+	{
+		image : "Content/Images/CharacterCardsHero.png",
+		w : 192,
+		h : 256,
+		Fighter : 		[ 0, 0 ],
+		Caster : 		[ 1, 0 ],
+		Dwarf : 		[ 2, 0 ],
+		Brienne : 		[ 3, 0 ], 
+		Anubis : 		[ 4, 0 ],
+		Saruta : 		[ 5, 0 ],
+		HK47 : 			[ 6, 0 ],
+		HK47_2 :		[ 7, 0 ],
 	},
 
 	{
@@ -187,8 +235,33 @@ var SpriteDefinitions =
 		Blind : [ 1, 3 ],
 		PoisonWeapon : [ 3, 3 ],
 		RainOfArrows : [ 4, 3 ]
+	},
+
+	{
+		image : "Content/Images/ActionCards.png",
+		w : 192,
+		h : 256,
+		MechanicalEye :		[ 0, 0 ]
+	},
+
+	{
+		image : "Content/Images/Figures.png",
+		w : 64,
+		h : 64,
+		FemaleWarrior :		[ 0, 0 ],
+		JackalPriest :		[ 1, 0 ],
+		Scholar : 			[ 2, 0 ],
+		HK47S :				[ 3, 0 ]
+	},
+
+	{
+		image : "Content/Images/Locations.png",
+		w : 48,
+		h : 64,
+		Market : 			[ 1, 0 ],
+		Library : 			[ 2, 0 ]
 	}
-]
+];
 
 var Sprites =
 {
@@ -197,44 +270,78 @@ var Sprites =
 		for (var i = 0; i < SpriteDefinitions.length; i++)
 		{
 			var def = SpriteDefinitions[i];
-			var image = def.image;
-			var w = def.w;
-			var h = def.h;
-
-			if (w !== undefined && h === undefined)
-				h = w;
-
-			for (var name in def)
+			if (def.folder !== undefined)
 			{
-				if (name === 'image' || name === 'w' || name === 'h')
-					continue;
-
-				if (def.hasOwnProperty(name))
-				{
-					var options = {};
-					options.imageURL = image;
-
-					if (w !== undefined)
-					{
-						var x = def[name][0] || 0;
-						var y = def[name][1] || 0;
-
-						options.type = $.gQ.ANIMATION_HORIZONTAL;
-						options.delta = w;
-						options.distance = h;
-						options.offsetx = x * w;
-						options.offsety = y * h;
-					}
-
-					var anim = new $.gQ.Animation(options);
-
-					if (name in this)
-						throw ("cannot add " + name + " to sprites, name already taken!");
-
-					this[name] = anim;
-				}
+				this.loadFolder(def);
 			}
-
+			else
+			{
+				this.loadSpriteSheet(def);
+			}
 		}
+	},
+
+	loadFolder : function(def)
+	{
+		var folder = def.folder;
+		var ext = def.extension;
+
+		for (var name in def)
+		{
+			if (name === 'folder' || name === 'extension')
+				continue;
+
+			if (def.hasOwnProperty(name))
+			{
+				var options = {};
+				options.imageURL = folder + "/" + def[name] + "." + ext;
+
+				this.addSprite(name, options);
+			}
+		}
+	},
+
+	loadSpriteSheet : function(def)
+	{
+		var image = def.image;
+		var w = def.w;
+		var h = def.h;
+
+		if (w !== undefined && h === undefined)
+			h = w;
+
+		for (var name in def)
+		{
+			if (name === 'image' || name === 'w' || name === 'h')
+				continue;
+
+			if (def.hasOwnProperty(name))
+			{
+				var options = {};
+				options.imageURL = image;
+
+				if (w !== undefined)
+				{
+					var x = def[name][0] || 0;
+					var y = def[name][1] || 0;
+
+					options.type = $.gQ.ANIMATION_HORIZONTAL;
+					options.delta = w;
+					options.distance = h;
+					options.offsetx = x * w;
+					options.offsety = y * h;
+				}
+
+				this.addSprite(name, options);
+			}
+		}
+	},
+
+	addSprite : function(name, options)
+	{
+		if (name in this)
+			throw ("cannot add " + name + " to sprites, name already taken!");
+
+		this[name] = new $.gQ.Animation(options);
 	}
-}
+};
