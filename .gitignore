@@ -164,3 +164,9 @@ pip-log.txt
 
 #idea
 .idea
+
+#############
+## Sublime
+#############
+
+*.sublime-workspace

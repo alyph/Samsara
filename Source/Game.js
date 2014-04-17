@@ -8,7 +8,7 @@ var Game = Class(
 	{
 		this.world = new World(this);
 
-		this.table = new Table(this);
+		//this.table = new Table(this);
 
 		this.player = new Player(this);
 		var party = this.player.party;
@@ -16,6 +16,8 @@ var Game = Class(
 		quest.params.set("region", this.world.getEntity("Region.Greenbelt"));
 		party.accepts(quest);
 		party.enter(this.world.getEntity("Locale.OlegTradingPost"));
+
+		this.screen = UI.showScreen("gameScreen");
 		this.player.beginPlay();
 
 		//var world = new World(this);

@@ -44,8 +44,9 @@ var Cloner = new (function(global)
 		return cloned;
 	};
 
-	this.extend = function(target, override)
+	this.extend = function(target, override, shallow)
 	{
+		shallow = shallow || false;
 		var props = Object.getOwnPropertyNames(override);
 		var l = props.length;
 		for (var i = 0; i < l; i++) 
@@ -54,7 +55,7 @@ var Cloner = new (function(global)
 			var value = override[key];
 
 			// TOOD: optimization allow shallow copy
-			if (typeof value === 'object' && value !== null && !value.hasOwnProperty("$ref"))
+			if (!shallow && typeof value === 'object' && value !== null && !value.hasOwnProperty("$ref"))
 			{
 				target[key] = this.clone(value);
 			}
@@ -63,6 +64,21 @@ var Cloner = new (function(global)
 				target[key] = value;
 			}			
 		};
+		return target;
+	};
+
+	this.extendBatch = function(shallow, objects)
+	{
+		var l = arguments.length;
+		if (l < 3)
+			throw ("too few arguments!");
+
+		var target = arguments[1];
+		for (var i = 2; i < l; i++) 
+		{
+			this.extend(target, arguments[i], shallow);
+		};
+		return target;
 	};
 
 	this.replaceReferences = function (data, refs)

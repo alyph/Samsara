@@ -17,7 +17,7 @@ var Activity = Class(WorldAction,
 
 	getImage : function()
 	{
-		return "cardCityGate";
+		return Sprites["cardCityGate"];
 	}
 });
 

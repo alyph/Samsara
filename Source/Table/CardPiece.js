@@ -114,7 +114,7 @@ var CardPiece = Class(
 	{
 		this.node = this._table.node.addGroup("card_"+this._id, {width : this.width, height : this.height});
 		var back = $("<div class='cardBack'></div>").appendTo(this.node);
-		var sprite = Sprites[this._card.getImage()/*_def.image*/];
+		var sprite = this._card.getImage()/*_def.image*/;
 		var spriteId = "cardImage_" + this._id;
 		var border = 4;
 		var iw = this.width - border * 2;
@@ -144,7 +144,7 @@ var CardPiece = Class(
 
 	_refreshContent : function()
 	{
-		$("#"+ "cardImage_" + this._id).css("background-image", "url("+Sprites[this._card.getImage()/*_def.image*/].imageURL+")");
+		$("#"+ "cardImage_" + this._id).css("background-image", "url("+this._card.getImage()/*_def.image*/.imageURL+")");
 		$("#"+ "cardLabel_" + this._id).html(this._card.getTitle()/*_def.title*/);
 		$("#"+ "cardDesc_" + this._id).html(this._card.getDesc()/*_def.desc*/);
 		this._setupImage();
@@ -152,7 +152,7 @@ var CardPiece = Class(
 
 	_setupImage : function()
 	{
-		var sprite = Sprites[this._card.getImage()/*_def.image*/];
+		var sprite = this._card.getImage()/*_def.image*/;
 		var spriteId = "cardImage_" + this._id;
 		var image = $("#"+spriteId);
 		var iw = image.width();

@@ -15,11 +15,6 @@ var PLAYGROUND_HEIGHT	= 768;
 		// Initialize the game:
 		$("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
 
-		// Initialize the background
-		$.playground()
-			.addGroup("background", {width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT})
-			/*.addSprite("backgroundImage", {animation: Sprites.background, width: PLAYGROUND_WIDTH, height: PLAYGROUND_HEIGHT})*/;
-
 		// this sets the id of the loading bar:
 		$.loadCallback(function(percent)
 		{
@@ -29,6 +24,8 @@ var PLAYGROUND_HEIGHT	= 768;
 		$.playground().startGame(function()
 		{
 			Core.init();
+
+			UI.init($("#playground"));
 
 			var game = new Game();
 			game.start();
@@ -47,12 +44,19 @@ var PLAYGROUND_HEIGHT	= 768;
 	var table = "Source/Table/";
 	var source = "Source/";
 	var core = "Source/Core/";
+	var ui = "Source/UI/";
 
 	head.js(
 		libs + "jsface.js",
 		core + "Components.js",
 		core + "Planner.js",
 		core + "System.js",
+		ui + "UI.js",
+		ui + "Elements/BasicElements.js",
+		ui + "Elements/GameElements.js",
+		ui + "Templates/BasicTemplates.js",
+		ui + "Templates/GameTemplates.js",
+		ui + "Templates/Screens.js",
 		entities + "Entity.js",
 		entities + "Message.js",
 		entities + "Narrator.js",

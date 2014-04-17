@@ -22,14 +22,12 @@ var Planner = new (function()
 
 		implies : function(state)
 		{
-			this.relates(state);
-			return this.value.implies(state.value);
+			return this.relates(state) && this.value.implies(state.value);
 		},
 
 		contradicts : function(state)
 		{
-			this.relates(state);
-			return this.value.contradicts(state.value);
+			return this.relates(state) && this.value.contradicts(state.value);
 		},
 
 		eval : function(context)

@@ -13,7 +13,8 @@ var Player = Class(
 
 	beginPlanPhase : function()
 	{
-		this.game.table.placeBackground(Sprites[this.party.Locale.background]);
-		this.game.table.placeEntities(this.party.getActivities());
+		var screen = this.game.screen;
+		screen.background.setData(Sprites[this.party.Locale.background]);
+		screen.entities.setData(this.party.getActivities());
 	}
 });

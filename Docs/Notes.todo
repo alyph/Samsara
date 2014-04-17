@@ -17,17 +17,30 @@ TODO:
 	☐	add sprites ref func $img()
 	☐	replace isatlocal with partylocal : local, since it s exclusive, or make isatlocal exclusive
 
+UI:
+	☐	may get rid of addchild concept so it doesn't matter where in the chain addchild is called...
+	☐	get rid of game query
+
 Future:
 	☐	better expression($e) imp
 	☐	hasExplored real imp
+	☐	upgrade to latest head.js
 
 
 
+super - sub   UI element vs. the elements inside template
+outer - inner direct parent-child relationship between 2 elements
+parent - child two elements linked as parent child and also in same heiarchy
 
 
 
-
-
+{
+		div:
+		{
+				subdiv: {},
+				subdiv: {}
+		}
+}
 
 
 
