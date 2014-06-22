@@ -10,7 +10,8 @@ var Game = Class(
 
 		this.screen = UI.showScreen("gameScreen");
 
-		this.screen.boardBack.setData(Sprites["Back_Map"]);
+		// TODO: the image data should be set in the template
+		this.screen.boardBack.setData(Sprites["Back_Theme"]);
 		
 
 		//this.table = new Table(this);

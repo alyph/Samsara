@@ -17,7 +17,8 @@ var SpriteDefinitions =
 		Back_Ambush : "Ambush",
 		Back_HeartMountain : "HeartMountain",
 		Back_Pyre : "Pyre",
-		Overlay_Stage : "Stage"
+		Overlay_Stage : "Stage",
+		Back_Theme: "Theme"
 	},
 
 	{
@@ -29,8 +30,7 @@ var SpriteDefinitions =
 		Loc_PillarPrimordia : "TwinPillars",
 		Loc_AeonMatrix: "AeonMatrix",
 		Loc_Marsh: "Marsh",
-		Loc_Forest: "Forest",
-		Back_Map: "Map"
+		Loc_Forest: "Forest"
 	},
 
 	{
