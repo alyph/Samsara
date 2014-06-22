@@ -16,6 +16,9 @@ TODO:
 	✔	activity merge @done (14-04-05 00:14)
 	☐	add sprites ref func $img()
 	☐	replace isatlocal with partylocal : local, since it s exclusive, or make isatlocal exclusive
+	☐	change locale to locale within relationship to a more generic relationship and fix the find potential travel origin to check single connection special case rather than within relation
+	☐	objects set by find references should have $ref set to true (?)
+	☐	remove gamequery
 
 UI:
 	☐	may get rid of addchild concept so it doesn't matter where in the chain addchild is called...

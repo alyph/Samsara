@@ -44,6 +44,9 @@ var World = Class(
 
 	createEntity : function(name, data)
 	{
+		if (this.entities[name])
+			throw ("duplicated entity with name " + name);
+
 		var entity;
 		if (typeof data.$base === "function")
 		{
@@ -77,6 +80,34 @@ var World = Class(
 		if (entity === undefined)
 			throw ("cannot find entity " + name);
 		return entity;
+	},
+
+	findEntity : function(name)
+	{
+		return this.entities[name] || null;
+	},
+
+	spawn : function(name, data)
+	{
+		var entity = this.createEntity(name, data);
+		this.extendEntityData(entity, data);
+		this.entities[name] = entity;
+		entity.beginPlay(this.game, this);
+		return entity;
+	},
+
+	destroy : function(entity)
+	{
+		if (this.entities[entity.$name] !== entity)
+			throw ("entity does not exist in the world, cannot be destroyed");
+
+		delete this.entities[entity.$name];
+		entity.endPlay();
+	},
+
+	step : function(steps)
+	{
+		
 	}
 });
 

@@ -1,5 +1,11 @@
 World.WorldData.entities =
 {
+	"Locale.PlainStarFall":
+	{
+		$base : "Locales.Wildness"
+	}
+
+	/*
 	"Locale.OlegTradingPost":
 	{
 		$base : "Locales.PointOfIntrest",
@@ -46,5 +52,5 @@ World.WorldData.entities =
 			"$Locale.Kamelands",
 			"$Locale.Narlmarches"
 		]
-	}
+	}*/
 };

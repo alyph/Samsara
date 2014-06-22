@@ -1,10 +1,11 @@
 UI.Template(
-["card", { padding : 2 },
-	["image", { $binding: "getImage()", width: 144, height: 192 }],
+["card", { $class: "$getSize()" },
+	["image", { $binding: "getImage()" }],
 	["label#title", { $binding: "getTitle()", position: "absolute" }],
 	["label#desc", {}]
 ]);
 
 UI.Template(
-["board", { $element: UI.Board }
+["board", { $element: UI.Board },
+	["list#objects", { $binding: "getObjects()", itemTemplate: "$card", position: "absolute", left: 64, right: 64, height: "50%" }]
 ]);

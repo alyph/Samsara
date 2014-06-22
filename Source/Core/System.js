@@ -159,6 +159,6 @@ var Evaluator = new (function(global)
 			results.push(this.eval(values[i], context));
 		};
 		return results;
-	}
+	};
 
 })(this);

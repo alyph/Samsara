@@ -262,4 +262,12 @@ var Definition = new (function(global)
 		return def;
 	};
 
+	global.$obj = function(cls, data)
+	{
+		var obj = new cls();
+		if (data)
+			Cloner.extend(obj, data, true);
+		return obj;
+	};
+
 })(this);

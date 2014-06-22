@@ -1,11 +1,46 @@
+
+/*
 var StageDefinition = Class(
 {
 	constructor : function() {}
 });
+*/
+
 
 var Stage = Class(
 {
-	constructor : function(game, def)
+	constructor : function()
+	{
+		this.actors = [];
+	}, 
+
+	addActor : function(actor)
+	{
+		this.actors.push(actor);
+	},
+
+	removeActor : function(actor)
+	{
+		this.actors.splice(this.actors.indexOf(actor), 1);
+	},
+
+	getObjects : function()
+	{
+		var objects = [];
+
+		for (var i = 0; i < this.actors.length; i++) 
+		{
+			var actor = this.actors[i];
+			if (actor.type == Actor.Types.NPC || actor.type === Actor.Types.Prop)
+			{
+				objects.push(actor);
+			}
+		};
+
+		return objects;
+	}
+
+/*	constructor : function(game, def)
 	{
 		this._game = game;
 		//this._party = party;
@@ -32,5 +67,5 @@ var Stage = Class(
 	detected : function()
 	{
 		return this.entities;
-	}
+	}*/
 });

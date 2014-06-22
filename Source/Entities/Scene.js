@@ -1,4 +1,4 @@
-
+/*
 var SceneDefinition = Class(
 {
 	script : ["INSERT STORY HERE"],
@@ -11,9 +11,96 @@ var Sections =
 	Party : 0,
 	Others : 1
 };
+*/
+
+
 
 var Scene = Class(
 {
+	$statics:
+	{
+		STATE_IDLE : 0,
+		STATE_BUSY : 1,
+		STATE_PAUSED : 2
+	},
+
+	constructor : function()
+	{
+		this.environment = null;
+		this.stage = new Stage();
+		this.pov = null;
+		this.state = Scene.STATE_IDLE;
+		this.actors = [];
+		this.desc = "";
+	},
+
+	getDesc : function()
+	{
+		return this.desc || this.environment.desc;
+	},
+
+	getState : function()
+	{
+		return this.state;
+	},
+
+	preStep : function()
+	{
+		return true;
+	},
+
+	step : function()
+	{
+		for (var i = 0; i < this.actors.length; i++) 
+		{
+			this.actors[i].perform();
+		};
+	},
+
+	addActor : function(actor)
+	{
+		if (actor.scene !== null)
+			throw ("already in a scene, must leave then enter!");
+		
+		var idx = this.actors.indexOf(actor);
+		if (idx >= 0)
+			throw ("actor already added!");
+
+		actor.scene = this;
+		this.actors.push(actor);
+		this.stage.addActor(actor);
+
+		if (actor.elements)
+		{
+			for (var i = 0; i < actor.elements.length; i++) 
+			{
+				this.addActor(actor.elements[i]);
+			};
+		}
+	},
+
+	removeActor : function(actor)
+	{
+		if (actor.scene !== this)
+			throw ("cannot remove actor that is not in current scene!");
+
+		actor.scene = null;
+		var idx = this.actors.indexOf(actor);
+		if (idx >= 0)
+			this.actors.splice(idx, 1);
+
+		this.stage.removeActor(actor);
+
+		if (actor.elements)
+		{
+			for (var i = 0; i < actor.elements.length; i++) 
+			{
+				this.removeActor(actor.elements[i]);
+			};
+		}
+	}	
+
+/*
 	constructor : function(game, def)
 	{
 		this._game = game;
@@ -235,6 +322,6 @@ var Scene = Class(
 		{
 			this.entities = this.entities.concat(this._context.eval(this.focus[i]));
 		}
-	}
+	}*/
 });
 

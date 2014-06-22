@@ -2,6 +2,7 @@ var Entity = Class(
 {
 	constructor : function()
 	{
+		this.$ref = true;
 		this.game = null;
 		this.world = null;
 	},
@@ -10,6 +11,12 @@ var Entity = Class(
 	{
 		this.game = game;
 		this.world = world;
+	},
+
+	endPlay : function()
+	{
+		this.game = null;
+		this.world = null;
 	},
 
 	getTitle : function()
@@ -25,6 +32,11 @@ var Entity = Class(
 	getImage : function()
 	{
 		return "cardCityGate";
+	},
+
+	getSize: function()
+	{
+		return "";
 	},
 
 	toString : function()

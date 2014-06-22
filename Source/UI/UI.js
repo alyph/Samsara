@@ -26,7 +26,7 @@ var UI = new (function(global)
 		if (!template)
 			throw ("cannot find screen template: " + template);
 		this.screen = template.instance();
-		rootDOM.append(this.screen.DOM);
+		rootDOM.append(this.screen.$DOM);
 		return this.screen;
 	};
 
@@ -47,7 +47,7 @@ var UI = new (function(global)
 
 	var cssKeys = 
 	{
-		position : 1, width : 1, height : 1, left: 1, right: 1, top: 1, bottom: 1
+		position : 1, width : 1, height : 1, left: 1, right: 1, top: 1, bottom: 1, margin: 1, padding: 1
 	};
 
 	this.Element = Class(
@@ -55,15 +55,17 @@ var UI = new (function(global)
 		constructor : function()
 		{
 			this.DOM = this.createDOM();
+			this.$DOM = $(this.DOM);
+			this.DOM.$elem = this;
 			this.container = null;
 			this.data = null;
-			this.bindingFunc = null;
 			this.bindings = null;
+			this.classBindings = null;
 		},
 
 		createDOM : function()
 		{
-			return $("<div />");
+			return $("<div />")[0];
 		},
 
 		setup : function(props)
@@ -99,6 +101,32 @@ var UI = new (function(global)
 
 		refresh : function()
 		{
+			if (this.classBindings !== null)
+			{
+				var l = this.classBindings.length;
+				for (var i = 0; i < l; i++) 
+				{
+					var binding = this.classBindings[i];
+					var sub = binding[0];
+					var prevClasses = binding[1];
+					if (prevClasses) sub.removeClass(prevClasses);
+
+					prevClasses = "";
+						
+					if (this.data !== null)
+					{
+						for (var b = 2; b < binding.length; b++) 
+						{
+							var cls = binding[b](this.data);
+							if (cls) prevClasses += cls + " ";
+						};
+					}
+
+					if (prevClasses) sub.addClass(prevClasses);
+					binding[1] = prevClasses;
+				};
+			}
+
 			if (this.bindings !== null)
 			{
 				var l = this.bindings.length;
@@ -106,18 +134,18 @@ var UI = new (function(global)
 				{
 					for (var i = 0; i < l; i++) 
 					{
-						var sub = this.bindings[i];
-						var data = sub.bindingFunc(this.data);
+						var binding = this.bindings[i];
+						var data = binding[1](this.data);
 						if (data === undefined)
 							throw ("invalid data from binding!");
-						sub.setData(data);
+						binding[0].setData(data);
 					};
 				}
 				else
 				{
 					for (var i = 0; i < l; i++) 
 					{
-						this.bindings[i].setData(null);
+						this.bindings[i][0].setData(null);
 					};
 				}
 			}
@@ -127,18 +155,29 @@ var UI = new (function(global)
 		{
 			if (!this.bindings)
 				this.bindings = [];
-			sub.bindingFunc = binding;
-			this.bindings.push(sub);
+			this.bindings.push([sub, binding]);
+		},
+
+		addClassBinding : function(sub, bindings)
+		{
+			if (!this.classBindings)
+				this.classBindings = [];
+			this.classBindings.push([sub, ""].concat(bindings));
 		},
 
 		addClass : function(className)
 		{
-			this.DOM.addClass(className);
+			this.$DOM.addClass(className);
+		},
+
+		removeClass : function(className)
+		{
+			this.$DOM.removeClass(className);
 		},
 
 		attr : function(name, value)
 		{
-			this.DOM.attr(name, value);
+			this.$DOM.attr(name, value);
 		},
 
 		addChild : function(child)
@@ -163,12 +202,12 @@ var UI = new (function(global)
 
 		append : function(inner)
 		{
-			this.DOM.append(inner.DOM);
+			this.$DOM.append(inner.$DOM);
 		},
 
 		detach : function()
 		{
-			this.DOM.detach();
+			this.$DOM.detach();
 		},
 
 		setSub : function(name, sub)
@@ -180,22 +219,45 @@ var UI = new (function(global)
 
 		css : function(prop, value)
 		{
-			return this.DOM.css(prop, value);
+			return this.$DOM.css(prop, value);
+		},
+
+		html : function(str)
+		{
+			return this.$DOM.html(str);
 		},
 
 		position : function(x, y)
 		{
-			this.DOM.css({ left : x, top : y });
+			this.$DOM.css({ left : x, top : y });
 		},
 
 		width : function()
 		{
-			return this.DOM.width();
+			return this.$DOM.width();
 		},
 
 		height : function()
 		{
-			return this.DOM.height();
+			return this.$DOM.height();
+		},
+
+		on : function(event, handler, obj)
+		{
+			var self = this;
+			this.$DOM.on(event, function(e)
+			{
+				self.handleEvent(e, handler, obj);
+			});
+		},
+
+		handleEvent : function(e, handler, obj)
+		{
+			e.targetElement = e.target.$elem;
+			if (!e.targetElement)
+				throw ("event triggered from unbound DOM!");
+
+			handler.call(obj, e);
 		}
 	});
 
@@ -265,6 +327,17 @@ var UI = new (function(global)
 
 				if (node.binding !== null)
 					elem.addBinding(sub, node.binding);
+			};
+
+			for (var i = 0; i < l; i++) 
+			{
+				var node = this.nodes[i];
+				var sub = subs[i];
+				if (node.classStr)
+					sub.addClass(node.classStr);
+
+				if (node.classBindings)
+					elem.addClassBinding(sub, node.classBindings);
 			};
 
 			elem.container = container;
@@ -353,6 +426,15 @@ var UI = new (function(global)
 			var props = hasProps ? current[1] : null;
 			current.splice(0, hasProps ? 2 : 1);
 
+			if (hasProps && current === data)
+			{
+				if (props.$binding)
+				{
+					delete props.$binding;
+					console.error("template root node cannot have binding!");
+				}
+			}
+
 			if (current.$base !== undefined)
 			{
 				children = compileOverride(current, template, baseTemplate);
@@ -376,6 +458,7 @@ var UI = new (function(global)
 			node.parent = current.$parent ? current.$parent.$node : null;
 			node.isContainer = hasProps && props.hasOwnProperty("$container") ? props.$container : node.isContainer;
 			node.binding = hasProps && props.hasOwnProperty("$binding") ? compileBinding(props.$binding) : node.binding;
+			compileClass(node, props);
 			template.nodes.push(node);
 
 			// TODO: optimization: if has props but props is empty, ignore
@@ -383,6 +466,7 @@ var UI = new (function(global)
 			{
 				delete props.$container;
 				delete props.$binding;
+				delete props.$class;
 				Cloner.replaceReferences(props, templates);
 				baseProps = node.props || (node.template ? node.template.getProps() : null);
 				node.props = baseProps ? Cloner.extendBatch(true, {}, baseProps, props) : props;				
@@ -592,5 +676,43 @@ var UI = new (function(global)
 			return new Function("data", "return data." + binding);
 		}
 	};
+
+	function compileClass(node, props)
+	{
+		if (!props || !props.$class)
+			return;
+
+		var classes = props.$class.split(/\s+/);
+		var classStr = "";
+		var classBindings = [];
+		for (var i = 0; i < classes.length; i++) 
+		{
+			var cls = classes[i];
+			if (!cls) continue;
+
+			if (cls[0] === '$')
+			{
+				classBindings.push(compileBinding(cls.substr(1)));
+			}
+			else
+			{
+				if (classStr) classStr += " ";
+				classStr += cls;
+			}
+		};
+
+		if (classStr)
+		{
+			node.classStr = node.classStr ? (node.classStr + " " + classStr) : classStr;
+		}
+
+		if (classBindings.length > 0)
+		{
+			if (node.classBindings)
+				node.classBindings = node.classBindings.concat(classBindings);
+			else
+				node.classBindings = classBindings;
+		}
+	}
 	
 })(this);

@@ -19,7 +19,8 @@ Definition.register(
 		title : "Explore",
 		params : $p("locale"),
 		effects : [ "Goals.PartyHasExplored(locale)" ],
-		preconditions : [ "Goals.PartyIsAt(locale)" ]
+		preconditions : [ "Goals.PartyIsAt(locale)" ],
+		seq : $obj(Seq_Explore)
 	}
 
 	/*

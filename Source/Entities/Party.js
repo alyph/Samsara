@@ -1,20 +1,49 @@
-var Party = Class(
+var Party = Class(Actor,
 {
-	constructor : function(game)
+	constructor : function()
 	{
-		this.game = game;
+		Party.$super.call(this);
+
 		this.members = [];
 		this.Locale = null;
+		this.scene = null;
 		this.quests = [];
+		this.actions = [];
+		this.plannedActions = [];
+		this.actionPool = [];
+		this.context = {};
+		this.context.party = this;
 
 		this.questActivities = [];
 		this.localActivities = [];
 	},
 
+	preStep : function()
+	{
+		var scene = this.scene;
+		return scene === null || scene.preStep();
+	},
+
+	step : function()
+	{
+		var scene = this.scene;
+		if (scene !== null)
+		{
+			scene.step();
+		}
+		else
+		{
+			this.perform();
+		}
+
+		this.plan();
+		return this.plannedActions.length === 0;
+	},
+
 	enter : function(loc)
 	{
 		this.Locale = loc;
-		this.updateActivities();
+		//this.updateActivities();
 	},
 
 	isAt : function(loc)
@@ -25,6 +54,19 @@ var Party = Class(
 	isInside : function(loc)
 	{
 		return this.Locale !== null && this.Locale.isInside(loc);
+	},
+
+	plan : function()
+	{
+		this.plannedActions.length = 0;
+
+		if (this.actions.length > 0)
+			return;
+
+		if (!this.hasExplored(this.Locale))
+		{
+			this.plannedActions.push(Definition.get("Activities.Explore").instantiate([this.Locale], this.context));
+		}
 	},
 
 	accepts : function(quest)

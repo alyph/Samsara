@@ -24,7 +24,42 @@ var SpriteDefinitions =
 		folder : "Content/Images/Locations",
 		extension : "png",
 		Loc_Camp : "Camp",
-		Loc_Outpost : "Outpost"
+		Loc_Outpost : "Outpost",
+		Loc_FieldShards : "FieldShards",
+		Loc_PillarPrimordia : "TwinPillars",
+		Loc_AeonMatrix: "AeonMatrix",
+		Loc_Marsh: "Marsh",
+		Loc_Forest: "Forest",
+		Back_Map: "Map"
+	},
+
+	{
+		image : "Content/Images/CharacterCards.png",
+		w : 192,
+		h : 256,
+		Cha_YoungMechKnight:			[0, 0],
+		Cha_FemaleBattleMage:			[1, 0],
+		Cha_MaskedArmorLeader:			[2, 0],
+		Cha_OorgolianSoldier:			[3, 0],
+		Cha_ChanceMoth:					[7, 1],
+		Cha_MerkadianSoldier:			[4, 3],
+		Cha_Murden:						[6, 1]
+		/*
+		cardBarbarian : [ 0, 0 ],
+		cardBard : [ 1, 0 ],
+		cardRogue : [ 2, 0 ],
+		cardSorceress : [ 3, 0 ],
+		cardWizard : [ 4, 0 ],
+		Stalker : [ 4, 2 ]*/
+	},
+
+	{
+		image: "Content/Images/CharacterCardsLarge.png",
+		w : 240,
+		h : 300,
+		Cha_Callerail:					[0, 0],
+		Cha_TravonisUl:					[1, 0],
+		Cha_Accelerator:				[3, 0]
 	},
 
 	{
@@ -131,18 +166,6 @@ var SpriteDefinitions =
 		cardFungiHarvester : [ 2, 2 ],
 		cardWargBerserk : [ 3, 2 ],
 		cardCynoAvenger : [ 4, 2 ]
-	},
-
-	{
-		image : "Content/Images/CharacterCards.png",
-		w : 192,
-		h : 256,
-		cardBarbarian : [ 0, 0 ],
-		cardBard : [ 1, 0 ],
-		cardRogue : [ 2, 0 ],
-		cardSorceress : [ 3, 0 ],
-		cardWizard : [ 4, 0 ],
-		Stalker : [ 4, 2 ]
 	},
 
 	{
@@ -260,12 +283,53 @@ var SpriteDefinitions =
 		h : 64,
 		Market : 			[ 1, 0 ],
 		Library : 			[ 2, 0 ]
+	},
+
+	{
+		image : "Content/Images/Locales.png",
+		w : 192,
+		h : 256,
+		PlainsOfKataru :	[ 0, 0 ]
+	},
+
+	{
+		image : "Content/Images/Activities.png",
+		w : 192,
+		h : 256,
+		Explore :			[ 0, 0 ]
 	}
 ];
 
-var Sprites =
+var Sprites = new (function()
 {
-	init : function()
+	var images = {};
+	var imagesTotal = 0;
+	var imagesLoaded = 0;
+	var finishedHandler = null;
+
+	var Sprite = Class(
+	{
+		constructor : function()
+		{
+			this.imageClass = "";
+			this.width = 0;
+			this.height = 0;
+			this.offsetx = 0;
+			this.offsety = 0;
+		}
+	});
+
+	var ImageInfo = Class(
+	{
+		constructor : function()
+		{
+			this.url = "";
+			this.className = "";
+			this.DOM = null;
+		}
+	});
+
+	this.init = function(finished)
 	{
 		for (var i = 0; i < SpriteDefinitions.length; i++)
 		{
@@ -279,9 +343,11 @@ var Sprites =
 				this.loadSpriteSheet(def);
 			}
 		}
-	},
 
-	loadFolder : function(def)
+		loadImages(finished);
+	};
+
+	this.loadFolder = function(def)
 	{
 		var folder = def.folder;
 		var ext = def.extension;
@@ -293,19 +359,25 @@ var Sprites =
 
 			if (def.hasOwnProperty(name))
 			{
-				var options = {};
-				options.imageURL = folder + "/" + def[name] + "." + ext;
+				var imgName = def[name];
+				var url = folder + "/" + imgName + "." + ext;
+				var info = addImage(imgName, url);
 
-				this.addSprite(name, options);
+				var sprite = new Sprite();
+				sprite.image = info;
+				this.addSprite(name, sprite);
 			}
 		}
-	},
+	};
 
-	loadSpriteSheet : function(def)
+	this.loadSpriteSheet = function(def)
 	{
 		var image = def.image;
 		var w = def.w;
 		var h = def.h;
+
+		var imgName = extractFileName(image);
+		var info = addImage(imgName, image);
 
 		if (w !== undefined && h === undefined)
 			h = w;
@@ -317,31 +389,90 @@ var Sprites =
 
 			if (def.hasOwnProperty(name))
 			{
-				var options = {};
-				options.imageURL = image;
+				var sprite = new Sprite();
+				sprite.image = info;
 
 				if (w !== undefined)
 				{
 					var x = def[name][0] || 0;
 					var y = def[name][1] || 0;
 
-					options.type = $.gQ.ANIMATION_HORIZONTAL;
-					options.delta = w;
-					options.distance = h;
-					options.offsetx = x * w;
-					options.offsety = y * h;
+					sprite.width = w;
+					sprite.height = h;
+					sprite.offsetx = x * w;
+					sprite.offsety = y * h;
 				}
 
-				this.addSprite(name, options);
+				this.addSprite(name, sprite);
 			}
 		}
-	},
+	};
 
-	addSprite : function(name, options)
+	this.addSprite = function(name, sprite)
 	{
 		if (name in this)
 			throw ("cannot add " + name + " to sprites, name already taken!");
 
-		this[name] = new $.gQ.Animation(options);
+		this[name] = sprite;		
+	};
+
+	function extractFileName(url)
+	{
+		return url.split('/').pop().split('.')[0];
+	};
+
+	function addImage(name, url)
+	{
+		var className = ("image_" + name).toLowerCase();
+
+		if (images[className])
+			throw ("conflicting image name:" + className);
+
+		var image = new ImageInfo();
+		image.url = url;
+		image.className = className;
+
+		images[className] = image;
+		return image;
+	};
+
+	function loadImages(finished)
+	{
+		imagesTotal = 0;
+		imagesLoaded = 0;
+
+		var styleStr = "<style> ";
+		for (var name in images)
+		{
+			var img = images[name]
+			var url = img.url;
+			styleStr += "." + name + " { background-image: url(" + url + "); } ";
+			imagesTotal++;
+		}
+		styleStr += "</style>";
+
+		$('head').append(styleStr);
+
+		finishedHandler = finished;
+
+		for (var name in images)
+		{
+			var img = images[name]
+			var url = img.url;
+			img.DOM = $("<img Src=\"" + url + "\" class=\"" + name + "\" style=\"display:none;\" />").appendTo($("body")).load(imageLoaded)[0];
+		}
 	}
-};
+
+	function imageLoaded()
+	{
+		$(this).remove();
+		imagesLoaded++;
+
+		if (imagesLoaded >= imagesTotal)
+		{
+			finishedHandler();
+		}
+	}
+
+})();
+

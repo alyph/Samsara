@@ -10,28 +10,32 @@ var PLAYGROUND_HEIGHT	= 768;
 	head.ready(function()
 	{
 		// Animations declaration:
-		Sprites.init();
-
-		// Initialize the game:
-		$("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
-
-		// this sets the id of the loading bar:
-		$.loadCallback(function(percent)
+		Sprites.init(function()
 		{
-			$("#loadingBar").width(400*percent/100);
-		});
+			// Initialize the game:
+			// TODO: remove gamequery as it's no longer needed
+			$("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
 
-		$.playground().startGame(function()
-		{
-			Core.init();
+			// this sets the id of the loading bar:
+			
+			$.loadCallback(function(percent)
+			{
+				$("#loadingBar").width(400*percent/100);
+			});
 
-			UI.init($("#playground"));
+			$.playground().startGame(function()
+			{
+				Core.init();
 
-			var game = new Game();
-			game.start();
+				UI.init($("#playground"));
 
-			$("#welcomeScreen").fadeTo(1000,0,function(){$(this).remove();});
-			$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
+				var game = new Game();
+				game.start();
+
+				$("#welcomeScreen").fadeTo(1000,0,function(){$(this).remove();});
+				$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
+			});
+
 		});
 
 	});
@@ -41,6 +45,7 @@ var PLAYGROUND_HEIGHT	= 768;
 	var components = "Source/Components/";
 	var definitions = "Source/Definitions/";
 	var entities = "Source/Entities/";
+	var sequences = "Source/Sequences/";
 	var table = "Source/Table/";
 	var source = "Source/";
 	var core = "Source/Core/";
@@ -58,20 +63,25 @@ var PLAYGROUND_HEIGHT	= 768;
 		ui + "Templates/GameTemplates.js",
 		ui + "Templates/Screens.js",
 		entities + "Entity.js",
+		entities + "Actor.js",
 		entities + "Message.js",
 		entities + "Narrator.js",
 		entities + "Card.js",
 		entities + "Deck.js",
 		entities + "Player.js",
 		entities + "Party.js",
+		entities + "Character.js",
 		entities + "Scene.js",
 		entities + "Stage.js",
 		entities + "Story.js",
 		entities + "Activity.js",
+		entities + "Environment.js",
 		entities + "Location.js",
 		entities + "Goal.js",
 		entities + "Quest.js",
 		entities + "World.js",
+		sequences + "Sequence.js",
+		sequences + "ActionSequences.js",
 		table + "Boards.js",
 		table + "CardArea.js",
 		table + "CardPiece.js",
@@ -82,6 +92,7 @@ var PLAYGROUND_HEIGHT	= 768;
 		definitions + "Activities.js",
 		definitions + "Characters.js",
 		definitions + "Goals.js",
+		definitions + "Environments.js",
 		definitions + "Locations.js",
 		definitions + "Quests.js",
 		definitions + "Sprites.js",

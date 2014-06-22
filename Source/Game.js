@@ -8,17 +8,27 @@ var Game = Class(
 	{
 		this.world = new World(this);
 
+		this.screen = UI.showScreen("gameScreen");
+
+		this.screen.boardBack.setData(Sprites["Back_Map"]);
+		
+
 		//this.table = new Table(this);
 
 		this.player = new Player(this);
 		var party = this.player.party;
-		var quest = new Quest(Definition.get("Quests.Exploration"));
-		quest.params.set("region", this.world.getEntity("Region.Greenbelt"));
-		party.accepts(quest);
-		party.enter(this.world.getEntity("Locale.OlegTradingPost"));
+		//var quest = new Quest(Definition.get("Quests.Exploration"));
+		//quest.params.set("region", this.world.getEntity("Region.Greenbelt"));
+		//party.accepts(quest);
+		party.enter(this.world.getEntity("Locale.PlainStarFall"));
 
-		this.screen = UI.showScreen("gameScreen");
-		this.player.beginPlay();
+		var scene = new Scene();
+		scene.environment = Definition.get("Environments.PlainStarFall");
+		party.enterScene(scene);
+		party.plan();
+
+		this.playerFinished = this.playerFinished.bind(this);
+		this.player.play(this.playerFinished);
 
 		//var world = new World(this);
 		//var openingScene = new Scene(this, Core.getDef("Scene_Opening"));
@@ -45,6 +55,29 @@ var Game = Class(
 		// camp.addActivities(explore, bulletin, visitBar, visitAgora);
 
 		// this.enterLocation(camp);
+	},
+
+	playerFinished : function()
+	{
+		this.step();
+	},
+
+	step : function()
+	{
+		var shouldContinue = true;
+		var player = this.player;
+		var world = this.world;
+
+		while (shouldContinue)
+		{
+			if (!player.preStep())
+				break;
+
+			shouldContinue = player.step();
+			world.step();
+		}
+
+		player.play(this.playerFinished);
 	}
 
 	// initDecks : function()
