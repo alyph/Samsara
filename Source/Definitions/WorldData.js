@@ -3,6 +3,30 @@ World.WorldData.entities =
 	"Locale.PlainStarFall":
 	{
 		$base : "Locales.Wildness"
+	},
+
+	"Character.Ragnar":
+	{
+		$base: Character,
+		name: "Ragnar",
+		sprite: "Cha_Warlord",
+		position: "front"
+	},
+
+	"Character.Tiamat":
+	{
+		$base: Character,
+		name: "Tiamat",
+		sprite: "Cha_Acolyte",
+		position: "rear"
+	},
+
+	"Character.Yagnas":
+	{
+		$base: Character,
+		name: "Yagnas",
+		sprite: "Cha_Deva",
+		position: "front"
 	}
 
 	/*

@@ -18,6 +18,15 @@ UI.Image = Class(UI.Element,
 	constructor : function()
 	{
 		UI.Image.$super.call(this);
+
+		this.useOriginalSize = false;
+	},
+
+	setup : function(props)
+	{
+		UI.Image.$superp.setup.call(this, props);
+		
+		this.useOriginalSize = props.useOriginalSize || false;
 	},
 
 	refresh : function()
@@ -37,10 +46,24 @@ UI.Image = Class(UI.Element,
 				this.image = sprite.image;
 			}
 
+			var iw = 0;
+			var ih = 0;
+
 			if (sprite.width > 0 && sprite.height > 0)
 			{
-				var iw = this.width();
-				var ih = this.height();
+				if (this.useOriginalSize)
+				{
+					iw = sprite.width;
+					ih = sprite.height;
+					this.width(iw);
+					this.height(ih);
+				}
+				else
+				{
+					iw = this.width();
+					ih = this.height();
+				}
+
 				var backSize = Math.round(sprite.image.DOM.naturalWidth / sprite.width) * iw;
 				var offsetX = -Math.round(sprite.offsetx / sprite.width) * iw;
 				var offsetY = -Math.round(sprite.offsety / sprite.height) * ih;	
@@ -49,7 +72,19 @@ UI.Image = Class(UI.Element,
 			}
 			else
 			{
-				cssProps["background-size"] = this.width() + "px";
+				if (this.useOriginalSize)
+				{
+					iw = sprite.image.DOM.naturalWidth;
+					ih = sprite.image.DOM.naturalHeight;
+					this.width(iw);
+					this.height(ih);
+				}
+				else
+				{
+					iw = this.width();
+				}
+
+				cssProps["background-size"] = iw + "px";
 			}
 
 			this.css(cssProps);
@@ -125,7 +160,7 @@ UI.ItemContainer = Class(UI.Element,
 
 	rearrange : function()
 	{
-		throw ("not implemented!");
+		throw ("must override.");
 	},
 
 	createItem : function()
@@ -193,7 +228,7 @@ UI.List = Class(UI.ItemContainer,
 
 		for (var i = 0; i < l; i++) 
 		{
-			var top = Math.floor((h - ih[i]) / 2);		
+			var top = Math.floor((h - ih[i]) / 2);
 			this.items[i].position(left, MathEx.randomInt(top - rand, top + rand));
 			left += iw[i] + padding;
 		};

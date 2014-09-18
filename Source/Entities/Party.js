@@ -1,4 +1,4 @@
-var Party = Class(Actor,
+var Party = Class(Entity,
 {
 	constructor : function()
 	{
@@ -16,6 +16,13 @@ var Party = Class(Actor,
 
 		this.questActivities = [];
 		this.localActivities = [];
+
+		this.scene = null;
+	},
+
+	addMember : function(member)
+	{
+		this.members.push(member);
 	},
 
 	preStep : function()

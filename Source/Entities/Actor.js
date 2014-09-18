@@ -1,3 +1,5 @@
+
+/*
 var Actor = Class(Entity,
 {
 	$statics:
@@ -40,3 +42,4 @@ var Actor = Class(Entity,
 		this.scene.removeActor(this);
 	}
 });
+*/

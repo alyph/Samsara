@@ -61,6 +61,11 @@ p
     opacity: 0.8;
 }
 
+.actor.right #sprite
+{
+    transform: scaleX(-1);
+}
+
 .gameScreen #background
 {
     border: 4px solid black;
@@ -74,6 +79,54 @@ p
     font: italic 18px "Comic Sans MS", cursive;
     padding: 8px;
     max-width: 80%;
+}
+
+.gameScreen #center
+{
+    top: 0%;
+    bottom: 25%;
+    /*-webkit-mask-box-image: url('../Content/Images/UI/Mask.png');*/
+}
+
+.gameScreen #center > #title
+{
+    color: #dac056;
+    font: 30px "dpcomic", cursive;
+    /*-webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;*/
+    margin: 40px auto 20px auto;
+    text-shadow:
+       3px 3px 0 #000,
+     -2px -2px 0 #000,  
+      2px -2px 0 #000,
+      -2px 2px 0 #000,
+       2px 2px 0 #000;
+}
+
+.gameScreen #center > #features
+{
+    color: white;
+    font: 12px "Minecraftia", cursive;
+    text-shadow: 2px 2px 0 #000;
+    margin: 0px auto;
+    max-width: 65%;
+    z-index: 1;
+}
+
+.gameScreen #center > #prompts
+{
+    color: white;
+    font: 12px "Minecraftia", cursive;
+    text-shadow: 2px 2px 0 #000;
+    margin: 0px auto;
+    max-width: 65%;
+    z-index: 1;
+}
+
+.gameScreen > #stage
+{
+    top: 12%;
+    bottom: 25%;
 }
 
 .cardBack
@@ -120,11 +173,6 @@ p
 #table
 {
     /*background-color: rgba(0, 0, 0, 0.6);*/
-}
-
-#center
-{
-    background-color: rgba(0, 0, 0, 0.6);
 }
 
 #message
@@ -246,4 +294,21 @@ p
     font-weight: normal;
     font-style: normal;
 }
+
+@font-face
+{
+    font-family: 'dpcomic';
+    src: url('../Content/Fonts/dpcomic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face
+{
+    font-family: 'Minecraftia';
+    src: url('../Content/Fonts/Minecraftia.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 

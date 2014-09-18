@@ -8,19 +8,20 @@ var Player = Class(
 		this.remainingActions = [];
 		this.queuedActions = [];
 
-		game.screen.actions.on("click", this.onAction, this);
+		//game.screen.actions.on("click", this.onAction, this);
 	},
 
 	play : function(finished)
 	{
 		var screen = this.game.screen;
 		var scene = this.party.scene;
-		screen.background.setData(Sprites[scene.environment.background]);
-		screen.description.setData(scene.getDesc());
+		screen.title.setData("~ " + scene.environment.desc + " ~");
+		screen.features.setData("Open Ground • River • Bushes • Trees • Boulders • Dead Bodies");
 		screen.stage.setData(scene.stage);
+		screen.prompts.setData("You are approached by a goblin warband led by a warg rider. They are soon rushing towards you. The balky barbarian Xaross now has a chance to act...");
 
 		this.remainingActions = this.party.plannedActions; 
-		screen.actions.setData(this.remainingActions);
+		//screen.actions.setData(this.remainingActions);
 		this.playFinished = finished;
 
 		this.queuedActions.length = 0;
@@ -48,7 +49,7 @@ var Player = Class(
 		this.remainingActions.splice(index, 1);
 		this.queuedActions.push(action);
 
-		this.game.screen.actions.setData(this.remainingActions);
+		//this.game.screen.actions.setData(this.remainingActions);
 
 		if (this.remainingActions.length === 0)
 		{

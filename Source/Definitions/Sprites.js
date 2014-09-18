@@ -18,7 +18,7 @@ var SpriteDefinitions =
 		Back_HeartMountain : "HeartMountain",
 		Back_Pyre : "Pyre",
 		Overlay_Stage : "Stage",
-		Back_Theme: "Theme"
+		Back_Theme: "ThemeDark"
 	},
 
 	{
@@ -31,6 +31,19 @@ var SpriteDefinitions =
 		Loc_AeonMatrix: "AeonMatrix",
 		Loc_Marsh: "Marsh",
 		Loc_Forest: "Forest"
+	},
+
+	{
+		image : "Content/Images/SpritesSmall.png",
+		w : 64,
+		h : 64,
+		Cha_Acolyte:					[1, 0],
+		Cha_Warlord:					[2, 0],
+		Cha_Deva:						[4, 0],
+		Cha_GoblinSwordsman:			[5, 0],
+		Cha_GoblinSpearman:				[6, 0],
+		Cha_GoblinArcher:				[7, 0],
+		Cha_GoblinRider:				[0, 1]	
 	},
 
 	{

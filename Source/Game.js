@@ -18,14 +18,16 @@ var Game = Class(
 
 		this.player = new Player(this);
 		var party = this.player.party;
+
+		party.addMember(this.world.getEntity("Character.Ragnar"));
+		party.addMember(this.world.getEntity("Character.Tiamat"));
+		party.addMember(this.world.getEntity("Character.Yagnas"));
 		//var quest = new Quest(Definition.get("Quests.Exploration"));
 		//quest.params.set("region", this.world.getEntity("Region.Greenbelt"));
 		//party.accepts(quest);
 		party.enter(this.world.getEntity("Locale.PlainStarFall"));
 
-		var scene = new Scene();
-		scene.environment = Definition.get("Environments.PlainStarFall");
-		party.enterScene(scene);
+		var scene = generateRandomEncounter(party);
 		party.plan();
 
 		this.playerFinished = this.playerFinished.bind(this);

@@ -33,5 +33,11 @@ Definition.register(
 	{
 		background : "Loc_Forest",
 		desc : "Forest"
+	},
+
+	CloudSerpentHills:
+	{
+		background : "Loc_Forest",
+		desc : "Cloud Serpent Hills"
 	}
 });

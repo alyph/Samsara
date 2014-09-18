@@ -47,7 +47,9 @@ var UI = new (function(global)
 
 	var cssKeys = 
 	{
-		position : 1, width : 1, height : 1, left: 1, right: 1, top: 1, bottom: 1, margin: 1, padding: 1
+		display : 1, margin: 1, padding: 1, "flex-direction" : 1, flex : 1,
+		position : 1, left: 1, right: 1, top: 1, bottom: 1, 
+		width : 1, height : 1, "max-width" : 1, "max-height" : 1
 	};
 
 	this.Element = Class(
@@ -227,19 +229,22 @@ var UI = new (function(global)
 			return this.$DOM.html(str);
 		},
 
-		position : function(x, y)
+		position : function(x, y, z)
 		{
-			this.$DOM.css({ left : x, top : y });
+			var style = { left : x, top : y };
+			if (z) style["z-index"] = z;
+
+			this.$DOM.css(style);
 		},
 
-		width : function()
+		width : function(v)
 		{
-			return this.$DOM.width();
+			return arguments.length ? this.$DOM.width(v) : this.$DOM.width();
 		},
 
-		height : function()
+		height : function(v)
 		{
-			return this.$DOM.height();
+			return arguments.length ? this.$DOM.height(v) : this.$DOM.height();
 		},
 
 		on : function(event, handler, obj)

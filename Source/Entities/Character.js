@@ -1,11 +1,11 @@
-var Character = Class(Actor,
+var Character = Class(Entity,
 {
 	constructor : function()
 	{
 		Character.$super.call(this);
 
 		this.name ="nameless";
-		this.portrait = null;
+		this.sprite = null;
 		this.size = "normal";
 	},
 
@@ -16,7 +16,7 @@ var Character = Class(Actor,
 
 	getImage : function()
 	{
-		return Sprites[this.portrait];
+		return Sprites[this.sprite];
 	},
 
 	getSize: function()
