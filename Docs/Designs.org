@@ -1,0 +1,195 @@
+
+* roadmap
+  - initial entities, characters, party, pov, keeper, locales  
+->- locale of a pov (probably just start from the plain of red grass)
+  - keeper activates pov, pov select action
+  - populate pois, pois provide actions
+  - travel around, explore --> actions
+    - ways to define where you are (combination of multiple landmarks)
+    - rough area/territory
+    - point of interest (places within the area, it's just type of relations, there will be places within the point of interest too)
+    - natural obstacles (river, mountain), road
+  - encounters
+  - settlement interactions
+  - combat
+
+* POVs
+  - can contain one or more characters, thinking planning, acting together (or act separately thus breaking the pov?)
+  - keeper will trigger povs to act based on certain rules
+  - povs will split and merge responding to the events, actions etc.
+  - when the whole party works together all its members merge together into one pov
+  - in other situations (like in combat), each member will act separately, so each belong to their own povs. They may still assist each other but that's special actions. And occasionally some of them may merge into small povs and act together (like say in group conversation)
+  - pov is anchored at one locale at any given time. The locale can still be in a broad sense (like in the Forest of Corruption)
+
+* Keeper
+  - is the game master, manages game flow, and mainly the actions of all active povs
+  - there is one keeper per world
+  - the keeper also control NPCs (rules to pick actions for NPCs)
+
+
+* Locale
+  - relations (with other locales)
+    - relation
+    - other locale
+    - descriptors
+
+* classes/trainings/talents
+  - artificer
+  - elementalist
+  - gladiator
+
+
+* characters
+  - to be named
+    - artificer guild
+    - apprentice
+    - lone survivor of the expedition
+  - to be named
+    - born elementalist
+    - guidance by the old god
+    - practiced heretics
+    - condemned by the temple of all seeing
+  - to be named
+    - gladiator champion
+    - broke free from the pit
+    - gained therianthropic mutation
+
+
+
+* locations
+  - an city continues to grow skywards
+  - a village next to a forest that's home for many exotic animals, they hunt and sell those animals to mages or nobles. They have good hunters   
+
+
+* laundry list
+  - palace
+  - keep
+  - mansion
+  - great library
+  - lighthouse
+  - university
+  - sorcerer's lab
+  - thieves' guild
+  - merchant's guild
+  - water front
+  - harbor
+  - caravan
+  - outpost
+  - fort
+  - watch tower
+  - wizard's tower
+  - ruins
+  - relics
+  - obelisk
+  - stone henge
+  - magic glove
+  - magic crystals
+  - barracks
+  - sewer
+  - portals
+  - secret passage
+  - camps
+  - den and caves
+  - lost temple
+  - sunken temples
+  - great wall
+  - pyramids
+  - caverns
+  - alchemist lab
+  - mill and farm
+  - hermit's hut
+  - lumber mill
+  - mines
+  - gladiator's pit
+  - arena
+  - secret meeting
+  - illusionary castle
+  - forgotten dungeons
+  - ancient tombs
+  - tavern
+  - hell gate (and city around it??)
+  - enchanted forest
+  - bazaar
+  - holy sites
+  - grand theater
+  - black market
+  - fishing
+  - herb gathering
+  - hunting
+  - feast or party
+  - gallery
+  - foundry and forge
+  - conspiracy
+  - demon hunters
+  - assassin guild
+  - moving castle/island/settlement/flotilla
+  - traveling merchant
+  - mysterious travelers
+  - monastery
+  - ritual
+  - crypt
+  - hidden pathway
+  - conclave
+
+
+  - ambitious lord
+  - exiled prince
+  - circle of arcana
+  - cultist of the ancient one
+  - necromancer
+  - makers of automaton
+  - keeper of greater archive
+  - merchant prince
+  - angelic order
+  - the faith
+  - brotherhood/sisterhood
+  - cultist of torment
+  - cultist of alter reality
+  - lord with iron fist
+  - slavers
+  - wardens
+  - academy
+  - the vault
+  - steppe nomads
+  - pirates
+  - rampaging barbarians
+  - underground race
+
+
+  * flow:
+  - pick a (or multiple) random character(s) to act
+  - pick action
+  - others may react
+  - results (action + reaction)
+  - multi target action will resolve for each target
+  - now next action (allow continue occur to previously involved characters)
+    - certain result allows the previous instigator or target perform follow up actions
+    - depending on whether or not it makes sense, the previous instigator or target can continue to perform next action without cut to other characters
+  - when exhausted continuity, cut to other characters to allow them to act, the next character may act upon the characters involved in previous actions if it makes sense
+
+* action:
+  - results
+    - calculated based on certain rules (dice roll?) and how reaction modifies it
+    - multiple results may apply to both instigators and targets
+    - in certain cases, the character can choose from multiple results
+    - deal damage: wounds, death
+    - maneuver: disengage, engage, find cover, climb tree, find high ground
+    - apply effects: set on fire, stunned, knock back, falling, grappled, fumbled
+  - descriptors
+    - define action types, traits and prerequisites
+    - used to check if a reaction or result is available for the given action
+    - determine in which context the action can be performed (opt-in, an action can only be performed in a context if it has at least one descriptor says so)
+    - types: attack, melee, ranged, spell, movement
+    - tags: weapon type, AOE, beam, projectile, touch
+  - reaction
+    - reactions are to modify the incoming action
+    - multiple characters (and not necessarily the target) may opt in to react, although there might be an order for whom to opt in, and depending on the result, the action may continue for other characters to react
+
+* action descriptors:
+  - name: most descriptors simply has a name (which is implicitly the definition short name)
+  - prerequisites: the action will have to match the prerequisites in order to be selected (can be an expression or function)
+
+
+* action examples:
+  - engage/rush: towards one or a group of targets, ended in a engaged state with the target, and warrant a free melee attack
+

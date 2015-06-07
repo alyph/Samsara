@@ -1,5 +1,6 @@
-var World = Class(
+var World = Class(BaseObject,
 {
+	/*
 	$statics:
 	{
 		WorldData:
@@ -7,21 +8,49 @@ var World = Class(
 			entities : {}
 		}
 	},
+*/
 
 	constructor : function(game)
 	{
+		World.$super.call(this);
 		this.game = game;
 		this.entities = {};
-		this.initialize();
+		this.keeper = null;
+		this.updateQueue = [];
+		this.isUpdating = false;
+		//this.isWaiting = false;
+		//this.updateCount = 0;
+		//this.turn = 0;
 	},
 
-	initialize : function()
+	create : function()
 	{
-		this.createEntities();
-
-		World.WorldData = null;
+		this.loadFromArchive();
 	},
 
+	loadFromArchive: function()
+	{
+		var entities = Archive.select(function(o){ return o.isA(Entity) && o.isInstance; });
+		var l = entities.length;
+
+		for (var i = 0; i < l; i++) 
+		{
+			var entity = entities[i];
+			this.entities[entity.$name] = entity;
+		};
+
+		for (var i = 0; i < l; i++) 
+		{
+			entities[i].enterWorld(this);
+		};
+
+		for (var i = 0; i < l; i++) 
+		{
+			entities[i].beginPlay();
+		};
+	},
+
+/*
 	createEntities : function()
 	{
 		var entitiesData = World.WorldData.entities;
@@ -63,7 +92,7 @@ var World = Class(
 		}
 
 		entity.$name = name;
-		entity.$ref = true;
+		//entity.$ref = true;
 		return entity;
 	},
 
@@ -73,7 +102,7 @@ var World = Class(
 		delete data["$base"];
 		Cloner.extend(entity, data);
 	},
-
+*/
 	getEntity : function(name)
 	{
 		var entity = this.entities[name];
@@ -87,13 +116,23 @@ var World = Class(
 		return this.entities[name] || null;
 	},
 
-	spawn : function(name, data)
+	spawn : function(name, props)
 	{
-		var entity = this.createEntity(name, data);
-		this.extendEntityData(entity, data);
-		this.entities[name] = entity;
-		entity.beginPlay(this.game, this);
+		var entity = Archive.create(name, props);
+		if (entity !== null)
+		{
+			this.entities[name] = entity;
+			entity.enterWorld(this);
+			entity.beginPlay();
+		}
+
 		return entity;
+
+		// var entity = this.createEntity(name, data);
+		// this.extendEntityData(entity, data);
+		// this.entities[name] = entity;
+		// entity.beginPlay(this.game, this);
+		// return entity;
 	},
 
 	destroy : function(entity)
@@ -101,13 +140,168 @@ var World = Class(
 		if (this.entities[entity.$name] !== entity)
 			throw ("entity does not exist in the world, cannot be destroyed");
 
-		delete this.entities[entity.$name];
 		entity.endPlay();
+		entity.leaveWorld();
+		delete this.entities[entity.$name];
+		Archive.delete(entity);
 	},
 
-	step : function(steps)
+	// run : function()
+	// {
+	// 	do
+	// 	{
+	// 		this.update();
+	// 	} while(!this.isWaiting);
+	// },
+
+	addToUpdate : function(entity)
 	{
+		if (this.isUpdating)
+			throw ("cannot modify update queue when updating");
+
+		if (entity.world != this)
+			throw ("cannot update entity not in the world");
+
+		this.updateQueue.push(entity);
+	},
+
+	removeFromUpdate : function(entity)
+	{
+		if (this.isUpdating)
+			throw ("cannot modify update queue when updating");
 		
-	}
+		var idx = this.updateQueue.indexOf(entity);
+		if (idx >= 0)
+			this.updateQueue.splice(idx, 1);
+	},
+
+	update : function()
+	{
+		this.isUpdating = true;
+
+		var l = this.updateQueue.length;
+		for (var i = 0; i < l; i++) 
+		{
+			this.updateQueue[i].update();
+		};
+
+		this.isUpdating = false;
+
+		// this.beginUpdate();
+
+		// this.turn++;
+
+		// var entry = this.requestUpdateEntry();
+		// var queue = this.updateQueue;
+		// this.updateCount = queue.length;
+
+		// for (var i = queue.length - 1; i >= 0; i--) 
+		// {
+		// 	var entity = queue[i];
+		// 	if (entity.$turn === this.turn)
+		// 	{
+		// 		throw ("the entity is updated twice!");
+		// 		continue;
+		// 	}
+
+		// 	entity.$turn = this.turn;			
+		// 	entry.update(entity);
+
+		// 	if (!entry.isFinished())
+		// 	{
+		// 		entry = this.requestUpdateEntry();
+		// 	}
+		// };
+
+		// if (this.updateCount === 0)
+		// {
+		// 	this.endUpdate();
+		// }
+		// else
+		// {
+		// 	this.isWaiting = true;
+		// }
+	},
+
+	// beginUpdate : function()
+	// {
+	// 	this.isUpdating = true;
+	// },
+
+	// endUpdate : function()
+	// {
+	// 	this.isUpdating = false;
+	// 	throw ("not implemented!");
+	// },
+
+	// requestUpdateEntry : function()
+	// {
+	// 	return new World.UpdateEntry(this);
+	// },
+
+	// updateEntryFinished : function(entry)
+	// {
+	// 	this.updateCount--;
+	// 	throw ("not implemented!");
+
+	// 	if (this.updateCount === 0 && this.isWaiting)
+	// 	{
+	// 		this.isWaiting = false;
+	// 		this.endUpdate();
+	// 		this.run();
+	// 	}
+	// }
 });
+
+
+World.UpdateEntry = function()
+{
+	var STATE_Instant = 0;
+	var STATE_Updating = 1;
+	var STATE_Finished = 2;
+
+	return Class(
+	{
+		constructor : function(world)
+		{
+			this.world = world;
+			this.entity = null;
+			this.state = STATE_Instant;
+		},
+
+		isFinished : function()
+		{
+			return this.state === STATE_Instant || this.state === STATE_Finished;
+		},
+
+		update : function(entity)
+		{
+			this.entity = entity;
+			this.state = STATE_Instant;
+
+			entity.update(this);
+
+			if (this.state === STATE_Instant)
+				this.world.updateEntryFinished(this);
+		},
+
+		begin : function()
+		{
+			if (this.state !== STATE_Instant)
+				throw ("cannot begin update, if it's already updating or finished!");
+
+			this.state = STATE_Updating;
+		},
+
+		end : function()
+		{
+			if (this.state !== STATE_Updating)
+				throw ("cannot end update, if it is not updating currently!");
+
+			this.state = STATE_Finished;
+			this.world.updateEntryFinished(this);
+		}
+	});
+}();
+
 

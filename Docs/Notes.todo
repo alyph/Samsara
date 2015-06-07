@@ -2,16 +2,20 @@
 
 TODO:
 
-	✔	basic scene layout @done (14-09-17 21:10)
-	✔	sprites positioning @done (14-09-17 21:10)
 
+	☐	opportunity based combat actions
 
+	☐	convert world update to use the LatentUpdater
 		
 	☐	add sprites ref func $img()
 	☐	replace isatlocal with partylocal : local, since it s exclusive, or make isatlocal exclusive
 	☐	change locale to locale within relationship to a more generic relationship and fix the find potential travel origin to check single connection special case rather than within relation
 	☐	objects set by find references should have $ref set to true (?)
 	☐	image setting in template
+
+
+	✔	basic scene layout @done (14-09-17 21:10)
+	✔	sprites positioning @done (14-09-17 21:10)
 
 	✔	create all locals @done (14-04-01 22:54)
 	✔	activities @done (14-04-01 22:54)
@@ -37,12 +41,25 @@ Future:
 	☐	upgrade to latest head.js
 
 
+behavior
+task
+action
+command, operation, procedure
+
+intention/goal/task: melee, ranged, support, withdraw, flee
+behaviors: modifiers to the ongoing task, how to achieve the goal/intention: band, leader, lonewolf
+
+
 
 super - sub   UI element vs. the elements inside template
 outer - inner direct parent-child relationship between 2 elements
 parent - child two elements linked as parent child and also in same heiarchy
 
 
+this.handler("fooo");
+
+this.callback("bar", handler);
+this.callback("bar").call(params);
 
 {
 		div:

@@ -23,3 +23,29 @@ Core.Definitions(SceneDefinition,
 		]
 	}
 });*/
+
+$begin("scene");
+
+$def("planning", 
+{
+	$base: Scene,
+
+	populator: function()
+	{
+		var locale = this.pov.locale;
+		var area = locale.desc.query(Archive.get("keyword.part_of")).other();
+		if (area !== null)
+		{
+			this.pois.push(new PointOfInterest(area));
+
+			var neighbors = area.desc.query(Archive.get("keyword.bordering")).others();
+			for (var i = 0; i < neighbors.length; i++) 
+			{
+				var poi = new PointOfInterest(neighbors[i]);
+				this.pois.push(poi);
+			};
+		}
+	}
+});
+
+$end();

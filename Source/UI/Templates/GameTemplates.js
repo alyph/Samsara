@@ -19,4 +19,13 @@ UI.Template(
 ["stage", { $element: UI.StagePanel, actorTemplate: "$actor" }
 ]);
 
+UI.Template(
+["poi", { },
+	["image#portrait", { $binding: "portrait()", useOriginalSize: true }]
+]);
+
+UI.Template(
+["scene", { $element: UI.SceneViewer, itemTemplate: "$poi" }
+]);
+
 

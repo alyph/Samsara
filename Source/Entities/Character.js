@@ -4,14 +4,16 @@ var Character = Class(Entity,
 	{
 		Character.$super.call(this);
 
-		this.name ="nameless";
+		this.displayName ="nameless";
 		this.sprite = null;
 		this.size = "normal";
+		this.party = null;
+		this.pov = null;
 	},
 
 	getTitle : function()
 	{
-		return this.name;
+		return this.displayName;
 	},
 
 	getImage : function()

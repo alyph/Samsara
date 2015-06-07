@@ -30,7 +30,8 @@ var SpriteDefinitions =
 		Loc_PillarPrimordia : "TwinPillars",
 		Loc_AeonMatrix: "AeonMatrix",
 		Loc_Marsh: "Marsh",
-		Loc_Forest: "Forest"
+		Loc_Forest: "Forest",
+		loc_primal_forest: "PrimalForest"
 	},
 
 	{
@@ -300,9 +301,15 @@ var SpriteDefinitions =
 
 	{
 		image : "Content/Images/Locales.png",
-		w : 192,
-		h : 256,
-		PlainsOfKataru :	[ 0, 0 ]
+		w : 128,
+		h : 96,
+		loc_barren :			[ 1, 0 ],
+		loc_night_forest :		[ 2, 0 ],
+		loc_rocky :				[ 3, 0 ],
+		loc_desert_rock :		[ 4, 0 ],
+		loc_mountain :			[ 5, 0 ],
+		loc_oriental_temple :	[ 6, 0 ],
+		loc_forest :			[ 7, 0 ]
 	},
 
 	{

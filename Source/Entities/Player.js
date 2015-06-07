@@ -1,81 +1,119 @@
-var Player = Class(
+var Player = Class(Entity,
 {
-	constructor : function(game)
+	constructor : function()
 	{
-		this.game = game;
-		this.party = game.world.spawn("PlayerParty", { $base: Party });//new Party(game);
-		this.isPlaying = false;
-		this.remainingActions = [];
-		this.queuedActions = [];
+		Player.$super.call(this);
+
+		this.screen = null;
+		this.pov = null;
+		// this.game = game;
+		// this.party = game.world.spawn("PlayerParty", { $base: Party });//new Party(game);
+		// this.party.player = this;
+		// this.isPlaying = false;
+		// this.remainingActions = [];
+		// this.queuedActions = [];
 
 		//game.screen.actions.on("click", this.onAction, this);
 	},
 
-	play : function(finished)
+	enterWorld : function(world)
 	{
-		var screen = this.game.screen;
-		var scene = this.party.scene;
-		screen.title.setData("~ " + scene.environment.desc + " ~");
-		screen.features.setData("Open Ground • River • Bushes • Trees • Boulders • Dead Bodies");
-		screen.stage.setData(scene.stage);
-		screen.prompts.setData("You are approached by a goblin warband led by a warg rider. They are soon rushing towards you. The balky barbarian Xaross now has a chance to act...");
-
-		this.remainingActions = this.party.plannedActions; 
-		//screen.actions.setData(this.remainingActions);
-		this.playFinished = finished;
-
-		this.queuedActions.length = 0;
-		this.isPlaying = true;
+		Player.$superp.enterWorld.call(this, world);
+		
+		this.screen = world.game.screen;
 	},
 
-	onAction : function(e)
+	chooseAction : function(pov)
 	{
-		if (!this.isPlaying)
-			return;
+		if (this.pov !== null)
+			throw ("Another pov choosing action.");
 
-		var item = e.targetItem;
-		if (!item)
-			return;
+		this.pov = pov;
 
-		this.queueAction(item.data);
-	},
+		// TODO: UI
+		//this.screen.scene.setData(pov.scene);
+	}
 
-	queueAction : function(action)
-	{
-		var index = this.remainingActions.indexOf(action);
-		if (index < 0)
-			throw ("queued action not available!");
+	// play : function(finished)
+	// {
+	// 	var screen = this.game.screen;
+	// 	var scene = this.party.scene;
+	// 	screen.title.setData("~ " + scene.environment.desc + " ~");
+	// 	screen.features.setData("Open Ground • River • Bushes • Trees • Boulders • Dead Bodies");
+	// 	screen.stage.setData(scene.stage);
+	// 	screen.prompts.setData("You are approached by a goblin warband led by a warg rider. They are soon rushing towards you. The balky barbarian Xaross now has a chance to act...");
 
-		this.remainingActions.splice(index, 1);
-		this.queuedActions.push(action);
+	// 	this.remainingActions = this.party.plannedActions; 
+	// 	//screen.actions.setData(this.remainingActions);
+	// 	this.playFinished = finished;
 
-		//this.game.screen.actions.setData(this.remainingActions);
+	// 	this.queuedActions.length = 0;
+	// 	this.isPlaying = true;
+	// },
 
-		if (this.remainingActions.length === 0)
-		{
-			this.isPlaying = false;
-			this.assignActions();
-			this.playFinished();
-		}
-	},
+	// showScene : function(scene)
+	// {
+	// 	var screen = this.game.screen;
+	// 	var scene = this.party.scene;
+	// 	screen.title.setData("~ " + scene.environment.desc + " ~");
+	// 	screen.features.setData("Open Ground • River • Bushes • Trees • Boulders • Dead Bodies");
+	// 	screen.stage.setData(scene.stage);
+	// 	screen.prompts.setData("You are approached by a goblin warband led by a warg rider. They are soon rushing towards you. The balky barbarian Xaross now has a chance to act...");
+	// },
 
-	assignActions : function()
-	{
-		this.party.actions.length = 0;
+	// chooseAction : function(actionInfos, finished)
+	// {
+	// 	throw ("not implemented!");
+	// },
 
-		for (var i = 0; i < this.queuedActions.length; i++) 
-		{
-			this.party.actions.push(this.queuedActions[i]);
-		};
-	},
+	// onAction : function(e)
+	// {
+	// 	if (!this.isPlaying)
+	// 		return;
 
-	preStep : function()
-	{
-		return this.party.preStep();
-	},
+	// 	var item = e.targetItem;
+	// 	if (!item)
+	// 		return;
 
-	step : function()
-	{
-		return this.party.step();
-	} 
+	// 	this.queueAction(item.data);
+	// },
+
+	// queueAction : function(action)
+	// {
+	// 	var index = this.remainingActions.indexOf(action);
+	// 	if (index < 0)
+	// 		throw ("queued action not available!");
+
+	// 	this.remainingActions.splice(index, 1);
+	// 	this.queuedActions.push(action);
+
+	// 	//this.game.screen.actions.setData(this.remainingActions);
+
+	// 	if (this.remainingActions.length === 0)
+	// 	{
+	// 		this.isPlaying = false;
+	// 		this.assignActions();
+	// 		this.playFinished();
+	// 	}
+	// },
+
+	// assignActions : function()
+	// {
+	// 	this.party.actions.length = 0;
+
+	// 	for (var i = 0; i < this.queuedActions.length; i++) 
+	// 	{
+	// 		this.party.actions.push(this.queuedActions[i]);
+	// 	};
+	// },
+
+	// preStep : function()
+	// {
+	// 	return this.party.preStep();
+	// },
+
+	// step : function()
+	// {
+	// 	return this.party.step();
+	// } 
 });

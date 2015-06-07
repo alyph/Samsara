@@ -129,6 +129,11 @@ p
     bottom: 25%;
 }
 
+.gameScreen #scene
+{
+    height: 100%;
+}
+
 .cardBack
 {
     position: absolute;

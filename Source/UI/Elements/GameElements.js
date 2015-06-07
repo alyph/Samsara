@@ -80,3 +80,78 @@ UI.StagePanel = Class(UI.Element,
 	}
 });
 
+UI.SceneViewer = Class(UI.ItemContainer,
+{
+	constructor : function()
+	{
+		UI.SceneViewer.$super.call(this);
+	},
+
+	getList : function()
+	{
+		return this.data.pois;
+	},
+
+	rearrange : function()
+	{
+		var l = this.numVisible;
+		if (l === 0)
+			return;
+
+		var w = this.width();
+		var h = this.height();
+
+		var numRows = Math.floor(Math.sqrt(l));
+		var numCols = Math.ceil(l / numRows);
+
+		var padding = 32;
+		var totalWidth = 0;
+		var totalHeight = padding;
+		var iws = []; iws.length = l;
+		var ihs = []; ihs.length = l;
+		var rw = []; rw.length = numRows;
+		var rh = []; rh.length = numRows;
+
+		for (var r = 0; r < numRows; r++) 
+		{
+			rw[r] = padding; 
+			rh[r] = 0;
+
+			for (var c = 0; c < numCols; c++)
+			{
+				var i = r * numCols + c;
+				if (i >= l) 
+					break;
+
+				var iw = this.items[i].width();
+				var ih = this.items[i].height();
+				iws[i] = iw;
+				ihs[i] = ih;
+				rw[r] += iw + padding;
+				rh[r] = Math.max(rh[r], ih);
+			};
+
+			totalWidth = Math.max(totalWidth, rw[r]);
+			totalHeight += rh[r] + padding;
+		};
+
+		var y = Math.floor((h - totalHeight) / 2);
+		for (var r = 0; r < numRows; r++) 
+		{
+			var x = Math.floor((w - rw[r]) / 2);
+			for (var c = 0; c < numCols; c++)
+			{
+				var i = r * numCols + c;
+				if (i >= l) 
+					break;
+
+				this.items[i].position(x, y);
+
+				x += iws[i] + padding;
+			};
+
+			y += rh[r] + padding;
+		};
+	}
+});
+

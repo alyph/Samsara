@@ -1,22 +1,46 @@
-var Entity = Class(
+var Entity = Class(BaseObject,
 {
 	constructor : function()
 	{
-		this.$ref = true;
-		this.game = null;
+		Entity.$super.call(this);
+		//this.$ref = true;
+		this.isInstance = false;
+		//this.game = null;
+		this.world = null;
+		//this.needsUpdate = false;
+		this.isUpdating = false;
+		this.desc = new Description();
+	},
+
+	enterWorld : function(world)
+	{
+		this.world = world;
+	},
+
+	leaveWorld : function()
+	{
 		this.world = null;
 	},
 
-	beginPlay : function(game, world)
+	beginPlay : function()
 	{
-		this.game = game;
-		this.world = world;
 	},
 
 	endPlay : function()
 	{
-		this.game = null;
-		this.world = null;
+	},
+
+	beginUpdate: function()
+	{
+		if (this.isUpdating)
+			return;
+
+		this.isUpdating = true;
+		this.world.addToUpdate(this);
+	},
+
+	update : function()
+	{
 	},
 
 	getTitle : function()
@@ -34,6 +58,11 @@ var Entity = Class(
 		return "cardCityGate";
 	},
 
+	getPortrait : function()
+	{
+		throw ("must override!");
+	},
+
 	getSize: function()
 	{
 		return "";
@@ -45,6 +74,11 @@ var Entity = Class(
 			return this.$name;
 
 		throw ("no valid implementation for entity toString!");
+	},
+
+	update : function(entry)
+	{
+		throw ("must override!");
 	}
 });
 

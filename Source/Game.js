@@ -1,37 +1,44 @@
-var Game = Class(
+var Game = Class(BaseObject,
 {
 	constructor : function()
 	{
+		Game.$super.call(this);
 	},
 
 	start : function()
 	{
-		this.world = new World(this);
-
 		this.screen = UI.showScreen("gameScreen");
 
 		// TODO: the image data should be set in the template
 		this.screen.boardBack.setData(Sprites["Back_Theme"]);
+		this.screen.sceneBack.setData(Sprites["loc_primal_forest"]);
+
+
+
+		this.world = new World(this);
+		this.world.create();
 		
 
 		//this.table = new Table(this);
 
-		this.player = new Player(this);
-		var party = this.player.party;
+		//this.player = new Player(this);
+		//var party = this.player.party;
 
-		party.addMember(this.world.getEntity("Character.Ragnar"));
-		party.addMember(this.world.getEntity("Character.Tiamat"));
-		party.addMember(this.world.getEntity("Character.Yagnas"));
+		//party.addMember(this.world.getEntity("Character.Ragnar"));
+		//party.addMember(this.world.getEntity("Character.Tiamat"));
+		//party.addMember(this.world.getEntity("Character.Yagnas"));
 		//var quest = new Quest(Definition.get("Quests.Exploration"));
 		//quest.params.set("region", this.world.getEntity("Region.Greenbelt"));
 		//party.accepts(quest);
-		party.enter(this.world.getEntity("Locale.PlainStarFall"));
+		//party.enter(this.world.getEntity("Locale.PlainStarFall"));
 
-		var scene = generateRandomEncounter(party);
-		party.plan();
+		//var scene = generateRandomEncounter(party);
+		//party.plan();
 
-		this.playerFinished = this.playerFinished.bind(this);
-		this.player.play(this.playerFinished);
+		//this.playerFinished = this.playerFinished.bind(this);
+		//this.player.play(this.playerFinished);
+
+		//this.world.run();
 
 		//var world = new World(this);
 		//var openingScene = new Scene(this, Core.getDef("Scene_Opening"));
@@ -60,28 +67,33 @@ var Game = Class(
 		// this.enterLocation(camp);
 	},
 
-	playerFinished : function()
+	update : function()
 	{
-		this.step();
-	},
-
-	step : function()
-	{
-		var shouldContinue = true;
-		var player = this.player;
-		var world = this.world;
-
-		while (shouldContinue)
-		{
-			if (!player.preStep())
-				break;
-
-			shouldContinue = player.step();
-			world.step();
-		}
-
-		player.play(this.playerFinished);
+		this.world.update();
 	}
+
+	// playerFinished : function()
+	// {
+	// 	this.step();
+	// },
+
+	// step : function()
+	// {
+	// 	var shouldContinue = true;
+	// 	var player = this.player;
+	// 	var world = this.world;
+
+	// 	while (shouldContinue)
+	// 	{
+	// 		if (!player.preStep())
+	// 			break;
+
+	// 		shouldContinue = player.step();
+	// 		world.step();
+	// 	}
+
+	// 	player.play(this.playerFinished);
+	// }
 
 	// initDecks : function()
 	// {

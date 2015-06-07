@@ -4,6 +4,8 @@ var Archive = new (function(global)
 	var objects = {};
 	var records = {};
 	var currentNamespace = null;
+	var globalRegs = {};
+
 
 	var Record = Class(
 	{
@@ -54,6 +56,15 @@ var Archive = new (function(global)
 		}
 	});
 
+	var CustomValue = Class(
+	{
+		constructor : function(raw, parser)
+		{
+			this.raw = raw;
+			this.parser = parser || null;
+		}
+	});
+
 	var Binder = Class(
 	{
 		constructor: function(target, source, sourceRec)
@@ -61,6 +72,88 @@ var Archive = new (function(global)
 			this.target = target;
 			this.source = source;
 			this.sourceRec = sourceRec || null;
+		},
+
+		canBind: function()
+		{
+			return !this.sourceRec || this.sourceRec.finished;
+		},
+
+		bind: function(record)
+		{
+			var source = this.source;
+			var target = this.target;
+			var keys = Object.keys(source);
+			for (var i = keys.length - 1; i >= 0; i--) 
+			{
+				var key = keys[i];
+				
+				// TODO: should use defineProperty() to hide these?
+				if (key[0] === '$')
+					continue;
+
+				if (!target.hasOwnProperty(key))
+					throw ("property does not match: " + key);
+
+				var	value = source[key];
+
+				var newValue = bindProperty(target, key, value, record);
+
+				if (newValue !== undefined)
+					target[key] = newValue;
+			};
+		}
+	});
+
+	var CustomBinder = Class(Binder,
+	{
+		constructor : function(target, source, parser)
+		{
+			CustomBinder.$super.call(this, target, source, null);
+			this.parser = parser;
+		},
+
+		bind: function(record)
+		{
+			var value = this.parser(this, record);
+			// parse failed (likely due to required objects not fully loaded), insert back and try later.
+			if (value === undefined)
+			{
+				record.binders.push(this);
+			}
+			else // the raw source value has been parsed into value, now insert a normal binder to bind parsed value to the target.
+			{
+				record.binders.push(new Binder(this.target, value, null));
+			}
+		},
+
+		// this is used by the parser to retrieve objects in the archive.
+		// Only the fully loaded object (record marked as finished) will be returned, otherwise return null
+		// currently there's no way to know whether the object simply doesn't exist (in that case will throw) or still being loaded.
+		resolveObject: function(name, record)
+		{
+			var fullName = resolveName(name, record.namespace);
+			var rec = records[fullName];
+			if (rec)
+			{
+				if (rec.finished)
+				{
+					return rec.obj;
+				}
+				else
+				{
+					this.sourceRec = rec;
+					return null;
+				}
+			}
+			else
+			{
+				var obj = objects[fullName];
+				if (!obj)
+					throw ("wrong name.");
+
+				return obj;
+			}
 		}
 	});
 
@@ -68,6 +161,42 @@ var Archive = new (function(global)
 	{
 		compileRecords();
 		clearGlobals();
+	};
+
+	this.get = function(name)
+	{
+		var obj = objects[name];
+		if (!obj)
+			throw ("object with name " + name  + " does not exist.");
+
+		return obj;
+	};
+
+	this.create = function(name, props)
+	{
+		load(name, props);
+		compileRecords();
+		return this.get(name);
+	};
+
+	this.delete = function(obj)
+	{
+		if (objects[obj.$name] !== obj)
+			throw ("The given object is not in the archive.");
+
+		delete objects[obj.$name];
+	};
+
+	this.select = function(where)
+	{
+		var found = [];
+		for (var name in objects)
+		{
+			var obj = objects[name];
+			if (where(obj))
+				found.push(obj);
+		};
+		return found;
 	};
 
 	function load(name, props)
@@ -81,6 +210,9 @@ var Archive = new (function(global)
 		if (records[name] || objects[name])
 			throw ("data with name " + name + " already exists!");
 
+		if (!props.$base)
+			throw ("the record missing base: " + name);
+
 		records[name] = new Record(name, props, currentNamespace);
 	};
 
@@ -89,7 +221,7 @@ var Archive = new (function(global)
 		if (currentNamespace !== null)
 			throw ("namespace not closed!");
 
-		var recordQueue = [];
+		var queue = [];
 
 		// insert all records into working queue
 		for (var name in records)
@@ -136,7 +268,9 @@ var Archive = new (function(global)
 		for (var i = 0; i < len; i++) 
 		{
 			var record = queue[i];
-			objects[record.name] = record.obj;
+			var obj = record.obj;
+			objects[record.name] = obj;
+			obj.init();
 		};
 
 		records = {};
@@ -191,12 +325,13 @@ var Archive = new (function(global)
 		while (binders.length > 0)
 		{
 			var binder = binders[binders.length - 1]
-			if (binder.sourceRec && !binder.sourceRec.finished)
+			if (!binder.canBind())
 				return false;
 
 			binders.pop();
 
-			bindObject(binder.target, binder.source, record);
+			binder.bind(record);
+			//bindObject(binder.target, binder.source, record);
 		}
 
 		record.finished = true;
@@ -219,15 +354,16 @@ var Archive = new (function(global)
 		var keys = Object.keys(source);
 		for (var i = keys.length - 1; i >= 0; i--) 
 		{
+			var key = keys[i];
+			
 			// TODO: should use defineProperty() to hide these?
 			if (key[0] === '$')
 				continue;
 
-			var key = keys[i];
 			if (!target.hasOwnProperty(key))
 				throw ("property does not match: " + key);
 
-			var value = source[key];
+			var	value = source[key];
 
 			var newValue = bindProperty(target, key, value, record);
 
@@ -391,6 +527,17 @@ var Archive = new (function(global)
 			{
 				newValue = sourceValue;
 			}
+			else if (sourceValue.constructor === CustomValue)
+			{
+				var parser = sourceValue.parser;
+				if (parser === null && targetObj)
+					parser = targetObj.parse;
+
+				if (!parser)
+					throw ("No parser found for custom value.");
+
+				record.binders.push(new CustomBinder(targetObj, sourceValue.raw, parser));
+			}
 			else
 			{
 				var sourceObj = sourceValue;
@@ -415,7 +562,8 @@ var Archive = new (function(global)
 					sourceCls = sourceValue.constructor;
 				}
 				
-				if (targetObj === null || (targetObj.constructor !== sourceCls && sourceCls !== Object))
+				// TODO: (already done, confirm validity) maybe should reconstruct the targetObject as long as the sourceBase is defined.
+				if (targetObj === null || sourceBase || (targetObj.constructor !== sourceCls && sourceCls !== Object))
 				{
 					targetObj = constructObject(sourceCls);
 					newValue = targetObj;
@@ -442,7 +590,7 @@ var Archive = new (function(global)
 		var info = new BaseInfo();
 		if (typeof base === 'string')
 		{
-			var baseName = resolveName(base, record.namespace);
+			var baseName = resolveName(base, namespace);
 			var baseRec = records[baseName];
 			if (baseRec)
 			{
@@ -455,9 +603,13 @@ var Archive = new (function(global)
 					throw ("wrong name");
 			}
 		}
-		else
+		else if (base)
 		{
 			info.cls = base;
+		}
+		else
+		{
+			throw ("unresolvable base.");
 		}
 
 		return info;
@@ -503,7 +655,7 @@ var Archive = new (function(global)
 
 		if (prefix)
 			currentNamespace.prefix = prefix + '.';
-	}
+	};
 
 	function endNamespace()
 	{
@@ -511,7 +663,7 @@ var Archive = new (function(global)
 			throw ("no namespace opened.");
 
 		currentNamespace = null;
-	}
+	};
 
 	function useNamespace(prefix)
 	{
@@ -522,14 +674,25 @@ var Archive = new (function(global)
 			throw ("not valid namespace.");
 
 		currentNamespace.uses.push(prefix + '.');
+	};
+
+	function loadInstance(name, props)
+	{
+		props.isInstance = true;
+		load(name, props);
+	};
+
+	function customValue(raw, parser)
+	{
+		return new CustomValue(raw, parser);
 	}
 
-	globalFunc("$obj", load);
+	globalFunc("$def", load);
+	globalFunc("$inst", loadInstance);
 	globalFunc("$begin", beginNamespace);
 	globalFunc("$end", endNamespace);
 	globalFunc("$use", useNamespace);
-
-	var globalRegs = {};
+	globalFunc("$v", customValue);
 
 	function globalFunc(name, func)
 	{

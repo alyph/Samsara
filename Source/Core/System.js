@@ -21,7 +21,7 @@ var $p = function()
 		Array.prototype.push.apply(paramDef, arguments);
 		
 		paramDef.has = has;
-		paramDef.$ref = true;
+		//paramDef.$ref = true;
 		return paramDef;
 	};
 }();

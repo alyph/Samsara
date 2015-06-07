@@ -119,9 +119,10 @@ UI.ItemContainer = Class(UI.Element,
 
 	refresh : function()
 	{
-		if (this.data !== null && this.data.length > 0)
+		var list = this.getList();
+		if (list !== null && list.length > 0)
 		{	
-			var l = this.data.length;
+			var l = list.length;
 
 			for (var i = this.items.length; i < l; i++) 
 			{
@@ -142,7 +143,7 @@ UI.ItemContainer = Class(UI.Element,
 
 			for (var i = 0; i < l; i++) 
 			{
-				this.items[i].setData(this.data[i]);
+				this.items[i].setData(list[i]);
 			};
 
 			this.numVisible = l;
@@ -156,6 +157,11 @@ UI.ItemContainer = Class(UI.Element,
 			};
 			this.numVisible = 0;
 		}
+	},
+
+	getList : function()
+	{
+		return this.data;
 	},
 
 	rearrange : function()

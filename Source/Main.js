@@ -25,12 +25,30 @@ var PLAYGROUND_HEIGHT	= 768;
 
 			$.playground().startGame(function()
 			{
-				Core.init();
+				//Core.init();
+
+				Archive.init();
 
 				UI.init($("#playground"));
 
 				var game = new Game();
 				game.start();
+				
+
+				(function update()
+				{
+					game.update();
+					window.setTimeout(update, 100);
+				})();
+
+				/*
+				window.requestAnimationFrame(update);
+				function update(timestamp)
+				{
+					game.update();
+					window.requestAnimationFrame(update);
+				};*/
+
 
 				$("#welcomeScreen").fadeTo(1000,0,function(){$(this).remove();});
 				$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
@@ -53,9 +71,12 @@ var PLAYGROUND_HEIGHT	= 768;
 
 	head.js(
 		libs + "jsface.js",
+		core + "BaseObject.js",
 		core + "Components.js",
+		core + "Descriptor.js",
 		core + "Planner.js",
 		core + "System.js",
+		core + "Archive.js",
 		ui + "UI.js",
 		ui + "Elements/BasicElements.js",
 		ui + "Elements/GameElements.js",
@@ -76,8 +97,11 @@ var PLAYGROUND_HEIGHT	= 768;
 		entities + "Story.js",
 		entities + "Activity.js",
 		entities + "Environment.js",
+		entities + "Keeper.js",
 		entities + "Location.js",
 		entities + "Goal.js",
+		entities + "POV.js",
+		entities + "POI.js",
 		entities + "Quest.js",
 		entities + "World.js",
 		sequences + "Sequence.js",
@@ -89,12 +113,15 @@ var PLAYGROUND_HEIGHT	= 768;
 		table + "Table.js",
 		source + "Game.js",
 		source + "Core.js",
+		definitions + "Keywords.js",
 		definitions + "Activities.js",
 		definitions + "Characters.js",
 		definitions + "Goals.js",
 		definitions + "Environments.js",
 		definitions + "Locations.js",
+		definitions + "Prototypes.js",
 		definitions + "Quests.js",
+		definitions + "Scenes.js",
 		definitions + "Sprites.js",
 		definitions + "WorldData.js");
 
@@ -105,6 +132,7 @@ var PLAYGROUND_HEIGHT	= 768;
 
 	head.js(
 		utils + "MathEx.js",
+		utils + "Containers.js",
 		utils + "Utils.js");
 
 })();

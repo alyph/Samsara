@@ -1,31 +1,31 @@
-Definition.register(
-{
-	"Locales.Base":
-	{
-		$base : Locale
-	}
-});
+// Definition.register(
+// {
+// 	"Locales.Base":
+// 	{
+// 		$base : Locale
+// 	}
+// });
 
-Definition.register(
-{
-	base : "Locales.Base",
-	group : "Locales"
-},
+// Definition.register(
+// {
+// 	base : "Locales.Base",
+// 	group : "Locales"
+// },
 
-{
-	Wildness:
-	{
-	},
+// {
+// 	Wildness:
+// 	{
+// 	},
 
-	PointOfIntrest:
-	{
-	}
-});
+// 	PointOfIntrest:
+// 	{
+// 	}
+// });
 
-Definition.register(
-{
-	"Regions.Base":
-	{
-		$base : Region
-	}
-});
+// Definition.register(
+// {
+// 	"Regions.Base":
+// 	{
+// 		$base : Region
+// 	}
+// });

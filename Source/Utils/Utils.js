@@ -17,6 +17,33 @@ var isArray = function(obj)
 	return obj.length !== undefined && (obj.length === 0 || obj[0] !== undefined);
 };
 
+var $handler = function(obj, name)
+{
+	return obj[name].bind(obj);
+};
+
+var $callback = function(obj, name, handler)
+{
+	if (!handler)
+	{
+		if (!obj.$callbacks)
+			return dummyHandler;
+
+		handler = obj.$callbacks[name];
+		return handler ? handler : dummyHandler;
+	}
+	else
+	{
+		if (!obj.$callbacks)
+			obj.$callbacks = {};
+
+		obj.$callbacks[name] = handler;
+		return handler;
+	}
+
+	function dummyHandler() {};
+}
+
 var Cloner = new (function(global)
 {
 	this.clone = function(source)
@@ -105,3 +132,58 @@ var Cloner = new (function(global)
 
 })(this);
 
+
+var LatentUpdater = function(owner, updateFunc)
+{
+	this.owner = owner;
+	this.updateFunc = updateFunc;
+	this.running = false;
+	this.updating = false;
+	this.stopped = false;
+	this.waiting = false;
+
+	this.start = function()
+	{
+		if (this.running)
+			throw ("already running. Multiple call to start()!");
+
+		if (this.updating || this.stopped || this.waiting)
+			throw ("in bad state!");
+
+		this.running = true;
+		resume.call(this);
+	};
+
+	this.updateFinished = function(shouldStop)
+	{
+		if (!this.updating)
+			throw ("cannot finish if not updating!");
+
+		this.updating = false;
+		this.stopped = shouldStop || false;
+
+		if (this.waiting)
+		{
+			this.waiting = false;
+			resume.call(this);
+		}
+	};
+
+	function resume() 
+	{
+		while (!this.stopped)
+		{
+			this.updateFunc.call(this.owner);
+			if (this.updating)
+			{
+				this.waiting = true;
+				return;
+			}
+		};
+
+		this.stopped = false;
+		this.updating = false;
+		this.waiting = false;
+		this.running = false;
+	};
+};
