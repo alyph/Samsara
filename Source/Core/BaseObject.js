@@ -3,6 +3,7 @@ var BaseObject = Class(
 	constructor : function()
 	{
 		this.$name = "";
+		this.$baseObj = null;
 	},
 
 	init : function()

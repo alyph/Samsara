@@ -1,7 +1,37 @@
 
+namespace(
+{
+	$inst('foo',
+	{
+
+	}),
+});
+
+
+predicate = parameter + keyword + parameter ... |: , )
+parameter = resolver + reference + code + ... |: keyword ,  )
+resolver = keyword + (predicate, precicate ...)
+reference = identifier + . resolver + . resolver ...
+
+
+predicate: (a, b)
+"all
+ (
+	a is 'good',
+	b is 'good',
+	min(a.size, b.size) <= 0.0
+ )
+ (b is good or c is ok)"
+
+
+ function()
+ {
+ 	return (is(a, good)) && (is(b, good)) && lessOrEqual(min(size(a), size(b)), 0.0);
+ };
+
 predicate.eval(a, b);
 
-predicate_bar: function(a, b)
+predicate_bar1: function(a, b)
 {
 	return predicate_foo(a, b, 'friend');
 }
@@ -30,7 +60,7 @@ a's son is b
 // tokenize
 // parse predicate
 // predicate expression: [keyword]  + parameter expression + [keyword] + ...
-// parameter expression : [operators] + [resolver expression] + [operators] + ...
+// parameter expression : [resolver] + [variable] + [script] + ...   //[operators] + [resolver expression] + [operators] + ...
 // resolver expression: identifier + resolver + resolver ...
 // resolver: .keyword(parameter expression, ...)
 

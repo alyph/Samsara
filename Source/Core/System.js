@@ -1,11 +1,65 @@
-var $p = function()
+
+var ParamsDef = Class(
+{
+	constructor : function()
+	{
+		this.list = Array.prototype.concat.apply([], arguments);
+		this.length = this.list.length;
+	},
+
+	at : function(i)
+	{
+		return this.list[i];
+	},
+
+	has : function(name)
+	{
+		return this.list.indexOf(name) >= 0;
+	},
+
+	toValues : function(keyValues)
+	{
+		var l = this.list.length;
+		var values = [];
+		values.length = l;
+		for (var i = 0; i < l; i++) 
+		{
+			var key = this.list[i];
+			var value = keyValues[key];
+			if (value === undefined)
+				throw ("Value of key " + key + " not presented!");
+			values[i] = value;
+		};
+
+		return values;
+	}
+});
+
+var $p = function(vargs)
 {
 	//var proto = [];
 
-	var has = function(name)
-	{
-		return this.indexOf(name) !== -1;
-	};
+	// var has = function(name)
+	// {
+	// 	return this.indexOf(name) !== -1;
+	// };
+
+	// var toValues = function(keyValues)
+	// {
+	// 	var l = this.length;
+	// 	var values = [];
+	// 	values.length = l;
+	// 	for (var i = 0; i < l; i++) 
+	// 	{
+	// 		var key = this[i];
+	// 		var value = keyValues[key];
+	// 		if (value === undefined)
+	// 			throw ("Value of key " + key + " not presented!");
+	// 		values[i] = value;
+	// 	};
+
+	// 	return values;
+	// };
 
 	/*
 	constr = function(data)
@@ -15,16 +69,20 @@ var $p = function()
 
 	constr.prototype = proto;
 */
-	return function()
-	{
-		var paramDef = [];
-		Array.prototype.push.apply(paramDef, arguments);
+	// return function()
+	// {
+	// 	var paramDef = [];
+	// 	Array.prototype.push.apply(paramDef, arguments);
 		
-		paramDef.has = has;
-		//paramDef.$ref = true;
-		return paramDef;
-	};
-}();
+	// 	paramDef.has = has;
+	// 	paramDef.toValues = toValues;
+	// 	//paramDef.$ref = true;
+	// 	return paramDef;
+	// };
+
+
+	return new ParamsDef(Array.apply(null, arguments));
+};
 
 var Params = Class(
 {
@@ -44,12 +102,12 @@ var Params = Class(
 
 	batch : function(values)
 	{
-		if (values.length != this.list.length)
+		if (values.length !== this.list.length)
 			throw ("number of parameters does not match, required: " + this.list.length + ", given: " + values.length);
 
 		for (var i = 0; i < values.length; i++) 
 		{
-			this[this.list[i]] = values[i];
+			this[this.list.at(i)] = values[i];
 		};
 	},
 
@@ -68,7 +126,7 @@ var Params = Class(
 		var l = this.list.length;
 		for (var i = 0; i < l; i++)
 		{
-			var name = this.list[i];
+			var name = this.list.at(i);
 			if (this[name] !== params[name])
 				return false;
 		}
@@ -81,7 +139,7 @@ var Params = Class(
 		var l = this.list.length;
 		for (var i = 0; i < l; i++)
 		{
-			var name = this.list[i];
+			var name = this.list.at(i);
 			if (context.hasOwnProperty(name))
 				throw ("cannot attach property " + name + " already in context");
 
@@ -94,7 +152,7 @@ var Params = Class(
 		var l = this.list.length;
 		for (var i = 0; i < l; i++)
 		{
-			var name = this.list[i];
+			var name = this.list.at(i);
 			delete context[name];
 		}
 	},
@@ -106,7 +164,7 @@ var Params = Class(
 		for (var i = 0; i < list.length; i++)
 		{
 			if (i > 0) str += ",";
-			var valueStr = this[list[i]].toString();
+			var valueStr = this[list.at(i)].toString();
 			if (valueStr[0] === "[")
 				throw ("incorrect value string format, make sure you implement the toString()" + valueStr);
 

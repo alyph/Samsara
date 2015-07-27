@@ -1,23 +1,45 @@
-/*
-Component('Action', 'Card',
+
+var ActionDefinition = Class(BaseObject,
 {
-
-});
-
-var ActionManager = Class({
-
-	constructor : function(game)
+	constructor : function()
 	{
-		this._game = game;
+		ActionDefinition.$super.call(this);
 
+		this.predicate = null;
 	},
 
-	activate : function(action)
+	populateActions : function(pov, actions)
 	{
-		var host = action.host;
+		if (this.evaluate(pov))
+		{
+			this.instantiate(pov, actions);
+		}
+	},
 
-		var narrator = new Narrator(this._game, action.definition.script, this._game.scene);
-		narrator.begin();
+	evaluate : function(pov)
+	{
+		if (this.predicate === null)
+			return true;
+
+		var keyValues =
+		{
+			pov: pov,
+			scene: pov.scene
+		};
+
+		return this.predicate.eval(keyValues);
+	},
+
+	instantiate : function(pov, actions)
+	{
+		actions.push(new Action(this));
 	}
-});*/
+});
 
+var Action = Class(
+{
+	constructor : function(def)
+	{
+		this.def = def;
+	}
+});

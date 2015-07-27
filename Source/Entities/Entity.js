@@ -12,17 +12,26 @@ var Entity = Class(BaseObject,
 		this.desc = new Description();
 	},
 
-	enterWorld : function(world)
+	init : function()
 	{
-		this.world = world;
+		if (this.isInstance)
+		{
+			this.world = Archive.get(Global.WorldName);
+			this.world.onEntityEntered(this);
+		}
 	},
 
-	leaveWorld : function()
-	{
-		this.world = null;
-	},
+	// enterWorld : function(world)
+	// {
+	// 	this.world = world;
+	// },
 
-	beginPlay : function()
+	// leaveWorld : function()
+	// {
+	// 	this.world = null;
+	// },
+
+	beginPlay : function(game)
 	{
 	},
 

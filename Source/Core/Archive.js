@@ -3,8 +3,66 @@ var Archive = new (function(global)
 {
 	var objects = {};
 	var records = {};
+	var namespaces = {};
 	var currentNamespace = null;
 	var globalRegs = {};
+
+	this.init = function()
+	{
+		compileRecords();
+		clearGlobals();
+	};
+
+	this.find = function(name)
+	{
+		return objects[name] || null;
+	};
+
+	this.get = function(name)
+	{
+		var obj = objects[name];
+		if (!obj)
+			throw ("object with name " + name  + " does not exist.");
+
+		return obj;
+	};
+
+	this.getAll = function(namespace)
+	{
+		var list = namespaces[namespace];
+		if (list === undefined)
+			throw ("namespace does not exist! " + namespace);
+
+		return list;
+	};
+
+	this.create = function(name, props)
+	{
+		load(name, props);
+		compileRecords();
+		return this.get(name);
+	};
+
+	this.delete = function(obj)
+	{
+		if (objects[obj.$name] !== obj)
+			throw ("The given object is not in the archive.");
+
+		delete objects[obj.$name];
+		removeFromNamespaces(obj.$name, obj);
+	};
+
+	this.select = function(where)
+	{
+		var found = [];
+		for (var name in objects)
+		{
+			var obj = objects[name];
+			if (where(obj))
+				found.push(obj);
+		};
+		return found;
+	};
 
 
 	var Record = Class(
@@ -67,11 +125,12 @@ var Archive = new (function(global)
 
 	var Binder = Class(
 	{
-		constructor: function(target, source, sourceRec)
+		constructor: function(target, source, sourceRec, sourceIsBase)
 		{
 			this.target = target;
 			this.source = source;
 			this.sourceRec = sourceRec || null;
+			this.sourceIsBase = sourceIsBase || false;
 		},
 
 		canBind: function()
@@ -83,6 +142,10 @@ var Archive = new (function(global)
 		{
 			var source = this.source;
 			var target = this.target;
+
+			if (this.sourceIsBase && target.hasOwnProperty('$baseObj'))
+				target.$baseObj = source;
+
 			var keys = Object.keys(source);
 			for (var i = keys.length - 1; i >= 0; i--) 
 			{
@@ -97,7 +160,7 @@ var Archive = new (function(global)
 
 				var	value = source[key];
 
-				var newValue = bindProperty(target, key, value, record);
+				var newValue = bindProperty(target, key, value, record, this.sourceIsBase);
 
 				if (newValue !== undefined)
 					target[key] = newValue;
@@ -123,7 +186,7 @@ var Archive = new (function(global)
 			}
 			else // the raw source value has been parsed into value, now insert a normal binder to bind parsed value to the target.
 			{
-				record.binders.push(new Binder(this.target, value, null));
+				record.binders.push(new Binder(this.target, value, null, false));
 			}
 		},
 
@@ -156,48 +219,6 @@ var Archive = new (function(global)
 			}
 		}
 	});
-
-	this.init = function()
-	{
-		compileRecords();
-		clearGlobals();
-	};
-
-	this.get = function(name)
-	{
-		var obj = objects[name];
-		if (!obj)
-			throw ("object with name " + name  + " does not exist.");
-
-		return obj;
-	};
-
-	this.create = function(name, props)
-	{
-		load(name, props);
-		compileRecords();
-		return this.get(name);
-	};
-
-	this.delete = function(obj)
-	{
-		if (objects[obj.$name] !== obj)
-			throw ("The given object is not in the archive.");
-
-		delete objects[obj.$name];
-	};
-
-	this.select = function(where)
-	{
-		var found = [];
-		for (var name in objects)
-		{
-			var obj = objects[name];
-			if (where(obj))
-				found.push(obj);
-		};
-		return found;
-	};
 
 	function load(name, props)
 	{
@@ -270,6 +291,7 @@ var Archive = new (function(global)
 			var record = queue[i];
 			var obj = record.obj;
 			objects[record.name] = obj;
+			addToNamespaces(record.name, obj);
 			obj.init();
 		};
 
@@ -316,10 +338,10 @@ var Archive = new (function(global)
 		var binders = record.binders;
 		if (binders.length === 0)
 		{
-			binders.push(new Binder(record.obj, record.props, null));
+			binders.push(new Binder(record.obj, record.props, null, false));
 
 			if (record.base.obj)
-				binders.push(new Binder(record.obj, record.base.obj, record.base.rec));
+				binders.push(new Binder(record.obj, record.base.obj, record.base.rec, true));
 		}
 
 		while (binders.length > 0)
@@ -349,26 +371,26 @@ var Archive = new (function(global)
 		return new cls();
 	};
 
-	function bindObject(target, source, record)
-	{
-		var keys = Object.keys(source);
-		for (var i = keys.length - 1; i >= 0; i--) 
-		{
-			var key = keys[i];
+	// function bindObject(target, source, record)
+	// {
+	// 	var keys = Object.keys(source);
+	// 	for (var i = keys.length - 1; i >= 0; i--) 
+	// 	{
+	// 		var key = keys[i];
 			
-			// TODO: should use defineProperty() to hide these?
-			if (key[0] === '$')
-				continue;
+	// 		// TODO: should use defineProperty() to hide these?
+	// 		if (key[0] === '$')
+	// 			continue;
 
-			if (!target.hasOwnProperty(key))
-				throw ("property does not match: " + key);
+	// 		if (!target.hasOwnProperty(key))
+	// 			throw ("property does not match: " + key);
 
-			var	value = source[key];
+	// 		var	value = source[key];
 
-			var newValue = bindProperty(target, key, value, record);
+	// 		var newValue = bindProperty(target, key, value, record);
 
-			if (newValue !== undefined)
-				target[key] = newValue;
+	// 		if (newValue !== undefined)
+	// 			target[key] = newValue;
 
 
 /*
@@ -463,20 +485,20 @@ var Archive = new (function(global)
 				// TODO: type check needed?
 				target[key] = value;
 			}*/
-		};
-	};
+	// 	};
+	// };
 
-	function bindList(target, source, record)
+	function bindList(target, source, record, fromBase)
 	{
 		var l = source.length;
 		target.length = l;
 		for (var i = 0; i < l; i++) 
 		{			
-			target[i] = bindProperty(null, "", source[i], record);
+			target[i] = bindProperty(null, "", source[i], record, fromBase);
 		};		
 	};
 
-	function bindProperty(target, key, sourceValue, record)
+	function bindProperty(target, key, sourceValue, record, fromBase)
 	{
 		var newValue = undefined;
 
@@ -497,7 +519,7 @@ var Archive = new (function(global)
 				throw ("unmatching type");
 			}
 
-			bindList(targetList, sourceValue, record);
+			bindList(targetList, sourceValue, record, fromBase);
 		}
 		// String
 		else if (typeof sourceValue === 'string')
@@ -569,10 +591,10 @@ var Archive = new (function(global)
 					newValue = targetObj;
 				}
 
-				record.binders.push(new Binder(targetObj, sourceObj, null));
+				record.binders.push(new Binder(targetObj, sourceObj, null, (fromBase && sourceBase == null)));
 
 				if (sourceBase)
-					record.binders.push(new Binder(targetObj, sourceBase, sourceBaseRec));
+					record.binders.push(new Binder(targetObj, sourceBase, sourceBaseRec, true));
 			}
 		}
 		// Simple value
@@ -646,6 +668,47 @@ var Archive = new (function(global)
 		throw ("cannot resolve name: " + name);
 	};
 
+	function addToNamespaces(name, obj)
+	{
+		var delim = -1;
+		while (true)
+		{
+			delim = name.indexOf('.', delim + 1);
+			if (delim < 0)
+				break;
+
+			var namespace = name.substring(0, delim);
+			var list = namespaces[namespace];
+			if (list === undefined)
+			{
+				list = [];
+				namespaces[namespace] = list;
+			}
+
+			list.push(obj);
+		};
+	};
+
+	function removeFromNamespaces(name, obj)
+	{
+		var delim = -1;
+		while (true)
+		{
+			delim = name.indexOf('.', delim + 1);
+			if (delim < 0)
+				break;
+
+			var namespace = name.substring(0, delim);
+			var list = namespaces[namespace];
+			if (list !== undefined)
+			{
+				var index = list.indexOf(obj);
+				if (index >= 0)
+					list.splice(index, 1);
+			}
+		};
+	};
+
 	function beginNamespace(prefix)
 	{
 		if (currentNamespace !== null)
@@ -685,7 +748,7 @@ var Archive = new (function(global)
 	function customValue(raw, parser)
 	{
 		return new CustomValue(raw, parser);
-	}
+	};
 
 	globalFunc("$def", load);
 	globalFunc("$inst", loadInstance);

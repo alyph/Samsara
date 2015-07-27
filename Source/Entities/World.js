@@ -10,45 +10,56 @@ var World = Class(BaseObject,
 	},
 */
 
-	constructor : function(game)
+	constructor : function()
 	{
 		World.$super.call(this);
-		this.game = game;
+		this.game = null;
+		this.global = null;
 		this.entities = {};
 		this.keeper = null;
 		this.updateQueue = [];
 		this.isUpdating = false;
+		this.isInstance = true;
 		//this.isWaiting = false;
 		//this.updateCount = 0;
 		//this.turn = 0;
 	},
 
-	create : function()
+	beginPlay : function(game)
 	{
-		this.loadFromArchive();
+		this.game = game;
+		for (var name in this.entities)
+		{
+			this.entities[name].beginPlay(game);
+		}
 	},
 
-	loadFromArchive: function()
-	{
-		var entities = Archive.select(function(o){ return o.isA(Entity) && o.isInstance; });
-		var l = entities.length;
+	// create : function()
+	// {
+	// 	this.loadFromArchive();
+	// },
 
-		for (var i = 0; i < l; i++) 
-		{
-			var entity = entities[i];
-			this.entities[entity.$name] = entity;
-		};
+	// loadFromArchive: function()
+	// {
+	// 	var entities = Archive.select(function(o){ return o.isA(Entity) && o.isInstance; });
+	// 	var l = entities.length;
 
-		for (var i = 0; i < l; i++) 
-		{
-			entities[i].enterWorld(this);
-		};
+	// 	for (var i = 0; i < l; i++) 
+	// 	{
+	// 		var entity = entities[i];
+	// 		this.entities[entity.$name] = entity;
+	// 	};
 
-		for (var i = 0; i < l; i++) 
-		{
-			entities[i].beginPlay();
-		};
-	},
+	// 	for (var i = 0; i < l; i++) 
+	// 	{
+	// 		entities[i].enterWorld(this);
+	// 	};
+
+	// 	for (var i = 0; i < l; i++) 
+	// 	{
+	// 		entities[i].beginPlay();
+	// 	};
+	// },
 
 /*
 	createEntities : function()
@@ -116,14 +127,27 @@ var World = Class(BaseObject,
 		return this.entities[name] || null;
 	},
 
+	onEntityEntered : function(entity)
+	{
+		var name = entity.$name;
+		if (this.entities.hasOwnProperty(name))
+			throw ("Entity with the same name already exists! " + name);
+
+		this.entities[name] = entity;
+	},
+
 	spawn : function(name, props)
 	{
+		if (this.game === null)
+			throw ("cannot spawn entities before game has begun play!");
+
+		props.isInstance = true;
 		var entity = Archive.create(name, props);
 		if (entity !== null)
 		{
-			this.entities[name] = entity;
-			entity.enterWorld(this);
-			entity.beginPlay();
+			//this.entities[name] = entity;
+			//entity.enterWorld(this);
+			entity.beginPlay(this.game);
 		}
 
 		return entity;
@@ -137,11 +161,14 @@ var World = Class(BaseObject,
 
 	destroy : function(entity)
 	{
+		if (this.game === null)
+			throw ("cannot destroy entities before game has begun play!");
+
 		if (this.entities[entity.$name] !== entity)
 			throw ("entity does not exist in the world, cannot be destroyed");
 
 		entity.endPlay();
-		entity.leaveWorld();
+		//entity.leaveWorld();
 		delete this.entities[entity.$name];
 		Archive.delete(entity);
 	},

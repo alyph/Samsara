@@ -8,29 +8,7 @@ var Keeper = Class(Entity,
 		this.focus = null;
 	},
 
-	enterWorld : function(world)
-	{
-		Keeper.$superp.enterWorld.call(this, world);
-		
-		if (world.keeper !== null)
-		{
-			throw ("there is already a keeper in the world.");
-		}
-
-		world.keeper = this;
-	},
-
-	leaveWorld : function()
-	{
-		if (world.keeper === this)
-		{
-			world.keeper = null;	
-		}
-
-		Keeper.$superp.leaveWorld.call(this);
-	},
-
-	beginPlay : function()
+	beginPlay : function(game)
 	{
 		this.beginUpdate();
 	},

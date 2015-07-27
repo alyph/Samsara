@@ -2,6 +2,8 @@
 var PLAYGROUND_WIDTH	= 1024;
 var PLAYGROUND_HEIGHT	= 768;
 
+var Global = {};
+
 // --------------------------------------------------------------------------------------------------------------------
 // --                                      the main declaration:                                                     --
 // --------------------------------------------------------------------------------------------------------------------
@@ -77,6 +79,7 @@ var PLAYGROUND_HEIGHT	= 768;
 		core + "Planner.js",
 		core + "System.js",
 		core + "Archive.js",
+		core + "Predicate.js",
 		ui + "UI.js",
 		ui + "Elements/BasicElements.js",
 		ui + "Elements/GameElements.js",
@@ -84,6 +87,7 @@ var PLAYGROUND_HEIGHT	= 768;
 		ui + "Templates/GameTemplates.js",
 		ui + "Templates/Screens.js",
 		entities + "Entity.js",
+		entities + "Action.js",
 		entities + "Actor.js",
 		entities + "Message.js",
 		entities + "Narrator.js",
@@ -97,6 +101,7 @@ var PLAYGROUND_HEIGHT	= 768;
 		entities + "Story.js",
 		entities + "Activity.js",
 		entities + "Environment.js",
+		entities + "Global.js",
 		entities + "Keeper.js",
 		entities + "Location.js",
 		entities + "Goal.js",
@@ -104,6 +109,7 @@ var PLAYGROUND_HEIGHT	= 768;
 		entities + "POI.js",
 		entities + "Quest.js",
 		entities + "World.js",
+		entities + "Scripting.js",
 		sequences + "Sequence.js",
 		sequences + "ActionSequences.js",
 		table + "Boards.js",
@@ -113,9 +119,11 @@ var PLAYGROUND_HEIGHT	= 768;
 		table + "Table.js",
 		source + "Game.js",
 		source + "Core.js",
+		definitions + "Actions.js",
 		definitions + "Keywords.js",
 		definitions + "Activities.js",
 		definitions + "Characters.js",
+		definitions + "Globals.js",
 		definitions + "Goals.js",
 		definitions + "Environments.js",
 		definitions + "Locations.js",

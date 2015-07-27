@@ -1,35 +1,85 @@
-function(global)
+var _ = {};
+
+new (function(global)
 {
 	var predicates = {};
+	var predicateKeywords = {};
+
 	var resolvers = {};
+
+	var functable = _;
+	//var _ = functable;
+	var funcNamespace = "_";
 
 	var Predicate = Class(
 	{
 		constructor : function()
 		{
 			this.params = null;
-			this.expression = null;
+			this.func = null;
 		},
 
-		eval : function(vargs)
+		eval : function(keyValues)
+		{
+			var values = this.params.toValues(keyValues);
+			return this.evalVargs.apply(this, values);
+		},
+
+		evalVargs : function(vargs)
 		{
 			if (arguments.length < this.params.length)
 				throw ("less arguments than required.");
 
-			return this.expression.eval(arguments);
+			return this.func.apply(this, arguments);
 		},
 
-		evalParams : function(params, args)
+		// evalParams : function(params, args)
+		// {
+		// 	var l = params.length;
+		// 	var values = [];
+		// 	values.length = l;
+		// 	for (var i = 0; i < l; i++) 
+		// 	{
+		// 		values[i] = params[i].eval(args);
+		// 	};
+
+		// 	return this.evalVargs.apply(this, values);
+		// }
+	});
+
+	var GlobalPredicate = Class(BaseObject,
+	{
+		constructor : function()
 		{
-			var l = params.length;
-			var values = [];
-			values.length = l;
-			for (var i = 0; i < l; i++) 
+			GlobalPredicate.$super.call(this);
+
+			this.params = null;
+			this.expression = "";
+			this.funcName = "";
+			this.isCompiled = false;
+		},
+
+		compile : function()
+		{
+			if (this.expression === null)
+				throw ("no expression.");
+
+			var result = parseExpression(this.expression);
+			var func = result[1];
+			this.doneCompile(func);
+		},
+
+		doneCompile : function(func)
+		{
+			var baseFuncName = this.funcName;
+			var suffix = 1;
+			while (functable.hasOwnProperty(this.funcName))
 			{
-				values[i] = params[i].eval(args);
+				this.funcName = baseFuncName + (suffix++);
 			};
 
-			return this.eval.apply(this, values);
+			functable[this.funcName] = func;
+			this.isCompiled = true;
 		}
 	});
 
@@ -45,166 +95,202 @@ function(global)
 		}
 	});
 
-	function createPredicate(name, statement, expression)
+	global.$predicate = createPredicate;
+	function createPredicate(statement, expression)
 	{
-		var isGlobal = arguments.length >= 3;
-		var params = [];
+		var isGlobal = arguments.length >= 2;
 		if (isGlobal)
 		{
+			var key = "";
+			var params = [];
+			var keywords = [];
 			var tokens = statement.trim().split(/\s+/);
 			var l = tokens.length;
 			for (var i = 0; i < l; i++) 
 			{
 				var token = tokens[i];
-				if (token.length > 0 && token[0] === '$')
+				if (token.length === 0)
+					continue;
+
+				if (token[0] === '$')
+				{
 					params.push(token.substr(1));
+					key += "?";
+				}
+				else
+				{
+					keywords.push(token);
+					predicateKeywords[token] = true;
+					key += token;
+				}
 			};
 
-			// TODO: save into global table, with the statement format.
-			// convert statement to code
-			throw ("not implemented!");
+			if (predicates.hasOwnProperty(key))
+			{
+				throw ("Predicate key conflicts: " + key + ", Statement:" + statement + ", Other:" + predicates[key].expression);
+			}
+
+			var funcName = keywords.join('_');
+			var predicate = new GlobalPredicate();
+			predicate.params = params;
+			predicate.expression = expression;
+			predicate.funcName = funcName;
+			predicates[key] = predicate;
+
+			if (typeof expression === 'function')
+			{
+				predicate.doneCompile(expression);
+			}
+			else
+			{
+				predicate.expression = expression;
+			}
+
+			return predicate;
 		}
 		else // local predicate, only need a parameter list, since no other predicates will actually reference it.
 		{
-			expression = statement;
-			params = statement.trim().split(/\s*,\s*/);
-		}
-
-		var props = {};
-		props.$base = Predicate;
-		props.params = $p.apply(global, params);
-		props.expression = $v([params, expression], parseExpression);
-
-		if (isGlobal) // For global predicate, load as a definition, so later Archive will process it.
-		{
-			$def(name, props);	
-		}
-		else // For local predicate, simply return the properties to whomever is referencing it.
-		{
-			return props;
+			var predicate = new Predicate();
+			var result = parseExpression(statement);
+			predicate.params = $p.apply(this, result[0]);
+			predicate.func = result[1];
+			return predicate;
 		}
 	};
 
-	function findPredicate(code)
+	// function isCompositeKeyword(symbol)
+	// {
+	// 	throw ("not implemented!");
+	// };
+
+	function findCompiledPredicate(key)
 	{
-		return predicates[code] || null;
+		var predicate = predicates[key] || null;
+		if (predicate !== null && !predicate.isCompiled)
+			predicate.compile();
+
+		return predicate;
 	};
 
-	function findResolver(code)
+	function findResolver(key)
 	{
-		return resolvers[code] || null;
+		return resolvers[key] || null;
 	}
 
-	function isResolverPrefix(token)
-	{
-		throw ("not implemented!");
-	};
+	// function isResolverPrefix(token)
+	// {
+	// 	throw ("not implemented!");
+	// };
 
-	var PredicateExpression = Class(
-	{
-		constructor : function(predicate, params)
-		{
-			this.predicate = predicate;
-			this.params = params;
-		},
+	// var PredicateExpression = Class(
+	// {
+	// 	constructor : function(predicate, params)
+	// 	{
+	// 		this.predicate = predicate;
+	// 		this.params = params;
+	// 	},
 
-		eval : function(args)
-		{			
-			return this.predicate.evalParams(this.params, args);
-		}
-	});
+	// 	eval : function(args)
+	// 	{			
+	// 		return this.predicate.evalParams(this.params, args);
+	// 	}
+	// });
 
-	var ParameterExpression = Class(
-	{
-		constructor : function(constant, variables, func)
-		{
-			this.constant = constant || null;
-			this.variables = variables || null;
-			this.func = func || null;
-		},
+	// var ParameterExpression = Class(
+	// {
+	// 	constructor : function(constant, variables, func)
+	// 	{
+	// 		this.constant = constant || null;
+	// 		this.variables = variables || null;
+	// 		this.func = func || null;
+	// 	},
 
-		eval : function(args)
-		{
-			if (this.variables === null)
-				return this.constant;
+	// 	eval : function(args)
+	// 	{
+	// 		if (this.variables === null)
+	// 			return this.constant;
 
-			var l = this.variables.length;
-			var values = [];
-			values.length = l;
-			for (var i = 0; i < l; i++) 
-			{
-				values[i] = this.variables[i].eval(args);
-			};
+	// 		var l = this.variables.length;
+	// 		var values = [];
+	// 		values.length = l;
+	// 		for (var i = 0; i < l; i++) 
+	// 		{
+	// 			values[i] = this.variables[i].eval(args);
+	// 		};
 
-			return this.func !== null ? this.func.call(this, values) : values[0];
-		}
-	});
+	// 		return this.func !== null ? this.func.call(this, values) : values[0];
+	// 	}
+	// });
 
-	var VariableExpression = Class(
-	{
-		constructor : function(idIndex, resolvers)
-		{
-			this.idIndex = idIndex;
-			this.resolvers = resolvers;
-		},
+	// var VariableExpression = Class(
+	// {
+	// 	constructor : function(idIndex, resolvers)
+	// 	{
+	// 		this.idIndex = idIndex;
+	// 		this.resolvers = resolvers;
+	// 	},
 
-		eval : function(args)
-		{
-			if (this.argIdx >= args.length)
-				throw ("not enough input arguments.");
+	// 	eval : function(args)
+	// 	{
+	// 		if (this.argIdx >= args.length)
+	// 			throw ("not enough input arguments.");
 
-			var output = args[this.idIndex];
+	// 		var output = args[this.idIndex];
 
-			if (this.resolvers)
-			{
-				var l = this.resolvers.length;
-				for (var i = 0; i < l; i++) 
-				{
-					output = this.resolvers[i].eval(output, args);
-				};
-			}
+	// 		if (this.resolvers)
+	// 		{
+	// 			var l = this.resolvers.length;
+	// 			for (var i = 0; i < l; i++) 
+	// 			{
+	// 				output = this.resolvers[i].eval(output, args);
+	// 			};
+	// 		}
 
-			return output;
-		}
-	});
+	// 		return output;
+	// 	}
+	// });
 
-	var ResolverExpression = Class(
-	{
-		constructor : function(resolver, params)
-		{
-			this.resolver = resolver;
-			this.params = params;
-		},
+	// var ResolverExpression = Class(
+	// {
+	// 	constructor : function(resolver, params)
+	// 	{
+	// 		this.resolver = resolver;
+	// 		this.params = params;
+	// 	},
 
-		eval : function(input, args)
-		{
-			var resolverArgs = [];
-			resolverArgs.push(input);
+	// 	eval : function(input, args)
+	// 	{
+	// 		var resolverArgs = [];
+	// 		resolverArgs.push(input);
 
-			if (this.params)
-			{
-				var l = this.params.length;
-				resolverArgs.length = l + 1;
-				for (var i = 0; i < l; i++) 
-				{
-					resolverArgs[i+1] = this.params[i].eval(args);
-				};
-			}
+	// 		if (this.params)
+	// 		{
+	// 			var l = this.params.length;
+	// 			resolverArgs.length = l + 1;
+	// 			for (var i = 0; i < l; i++) 
+	// 			{
+	// 				resolverArgs[i+1] = this.params[i].eval(args);
+	// 			};
+	// 		}
 
-			return this.resolver.eval.apply(this.resolver, resolverArgs);
-		}
-	});
+	// 		return this.resolver.eval.apply(this.resolver, resolverArgs);
+	// 	}
+	// });
 
 	var TokenTypes =
 	{
-		keyword: 0,
-		composite: 1,
-		identifier: 2,
-		openParenthesis: 3,
-		closeParenthesis: 4,
-		comma: 5,
-		end: 6,
-		quote: 7
+		keyword				: 0,
+		composite 			: 1,
+		identifier			: 2,
+		openParenthesis		: 3,
+		closeParenthesis	: 4,
+		Comma 				: 5,
+		end					: 6,
+		quote 				: 7,
+		string 				: 8,
+		symbol 				: 9,
+		resolver 			: 10,
+		dot					: 11
 	}
 
 	var Token = Class(
@@ -223,80 +309,192 @@ function(global)
 		{
 			this.tokens = tokens;
 			this.cursor = 0;
+			this.identifiers = [];
 		},
 
 		peek : function()
 		{
-			throw ("not implemented!");
+			return this.tokens[this.cursor];
 		},
 
 		next : function()
 		{
-			throw ("not implemented!");
+			if (this.cursor === this.tokens.length - 1)
+				throw ("cannot move to next. End of the token stream.");
+
+			return this.tokens[this.cursor++];
 		},
 
 		expect : function(type)
 		{
-			throw ("not implemented!");
+			var nextType = this.tokens[this.cursor].type;
+			if (nextType !== type)
+				throw ("Expecting " + type + " but encountering " + nextType);
+
+			return this.next();
 		},
 
 		test : function(type)
 		{
-			throw ("not implemented!");
+			if (this.tokens[this.cursor].type === type)
+			{
+				return this.next();
+			}
+		},
+
+		analyzeSymbol : function(token)
+		{
+			if (token.type === TokenTypes.symbol)
+			{
+				var str = token.str;
+				if (predicateKeywords.hasOwnProperty(str))
+				{
+					token.type = TokenTypes.keyword;
+				}
+				else if (findResolver(str) !== null)
+				{
+					token.type = TokenTypes.resolver;
+				}
+				else
+				{
+					token.type = TokenTypes.identifier;
+					this.addIdentifier(str);
+				}
+			}
+		},
+
+		addIdentifier : function(identifier)
+		{
+			if (this.identifiers.indexOf(identifier) < 0)
+			{
+				this.identifiers.push(identifier);
+			}
 		}
 	});
 
-	function parseExpression(binder, record)
-	{
-		var source = binder.source;
-		var params = source[0];
-		var expression = source[1];
+	// function CompiledFunction(args, body) 
+	// {
+	// 	return Function.apply(this, args.concat(body));
+	// }
+	// CompiledFunction.prototype = Function.prototype;
+
+	function parseExpression(expression, params)
+	{		
 		var tokens = tokenize(expression, params);
 		var reader = new TokenReader(tokens);
-		var predicateExpr = parsePredicate(reader);
+		var funcBody = "return (" + parsePredicate(reader) + ");";
+		var args = reader.identifiers;
 
-		// TODO: good to go?
-		return predicateExpr;
+		if (params)
+		{
+			var l = args.length;
+			for (var i = 0; i < l; i++) 
+			{
+				if (!params.has(args[i]))
+					throw ("The identifier " + args[i] + " used in the expression " + expression + " are not found in the parameter list defined by the statement.");
+			};
+
+			args = [].concat(params);
+		}
+
+		return [args, Function.apply(null, args.concat(funcBody))];
 	};
 
 	function tokenize(expression, params)
 	{
+		var reg = /[a-zA-Z]\w*|-?\d+(?:\.\d+)?|[><!=]=|['+\-*\/(),.<>]/g;
+		var tokens = [];
 
+		var result;
+		while ((result = reg.exec(expression)) !== null) 
+		{
+			var match = result[0];
+			var token = new Token();
+			token.str = match;
+			tokens.push(token);
+
+			// String
+			if (match === "'")
+			{
+				token.type = TokenTypes.string;
+				var closeQuote = expression.indexOf("'", reg.lastIndex);
+				if (closeQuote < 0)
+				{
+					token.str = expression.substr(reg.lastIndex - 1) + "'";
+					reg.lastIndex = expression.length;
+				}
+				else
+				{
+					token.str = expression.substring(reg.lastIndex - 1, closeQuote + 1);
+					reg.lastIndex = closeQuote + 1;
+				}
+			}
+			// Open Parenthesis
+			else if (match === "(")
+			{
+				token.type = TokenTypes.openParenthesis;
+			}
+			// Close Parenthesis
+			else if (match === ")")
+			{
+				token.type = TokenTypes.closeParenthesis;
+			}
+			// Comma
+			else if (match === ",")
+			{
+				token.type = TokenTypes.comma;
+			}
+			// Dot
+			else if (match === ".")
+			{
+				token.type = TokenTypes.dot;
+			}
+			// Symbol
+			else
+			{
+				token.type = TokenTypes.symbol;
+			}
+		}
+
+		var endToken = new Token();
+		endToken.type = TokenTypes.end;
+		tokens.push(endToken);
+
+		return tokens;
 	};
 
 	function parsePredicate(reader)
 	{
+		var key = "";
+		var params = [];
+		
 		var next = reader.peek();
-		if (next.type === TokenTypes.composite)
+		while (next.type !== TokenTypes.end &&
+			next.type !== TokenTypes.comma &&
+			next.type !== TokenTypes.closeParenthesis)
 		{
-			return parseCompositePredicate(reader);
-		}
-		else
-		{
-			var code = "";
-			var params = [];
-			while (next.type !== TokenTypes.end &&
-				next.type !== TokenTypes.comma &&
-				next.type !== TokenTypes.closeParenthesis)
+			reader.analyzeSymbol(next);
+			if (next.type === TokenTypes.keyword)
 			{
-				if (next.type === TokenTypes.keyword)
-				{
-					code += next.str;
-					reader.next();
-				}
-				else
-				{
-					code += "?";
-					params.push(parseParameter(reader));
-				}
-
-				next = reader.peek();
+				key += next.str;
+				reader.next();
+			}
+			else
+			{
+				key += "?";
+				params.push(parseParameter(reader));
 			}
 
-			return buildPredicateExpression(code, params);
+			next = reader.peek();
 		}
-	};
 
+		var predicate = findCompiledPredicate(key);
+		if (predicate === null)
+			throw ("cannot find predicate: " + key);
+
+		return funcNamespace + "." + predicate.funcName + "(" + params.join(", ") + ")";
+	};
+/*
 	function parseCompositePredicate(reader)
 	{
 		var code = reader.expect(TokenTypes.composite).str;
@@ -313,129 +511,142 @@ function(global)
 		reader.expect(TokenTypes.closeParenthesis);
 
 		return buildPredicateExpression(code, subPredicates);
-	};
+	};*/
 
-	function buildPredicateExpression(code, params)
-	{
-		var predicate = findPredicate(code);
-		if (!predicate)
-			throw ("No predicate matching code: " + code);
+	// function buildPredicateExpression(code, params)
+	// {
+	// 	var predicate = findCompiledPredicate(code);
+	// 	if (!predicate)
+	// 		throw ("No predicate matching code: " + code);
 
-		return new PredicateExpression(predicate, params);
-	};
+	// 	return new PredicateExpression(predicate, params);
+	// };
 
 	function parseParameter(reader)
 	{
 		var parenthesisCount = 0;
 		var script = "";
-		var openQuote = false;
-		var variables = [];
 
 		while (true)
 		{
 			var next = reader.peek();
 
-			if (next.type === TokenTypes.quote)
+			if (next.type === TokenTypes.end || 
+				next.type === TokenTypes.comma)				
 			{
-				script += reader.next().str;
-				openQuote = !openQuote;
+				break;
 			}
-			else if (openQuote)
+			else if (next.type === TokenTypes.openParenthesis)
 			{
-				script += reader.next().str;
+				parenthesisCount++;
 			}
-			else if (next.type === TokenTypes.identifier)
+			else if (next.type === TokenTypes.closeParenthesis)
 			{
-				script += "$vars[" + variables.length + "]";
-				variables.push(parseVariable(reader));
+				if (--parenthesisCount < 0)
+					break;
 			}
 			else
 			{
-				if (next.type === TokenTypes.end || next.type === TokenTypes.keyword)				
+				reader.analyzeSymbol(next);
+				if (next.type === TokenTypes.keyword)
 				{
 					break;
 				}
-				else if (next.type === TokenTypes.comma)
+				else if (next.type === TokenTypes.identifier)
 				{
-					if (parenthesisCount <= 0)
-						break;
+					script += parseReference(reader);
+					continue;
 				}
-				else if (next.type === TokenTypes.openParenthesis)
+				else if (next.type === TokenTypes.resolver)
 				{
-					parenthesisCount++;
+					script += parseResolver(reader);
+					continue;
 				}
-				else if (next.type === TokenTypes.closeParenthesis)
-				{
-					if (--parenthesisCount < 0)
-						break;
-				}
+			}
 
-				script += reader.next().str;
+			script += reader.next().str;
+		}
+
+		return script;
+	};
+
+	// function buildParameterExpression(script, variables)
+	// {
+	// 	if (variables.length === 0)
+	// 		return new ParameterExpression(eval(script), null, null);
+
+	// 	if (script === "$vars[0]")
+	// 		return new ParameterExpression(null, variables, null);
+
+	// 	var func = new Function("vars", "return " + script + ";");
+	// 	return new ParameterExpression(null, variables, func);
+	// };
+
+	function parseReference(reader)
+	{
+		var identifier = reader.expect(TokenTypes.identifier);
+		var script = identifier.str;
+
+		while (reader.test(TokenTypes.dot))
+		{
+			script = parseResolver(reader, script);
+		}
+
+		return script;
+	};
+
+	// function buildVariableExpression(identifier, resolvers)
+	// {
+	// 	return new VariableExpression(identifier.index, resolvers);
+	// };
+
+	function parseResolver(reader, self)
+	{
+		var func = "";
+		var params = [];
+
+		var resolverToken = reader.next();
+
+		var resolver = findResolver(resolverToken.str);
+		if (resolver !== null)
+			func = resolver.funcName;
+
+		if (arguments.length >= 2)
+		{
+			params.push(self);
+
+			if (func === "")
+			{
+				func = "prop";
+				params.push(resolverToken.str);
 			}
 		}
 
-		return buildParameterExpression(script, variables);
-	};
+		if (func === "")
+			throw ("Cannot find proper resolver function: " + resolverToken.str);
 
-	function buildParameterExpression(script, variables)
-	{
-		if (variables.length === 0)
-			return new ParameterExpression(eval(script), null, null);
-
-		if (script === "$vars[0]")
-			return new ParameterExpression(null, variables, null);
-
-		var func = new Function("vars", "return " + script + ";");
-		return new ParameterExpression(null, variables, func);
-	};
-
-	function parseVariable(reader)
-	{
-		var identifier = reader.expect(TokenTypes.identifier);
-		var resolvers = [];
-
-		while (isResolverPrefix(reader.peek()))
-		{
-			resolvers.push(parseResolver(reader));
-		}
-
-		return buildVariableExpression(identifier, resolvers);
-	};
-
-	function buildVariableExpression(identifier, resolvers)
-	{
-		return new VariableExpression(identifier.index, resolvers);
-	};
-
-	function parseResolver(reader)
-	{
-		var prefix = reader.next();
-		var keyword = reader.expect(TokenTypes.keyword);
-		var params = null;
 
 		if (reader.test(TokenTypes.openParenthesis))
-		{
-			params = [];
-
+		{			
 			do
 			{
-				params.push(parseParameter(reader));
+				params.push(parsePredicate(reader));
 
 			} while(reader.test(TokenTypes.comma));
 
 			reader.expect(TokenTypes.closeParenthesis);
 		}
 
-		return buildResolverExpression(prefix, keyword, params);
+		return funcNamespace + "." + func + "(" + params.join(", ") + ")";
 	};
 
-	function buildResolverExpression(prefix, keyword, params)
-	{
-		var resolver = findResolver(prefix.str + keyword.str);
-		if (!resolver)
-			throw ("No resolver matching code: " + code);
+	// function buildResolverExpression(prefix, keyword, params)
+	// {
+	// 	var resolver = findResolver(prefix.str + keyword.str);
+	// 	if (!resolver)
+	// 		throw ("No resolver matching code: " + code);
 
-		return new ResolverExpression(resolver, params);
-	};
+	// 	return new ResolverExpression(resolver, params);
+	// };
 	
-}(this);
+})(this);

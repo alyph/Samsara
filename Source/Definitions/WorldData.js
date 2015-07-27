@@ -1,4 +1,11 @@
+Global.WorldName = "world";
 
+$inst(Global.WorldName, 
+{
+	$base: World,
+	global: "@global",
+	keeper: "@keeper"
+});
 
 $begin("locale");
 $use("keyword");

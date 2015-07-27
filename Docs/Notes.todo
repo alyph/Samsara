@@ -2,7 +2,7 @@
 
 TODO:
 
-
+	☐	route init() (should renamed to loaded()), add all objects to the map, then call loaded() on them.
 	☐	opportunity based combat actions
 
 	☐	convert world update to use the LatentUpdater

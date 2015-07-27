@@ -16,14 +16,19 @@ var Player = Class(Entity,
 		//game.screen.actions.on("click", this.onAction, this);
 	},
 
-	enterWorld : function(world)
-	{
-		Player.$superp.enterWorld.call(this, world);
+	// enterWorld : function(world)
+	// {
+	// 	Player.$superp.enterWorld.call(this, world);
 		
-		this.screen = world.game.screen;
+	// 	this.screen = world.game.screen;
+	// },
+
+	beginPlay : function(game)
+	{
+		this.screen = game.screen;
 	},
 
-	chooseAction : function(pov)
+	chooseAction : function(pov, actions)
 	{
 		if (this.pov !== null)
 			throw ("Another pov choosing action.");

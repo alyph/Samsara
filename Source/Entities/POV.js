@@ -28,15 +28,28 @@ var PointOfView = Class(Entity,
 		}
 	},
 
-	beginPlay : function()
+	beginPlay : function(game)
 	{
 		this.world.keeper.activatePOV(this);
 	},
 
+	populateActions : function()
+	{
+		var actions = [];
+		var actionDefs = Archive.getAll(Global.ActionsNamespace);
+		var numActionDefs = actionDefs.length;
+		for (var i = 0; i < numActionDefs; i++) 
+		{
+			actionDefs[i].populateActions(this, actions);
+		};
+		return actions;
+	},
+
 	chooseAction : function()
 	{
-		this.scene.populatePOIs();
-		this.controller.chooseAction(this);
+		//this.scene.populatePOIs();
+		var actions = this.populateActions();
+		this.controller.chooseAction(this, actions);
 	},
 
 	actionChosen: function(action)
