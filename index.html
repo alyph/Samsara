@@ -5,19 +5,19 @@
         <title>Samsara</title>
         <link rel="stylesheet" href="CSS/Style.css" />
         <link href='http://fonts.googleapis.com/css?family=Bubblegum+Sans' rel='stylesheet' type='text/css'>
-        <script src="Source/Libs/head.js"></script>
-        <script>head.js("Source/Main.js")</script>
+        <!--script src="Source/Libs/head.js"></script>
+        <script>head.js("Source/Main.js")</script-->
+        <script src="Source/Libs/head.load.js" data-headjs-load="Source/Main.js"></script>      
     </head>
     <body>
-        <div style="width: 1024px; height: 768px; background: black; margin: 80px auto;">
-            <div id="playground" style="width: 1024px; height: 768px; background: black;">
-                <div id="welcomeScreen" style="width: 1024px; height: 768px; position: absolute; z-index: 100; background: black; font-family: verdana, sans-serif;">
-                    <div id="loadingSet" style="position: relative; top: 200px;">
-                        <center><a style="color: white;">Loading...</a></center>
-                        <div style="position: absolute; top: 320px; width: 800px; color: white;">
-                            <div id="loadingBar" style="position: relative; left: 200px; height: 15px; width: 0px; background: white;"></div><br />
-                        </div>
-                    </div>
+        <div id="viewport">
+            <div id="screenRoot"></div>
+            <div id="welcomeScreen">
+                <div id="loadingSet">
+                    <center><a>Loading...</a></center>
+                    <!--div style="position: absolute; top: 320px; width: 800px; color: white;">
+                        <div id="loadingBar" style="position: relative; left: 200px; height: 15px; width: 0px; background: white;"></div><br />
+                    </div-->
                 </div>
             </div>
         </div>

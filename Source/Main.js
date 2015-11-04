@@ -16,22 +16,22 @@ var Global = {};
 		{
 			// Initialize the game:
 			// TODO: remove gamequery as it's no longer needed
-			$("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
+			// $("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
 
 			// this sets the id of the loading bar:
 			
-			$.loadCallback(function(percent)
-			{
-				$("#loadingBar").width(400*percent/100);
-			});
+			// $.loadCallback(function(percent)
+			// {
+			// 	$("#loadingBar").width(400*percent/100);
+			// });
 
-			$.playground().startGame(function()
-			{
+			// $.playground().startGame(function()
+			// {
 				//Core.init();
 
 				Archive.init();
 
-				UI.init($("#playground"));
+				UI.init($("#screenRoot"));
 
 				var game = new Game();
 				game.start();
@@ -52,9 +52,10 @@ var Global = {};
 				};*/
 
 
-				$("#welcomeScreen").fadeTo(1000,0,function(){$(this).remove();});
+				$("#welcomeScreen").fadeTo(500,0,function(){$(this).remove();});
 				$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
-			});
+
+			// });
 
 		});
 
@@ -71,8 +72,14 @@ var Global = {};
 	var core = "Source/Core/";
 	var ui = "Source/UI/";
 
-	head.js(
+	head.load(
+		libs + "jquery-2.0.3.js",
+		libs + "jquery-ui-1.8.23.custom.min.js",
+		libs + "jquery.gamequery.js",
 		libs + "jsface.js",
+		utils + "MathEx.js",
+		utils + "Containers.js",
+		utils + "Utils.js",
 		core + "BaseObject.js",
 		core + "Components.js",
 		core + "Descriptor.js",
@@ -133,15 +140,15 @@ var Global = {};
 		definitions + "Sprites.js",
 		definitions + "WorldData.js");
 
-	head.js(
-		libs + "jquery-2.0.3.js",
-		libs + "jquery-ui-1.8.23.custom.min.js",
-		libs + "jquery.gamequery.js");
+	// head.js(
+	// 	libs + "jquery-2.0.3.js",
+	// 	libs + "jquery-ui-1.8.23.custom.min.js",
+	// 	libs + "jquery.gamequery.js");
 
-	head.js(
-		utils + "MathEx.js",
-		utils + "Containers.js",
-		utils + "Utils.js");
+	// head.js(
+	// 	utils + "MathEx.js",
+	// 	utils + "Containers.js",
+	// 	utils + "Utils.js");
 
 })();
 
