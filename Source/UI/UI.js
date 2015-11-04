@@ -1,3 +1,856 @@
+
+var NewUI = new (function(global)
+{
+	var numLoadingHtml = 0;
+	var readyCallback = null;
+	var templates = {};
+	var behaviors = {};
+	var properties = {};
+
+	var ATTR_BEHAVIORS = "$behaviors";
+
+	this.registerTemplates = function(htmlUrl)
+	{
+		numLoadingHtml++;
+		$.get(htmlUrl, function(data)
+		{
+			var tempRoot = document.createElement("div");
+			tempRoot.innerHTML = data;
+
+			var numTemplates = tempRoot.children.length;
+			for (var i = 0; i < numTemplates; i++) 
+			{
+				var template = tempRoot.children[i];
+				registerTemplate(template);
+			};
+
+			numLoadingHtml--;
+			checkReady();
+		});
+
+		return this;
+	};
+
+	this.ready = function(callback)	
+	{
+		if (readyCallback !== null)
+			throw ("Already has ready callback!");
+
+		readyCallback = callback;
+		checkReady();
+	};
+
+	this.Behavior = function(name, config)
+	{
+		if (behaviors[name] !== undefined)
+			throw (`The behavior with name ${name} is already registered.`);
+
+		var beh = new Behavior(name, config);
+		behaviors[name] = beh;
+		return beh;
+	};
+
+	function checkReady()
+	{
+		if (readyCallback !== null)
+		{
+			var isReady = numLoadingHtml <= 0;
+			if (isReady)
+			{
+				var callback = readyCallback;
+				readyCallback = null;
+				callback();
+			}
+		}
+	};
+
+
+// .########.########.##.....##.########..##..........###....########.########
+// ....##....##.......###...###.##.....##.##.........##.##......##....##......
+// ....##....##.......####.####.##.....##.##........##...##.....##....##......
+// ....##....######...##.###.##.########..##.......##.....##....##....######..
+// ....##....##.......##.....##.##........##.......#########....##....##......
+// ....##....##.......##.....##.##........##.......##.....##....##....##......
+// ....##....########.##.....##.##........########.##.....##....##....########
+
+	var Template = Class(
+	{
+		constructor : function(templateElement)
+		{
+			this.name = templateElement.id;
+			this.element = templateElement;
+			this.proto = Object.create(CustomElement.prototype);			
+			this.elementInfos = [];
+			this.dependencies = null;
+			//this.bindingInfos = [];
+			//this.behaviors = [];
+			
+			var template = this;
+			this.proto.createdCallback = function()
+			{
+				CustomElement.apply(this);
+				this.setup(template);
+			};
+
+			this.proto.detachedCallback = function()
+			{
+				this.bind(null);
+			};
+
+			this.collectElementInfo(this.element, []);
+			this.collectChildrenInfos(this.element.content.children, []);
+		},
+
+		collectElementInfo : function(element, path)
+		{
+			var isRoot = (path.length === 0);
+			var isCustomElement = isRoot || (element.tagName.indexOf('-') >= 0);
+
+			var info = new ElementInfo();
+
+			if (element.children.length === 0 && !isRoot)
+			{
+				var func = this.compileBinding(element.textContent);
+				if (func !== null)
+				{
+					info.bindingFunc = func;
+					element.textContent = "";
+				}
+			}
+
+			if (element.hasAttribute(ATTR_BEHAVIORS))
+			{
+				var behaviorNames = element.getAttribute(ATTR_BEHAVIORS).trim().split(/\s+/);
+				element.removeAttribute(ATTR_BEHAVIORS);
+				for (var i = 0; i < behaviorNames.length; i++) 
+				{
+					var behavior = findBehavior(behaviorNames[i]);
+					if (behavior)
+					{
+						info.behaviors.push(behavior);
+					}
+					else
+					{
+						console.error("Cannot find behavior: " + behaviorNames[i]);
+					}
+				};
+			}
+
+			// TODO: do not allow non-custom element to have custom attributes
+			// Although here you can't check element.template to know if it's
+			// custom or not, must check if it has - in the tag
+			var attrs = element.attributes;
+			for (var i = 0; i < attrs.length; i++) 
+			{
+				var attr = attrs[i];
+				if (attr.name.length > 0 && attr.name[0] === '$')
+				{
+					var key = attr.name.substr(1).trim().replace(/[\s-_]+([a-zA-Z])/g,
+						function(match, p1) { return p1.toUpperCase(); });
+					
+					var prop = findProperty(key);
+					if (prop)
+					{
+						if (prop.readonly || !isCustomElement)
+						{
+							element.dataset[key] = attr.value;
+						}
+						else
+						{
+							var propInfo = new ElementPropertyInfo();
+							propInfo.property = prop;
+							propInfo.value = prop.parse(attr.value);
+							info.properties.push(propInfo);
+						}
+					}
+					else
+					{
+						console.error("Cannot find property: " + key);
+					}
+
+					element.removeAttribute(attr.name);
+				}
+			};
+
+			// if (info.properties.length > 0 && !isCustomElement)
+			// {
+			// 	console.error("Cannot apply custom properties to non-custom element: " + element.tagName);
+			// 	info.properties.length = 0; 
+			// }
+
+			if (info.bindingFunc !== null || info.behaviors.length > 0 || info.properties.length > 0)
+			{
+				info.path = path.concat();
+				this.elementInfos.push(info);
+
+				var elementName = element.tagName.toLowerCase();
+				if (isCustomElement && !isRoot && templates[elementName] === undefined)
+				{
+					if (this.dependencies === null)
+						this.dependencies = {};
+
+					this.dependencies[elementName] = true;
+				}
+			}
+		},
+
+		collectChildrenInfos : function(children, path)
+		{
+			var l = children.length;
+			for (var i = 0; i < l; i++) 
+			{
+				path.push(i);
+
+				var element = children[i];
+
+				this.collectElementInfo(element, path);
+
+				if (element.children.length > 0)
+				{
+					this.collectChildrenInfos(element.children, path);	
+				}
+
+				path.pop();
+			};
+		},
+
+		compileBinding : function(expression)
+		{
+			var input = expression.trim();
+			var reg = /\{\{(.*)\}\}/g;
+			var last = 0;
+			var tokens = [];
+			var numBindings = 0;
+			var result;
+			while ((result = reg.exec(input)) !== null) 
+			{
+				if (reg.index > last)
+				{
+					tokens.push(JSON.stringify(input.substring(last, result.index)));
+				}
+
+				last = reg.lastIndex;
+
+				var bindingExpr = result[1].trim();
+				if (bindingExpr === ".") bindingExpr = "arguments[0]"; // TODO: potential optimization.
+				tokens.push("(" + bindingExpr + ")");
+				numBindings++;
+			}
+
+			if (numBindings === 0)
+			{
+				return null;
+			}
+
+			if (last < input.length)
+			{
+				tokens.push(JSON.stringify(input.substring(last)));
+			}
+
+			var body = "if (data === null) return null; " +
+					   "with (data) { return " + tokens.join(" + ") + "; };";
+
+			return new Function("data", body);
+		}
+	});	
+
+	var ElementInfo = Class(
+	{
+		constructor : function ElementInfo()
+		{
+			this.path = null;
+			this.bindingFunc = null;
+			this.behaviors = [];
+			this.properties = [];
+		}
+	});
+
+	var ElementPropertyInfo = Class(
+	{
+		constructor : function ElementPropertyInfo()
+		{
+			this.property = null;
+			this.value = null;
+		}
+	});
+
+	var pendingTemplates = {};
+
+	function registerTemplate(templateElement)
+	{
+		var template = new Template(templateElement);
+		if (template.dependencies)
+		{
+			var dependencies = Object.keys(template.dependencies);
+			for (var i = 0; i < dependencies.length; i++) 
+			{
+				var dependency = dependencies[i];
+				if (pendingTemplates[dependency] === undefined)
+					pendingTemplates[dependency] = [];
+
+				pendingTemplates[dependency].push(template);
+			};
+		}
+		else
+		{
+			finishRegisteringTemplate(template);
+		}
+	    
+	    return template;
+	};
+
+	function finishRegisteringTemplate(template)
+	{
+		var name = template.name;
+
+		if (template[name])
+		{
+			Console.error("Duplicated template registeration: " + name);
+			return;
+		}
+
+		document.registerElement(name, { prototype: template.proto });
+		templates[name] = template;
+
+		var pendings = pendingTemplates[name];
+		if (pendings !== undefined)
+		{
+			for (var i = 0; i < pendings.length; i++) 
+			{
+				var pending = pendings[i];
+
+				if (pending.dependencies)
+				{
+					delete pending.dependencies[name];
+					if (Object.keys(pending.dependencies).length === 0)
+						pending.dependencies = null;
+				}
+
+				if (!pending.dependencies)
+					finishRegisteringTemplate(pending);
+			};
+
+			delete pendingTemplates[name];
+		}
+	};
+
+	function isCustomElement(element)
+	{
+		return element.template && true;
+	};
+
+// .########.##.......########.##.....##.########.##....##.########
+// .##.......##.......##.......###...###.##.......###...##....##...
+// .##.......##.......##.......####.####.##.......####..##....##...
+// .######...##.......######...##.###.##.######...##.##.##....##...
+// .##.......##.......##.......##.....##.##.......##..####....##...
+// .##.......##.......##.......##.....##.##.......##...###....##...
+// .########.########.########.##.....##.########.##....##....##...
+
+	function CustomElement() 
+	{
+		this.template = null;
+		this.bindings = [];
+		this.dataContext = null;
+		this.dataObserver = null;
+		this.properties = null;
+	};
+	var customElemProto = CustomElement.prototype = Object.create(HTMLElement.prototype);
+	customElemProto.constructor = CustomElement;
+
+	customElemProto.setup = function(template)
+	{
+		this.template = template;
+		var templateElem = template.element;
+
+		// TODO: do not create shadow root if the content is empty?
+        // Add the template content to the shadow root
+		var clonedContent = document.importNode(templateElem.content, true);
+        var shadowRoot = this.createShadowRoot();
+        shadowRoot.appendChild(clonedContent);
+
+        // TODO: simplify
+        var numClasses = templateElem.classList.length;
+        for (var i = 0; i < numClasses; i++) 
+        {
+        	this.classList.add(templateElem.classList.item(i));
+        };
+
+        // TODO: may want to inline to improve perf.
+        //attachBehaviors(this);
+        //initBindings(this);
+
+        var infos = this.template.elementInfos;
+        var ni = infos.length;
+        for (var i = 0; i < ni; i++) 
+        {
+        	var info = infos[i];
+        	var element = traverseSubElement(this, info.path);
+
+        	if (info.bindingFunc !== null)
+        	{
+        		var binding = new Binding();
+				binding.element = element;
+				binding.func = info.bindingFunc;
+				this.bindings.push(binding);
+        	}
+
+        	for (var b = 0; b < info.behaviors.length; b++) 
+        	{
+        		info.behaviors[b].attached(element);
+        	};
+
+        	// TODO: need double check this is custom element?
+        	for (var p = 0; p < info.properties.length; p++) 
+        	{
+        		var prop = info.properties[p];
+        		prop.property.set(element, prop.value);   		
+        	};
+        };
+
+        //this.bind(null);
+	};
+
+	customElemProto.bind = function(data)
+	{
+		var oldData = this.dataContext;
+
+		if (oldData === data)
+			return;
+
+		observeData(this, data);
+		refreshBindings(this);
+
+		this.dispatchEvent(new CustomEvent("bindingchanged", { detail: { previous: oldData, current: data } }));
+	};
+
+	// customElemProto.property = function(name, value)
+	// {
+	// 	if (arguments.length >= 2)
+	// 	{
+	// 		if (value === undefined)
+	// 			throw ("cannot set property to undefined.");
+
+	// 		if (this.properties === null)
+	// 			this.properties = {};
+
+	// 		this.properties[name] = value;
+	// 	}
+	// 	else
+	// 	{
+	// 		if (this.properties !== null)
+	// 		{
+	// 			value = this.properties[name];
+	// 		}
+	// 	}
+	// 	return value;
+	// };
+
+	// function attachBehaviors(element)
+	// {
+	// 	var behaviors = element.template.behaviors;
+	// 	var numBehaviors = behaviors.length;
+	// 	for (var i = 0; i < numBehaviors; i++) 
+	// 	{
+	// 		behaviors[i].attached(element);
+	// 	};
+	// };
+
+	// function initBindings(element)
+	// {
+	// 	var infos = element.template.bindingInfos;
+	// 	var numBindings = infos.length;
+	// 	for (var i = 0; i < numBindings; i++) 
+	// 	{
+	// 		var info = infos[i];
+	// 		var binding = new Binding();
+	// 		binding.element = traverseSubElement(element, info.path);
+	// 		binding.func = info.func;
+	// 		element.bindings.push(binding);
+	// 	};
+
+	// 	// bind to null initially;
+	// 	element.bind(null);
+	// };
+
+	function refreshBindings(element)
+	{
+		var data = element.dataContext;
+		var numBindings = element.bindings.length;
+		for (var i = 0; i < numBindings; i++) 
+		{
+			element.bindings[i].apply(data);
+		};
+
+		// pass to behavior
+		element.dispatchEvent(new CustomEvent("datachanged", { detail: { data: data } }));	
+
+		// if no bindings and no behavior hanlded, set to content (must be string, must have container)
+	}
+
+	function observeData(element, data)
+	{
+		if (element.dataContext !== null && element.dataObserver !== null)
+			Object.unobserve(element.dataContext, element.dataObserver);
+
+		element.dataContext = data;
+		element.dataObserver = null;
+
+		if (data !== null && typeof data === 'object')
+		{
+			element.dataObserver = function()
+			{
+				refreshBindings(element);
+			};
+
+			Object.observe(data, element.dataObserver);
+		}
+	};
+
+	function traverseSubElement(element, path)
+	{
+		// 0 path pointing to the element itself.
+		if (path.length === 0)
+			return element;
+
+		var cursor = element.shadowRoot;
+		var l = path.length;
+		for (var i = 0; i < l; i++) 
+		{
+			cursor = cursor.children[path[i]];
+		};
+		return cursor;
+	};
+
+	var BindingInfo = Class(
+	{
+		constructor : function(path, func)
+		{
+			this.path = path.concat();
+			this.func = func;
+		}
+	});
+
+	var Binding = Class(
+	{
+		constructor : function()
+		{
+			this.element = null;
+			this.func = null;
+		},
+
+		apply : function(data)
+		{
+			var value;
+
+			try
+			{
+				value = this.func(data);
+			}
+			catch (e)
+			{
+				value = null;
+				console.error("Failed to evaluate binding expression:" + e.message);
+			}
+
+			// If custom element
+			if (isCustomElement(this.element))
+			{
+				this.element.bind(value);
+			}
+			// Otherwise set content to string
+			else
+			{
+				var html = value !== null ? value.toString() : "";
+				this.element.innerHTML = html;
+			}
+		}
+	});
+
+// .########..########.##.....##....###....##.....##.####..#######..########.
+// .##.....##.##.......##.....##...##.##...##.....##..##..##.....##.##.....##
+// .##.....##.##.......##.....##..##...##..##.....##..##..##.....##.##.....##
+// .########..######...#########.##.....##.##.....##..##..##.....##.########.
+// .##.....##.##.......##.....##.#########..##...##...##..##.....##.##...##..
+// .##.....##.##.......##.....##.##.....##...##.##....##..##.....##.##....##.
+// .########..########.##.....##.##.....##....###....####..#######..##.....##
+
+
+
+	var Behavior = Class(
+	{
+		constructor : function Behavior(name, config)
+		{
+			this.name = name;
+			this.listeners = [];
+
+			var keys = Object.keys(config);
+			for (var i = 0; i < keys.length; i++) 
+			{
+				var key = keys[i];
+				var value = config[key];
+
+				if (typeof value === 'function')
+				{
+					if (key.startsWith("on"))
+					{
+						this.listeners.push(new BehaviorListener(this, key.substr(2), value));
+					}
+					else
+					{
+						this[key] = value;
+					}
+				}
+				else if (typeof value === 'object')
+				{
+					if (value.type === undefined || value.value === undefined)
+						throw (`incorrect behavior property format: ${key} : ${JSON.stringify(value)}`);
+
+					var readonly = (value.readonly === false ? false : true); // make non-readonly explicit.
+					this[key] = new BehaviorProperty(defineProperty(key, value.type, readonly), value.value);
+				}
+				else
+				{
+					throw (`Unexpected behavior config: ${key} : ${JSON.stringify(value)}`);
+				}
+			};
+		},
+
+		attached : function(element)
+		{
+			// var l = this.properties.length;
+			// for (var i = 0; i < l; i++) 
+			// {
+			// 	var prop = this.properties[i];
+			// 	if (element.property(prop.key) !== undefined)
+			// 		throw ("Behavior property conflict: " + prop.key);
+
+			// 	element.property(prop.key, prop.value);
+			// };
+
+			var l = this.listeners.length;
+			for (var i = 0; i < l; i++) 
+			{
+				var listener = this.listeners[i];
+				element.addEventListener(listener.type, listener.handler);
+			};
+		}
+	});
+
+	var BehaviorListener = Class(
+	{
+		constructor : function BehaviorListener(behavior, type, handler)
+		{
+			this.type = type;
+			this.handler = function(event)
+			{
+				handler.call(behavior, event.currentTarget, event);
+			};
+		}
+	});
+
+	var BehaviorProperty = Class(
+	{
+		constructor : function BehaviorProperty(prop, value)
+		{
+			if (!prop || value === undefined)
+				throw ("missing property or value.");
+
+			this.property = prop;
+			this.value = this.property.coerce(value);
+		},
+
+		get : function(element)
+		{
+			return this.property.get(element, this.value);
+		},
+
+		set : function(element, value)
+		{
+			return this.property.set(element, value);
+		}
+	});
+
+	function findBehavior(name)
+	{
+		return behaviors[name] || null;
+	};
+
+
+// .########..########...#######..########..########.########..########.##....##
+// .##.....##.##.....##.##.....##.##.....##.##.......##.....##....##.....##..##.
+// .##.....##.##.....##.##.....##.##.....##.##.......##.....##....##......####..
+// .########..########..##.....##.########..######...########.....##.......##...
+// .##........##...##...##.....##.##........##.......##...##......##.......##...
+// .##........##....##..##.....##.##........##.......##....##.....##.......##...
+// .##........##.....##..#######..##........########.##.....##....##.......##...
+
+	var CustomProperty = Class(
+	{
+		constructor : function CustomProperty(name, readonly)
+		{
+			this.name = name;
+			this.readonly = readonly;
+		},
+
+		get : function(element, defaultValue)
+		{
+			var value;
+
+			if (isCustomElement(element))
+			{
+				if (this.readonly)
+				{
+					value = element.dataset[this.name];
+					if (value !== undefined)
+						return this.parse(value);
+
+					value = element.template.element.dataset[this.name];
+					if (value !== undefined)
+					{
+						return this.parse(value);
+					}
+				}
+				else if (element.properties !== null) 
+				{
+					value = element.properties[this.name];
+					if (value !== undefined)
+						return value;
+				}
+			}
+			else
+			{
+				value = element.dataset[this.name];
+				if (value !== undefined)
+					return this.parse(value);
+			}
+
+			return defaultValue;
+		},
+
+		set : function(element, value)
+		{
+			if (this.readonly)
+				throw ("Cannot set readonly property: " + this.name);
+
+			if (isCustomElement(element))
+			{
+				if (element.properties === null)
+					element.properties = {};
+
+				element.properties[this.name] = value;
+			}
+			else
+			{
+				element.dataset[this.name] = this.stringify(value);
+			}
+		}
+	});
+
+	var StringProperty = Class(CustomProperty,
+	{
+		constructor : function StringProperty(name, readonly)
+		{
+			StringProperty.$super.call(this, name, readonly);
+		},
+
+		parse : function(str)
+		{
+			return str;
+		},
+
+		stringify : function(value)
+		{
+			return value;
+		},
+
+		coerce : function(value)
+		{
+			return (value + "");
+		}
+	});
+
+	var NumberProperty = Class(CustomProperty,
+	{
+		constructor : function NumberProperty(name, readonly)
+		{
+			NumberProperty.$super.call(this, name, readonly);
+		},
+
+		parse : function(str)
+		{
+			return (str * 1);
+		},
+
+		stringify : function(value)
+		{
+			return (value + "");
+		},
+
+		coerce : function(value)
+		{
+			return (value * 1);
+		}
+	});
+
+	function defineProperty(name, type, readonly)
+	{
+		if (properties[name] !== undefined)
+			throw (`property with name ${name} already defined.`);
+
+		readonly = readonly ? true : false;
+
+		var prop = null;
+		if (type === String)
+		{
+			prop = new StringProperty(name, readonly);	
+		}
+		else if (type === Number)
+		{
+			prop = new NumberProperty(name, readonly);
+		}
+		else
+		{
+			throw (`unknown property type ${type}`);
+		}
+		properties[name] = prop;
+		return prop;
+	};
+
+	function findProperty(name)
+	{
+		return properties[name] || null;
+	};
+
+})(this);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 var UI = new (function(global)
 {
 	var templatesData = {};
@@ -67,7 +920,7 @@ var UI = new (function(global)
 
 		createDOM : function()
 		{
-			return $("<div />")[0];
+			return $("<div></div>")[0];
 		},
 
 		setup : function(props)
