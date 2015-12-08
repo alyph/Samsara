@@ -1,5 +1,16 @@
+* UI
+  - data binding
+  - code backend (components?)
+  - inheritance (attributes, classes, layout)
+
+  [tasks]
+  - setup test cases
+  - imp data binding
+  - imp behaviors  <---
+
 
 * roadmap
+  - abstraction positioning... must solve the problem of travel progress
   - initial entities, characters, party, pov, keeper, locales  
 ->- locale of a pov (probably just start from the plain of red grass)
   - keeper activates pov, pov select action

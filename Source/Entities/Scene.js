@@ -27,6 +27,8 @@ var Scene = Class(BaseObject,
 
 		this.pov = null;
 		this.pois = [];
+
+		this.backdrop = null;
 	},
 
 	populatePOIs : function()

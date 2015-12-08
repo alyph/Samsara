@@ -129,6 +129,7 @@ $use("temp_locale");
 $inst("player_party_pov", 
 {
 	$base: "proto.pov_base",
+	scene: { $base: "scene.caravan_ambush" },
 	locale: "@starting_loc",
 	controller: "@player",
 	characters: [ "@pc_melee", "@pc_caster", "@pc_agile" ]

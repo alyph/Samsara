@@ -4,7 +4,7 @@ var Player = Class(Entity,
 	{
 		Player.$super.call(this);
 
-		this.screen = null;
+		//this.screen = null;
 		this.pov = null;
 		// this.game = game;
 		// this.party = game.world.spawn("PlayerParty", { $base: Party });//new Party(game);
@@ -23,10 +23,11 @@ var Player = Class(Entity,
 	// 	this.screen = world.game.screen;
 	// },
 
-	beginPlay : function(game)
-	{
-		this.screen = game.screen;
-	},
+	// beginPlay : function(game)
+	// {
+	// 	//this.screen = game.screen;
+		
+	// },
 
 	chooseAction : function(pov, actions)
 	{
@@ -34,6 +35,8 @@ var Player = Class(Entity,
 			throw ("Another pov choosing action.");
 
 		this.pov = pov;
+
+		$("player-view")[0].bind(this);
 
 		// TODO: UI
 		//this.screen.scene.setData(pov.scene);

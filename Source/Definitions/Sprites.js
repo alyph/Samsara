@@ -31,7 +31,8 @@ var SpriteDefinitions =
 		Loc_AeonMatrix: "AeonMatrix",
 		Loc_Marsh: "Marsh",
 		Loc_Forest: "Forest",
-		loc_primal_forest: "PrimalForest"
+		loc_primal_forest: "PrimalForest",
+		mountain_pass: "mountain_pass"
 	},
 
 	{

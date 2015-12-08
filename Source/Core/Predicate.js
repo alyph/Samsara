@@ -8,7 +8,6 @@ new (function(global)
 	var resolvers = {};
 
 	var functable = _;
-	//var _ = functable;
 	var funcNamespace = "_";
 
 	var Predicate = Class(
@@ -32,19 +31,6 @@ new (function(global)
 
 			return this.func.apply(this, arguments);
 		},
-
-		// evalParams : function(params, args)
-		// {
-		// 	var l = params.length;
-		// 	var values = [];
-		// 	values.length = l;
-		// 	for (var i = 0; i < l; i++) 
-		// 	{
-		// 		values[i] = params[i].eval(args);
-		// 	};
-
-		// 	return this.evalVargs.apply(this, values);
-		// }
 	});
 
 	var GlobalPredicate = Class(BaseObject,
@@ -158,11 +144,6 @@ new (function(global)
 		}
 	};
 
-	// function isCompositeKeyword(symbol)
-	// {
-	// 	throw ("not implemented!");
-	// };
-
 	function findCompiledPredicate(key)
 	{
 		var predicate = predicates[key] || null;
@@ -177,121 +158,20 @@ new (function(global)
 		return resolvers[key] || null;
 	}
 
-	// function isResolverPrefix(token)
-	// {
-	// 	throw ("not implemented!");
-	// };
-
-	// var PredicateExpression = Class(
-	// {
-	// 	constructor : function(predicate, params)
-	// 	{
-	// 		this.predicate = predicate;
-	// 		this.params = params;
-	// 	},
-
-	// 	eval : function(args)
-	// 	{			
-	// 		return this.predicate.evalParams(this.params, args);
-	// 	}
-	// });
-
-	// var ParameterExpression = Class(
-	// {
-	// 	constructor : function(constant, variables, func)
-	// 	{
-	// 		this.constant = constant || null;
-	// 		this.variables = variables || null;
-	// 		this.func = func || null;
-	// 	},
-
-	// 	eval : function(args)
-	// 	{
-	// 		if (this.variables === null)
-	// 			return this.constant;
-
-	// 		var l = this.variables.length;
-	// 		var values = [];
-	// 		values.length = l;
-	// 		for (var i = 0; i < l; i++) 
-	// 		{
-	// 			values[i] = this.variables[i].eval(args);
-	// 		};
-
-	// 		return this.func !== null ? this.func.call(this, values) : values[0];
-	// 	}
-	// });
-
-	// var VariableExpression = Class(
-	// {
-	// 	constructor : function(idIndex, resolvers)
-	// 	{
-	// 		this.idIndex = idIndex;
-	// 		this.resolvers = resolvers;
-	// 	},
-
-	// 	eval : function(args)
-	// 	{
-	// 		if (this.argIdx >= args.length)
-	// 			throw ("not enough input arguments.");
-
-	// 		var output = args[this.idIndex];
-
-	// 		if (this.resolvers)
-	// 		{
-	// 			var l = this.resolvers.length;
-	// 			for (var i = 0; i < l; i++) 
-	// 			{
-	// 				output = this.resolvers[i].eval(output, args);
-	// 			};
-	// 		}
-
-	// 		return output;
-	// 	}
-	// });
-
-	// var ResolverExpression = Class(
-	// {
-	// 	constructor : function(resolver, params)
-	// 	{
-	// 		this.resolver = resolver;
-	// 		this.params = params;
-	// 	},
-
-	// 	eval : function(input, args)
-	// 	{
-	// 		var resolverArgs = [];
-	// 		resolverArgs.push(input);
-
-	// 		if (this.params)
-	// 		{
-	// 			var l = this.params.length;
-	// 			resolverArgs.length = l + 1;
-	// 			for (var i = 0; i < l; i++) 
-	// 			{
-	// 				resolverArgs[i+1] = this.params[i].eval(args);
-	// 			};
-	// 		}
-
-	// 		return this.resolver.eval.apply(this.resolver, resolverArgs);
-	// 	}
-	// });
 
 	var TokenTypes =
 	{
-		keyword				: 0,
-		composite 			: 1,
-		identifier			: 2,
-		openParenthesis		: 3,
-		closeParenthesis	: 4,
-		Comma 				: 5,
-		end					: 6,
-		quote 				: 7,
+		symbol 				: 0,
+		keyword				: 1,
+		resolver 			: 2,
+		identifier			: 3,
+		openParenthesis		: 4,
+		closeParenthesis	: 5,
+		dot					: 6,
+		Comma 				: 7,
 		string 				: 8,
-		symbol 				: 9,
-		resolver 			: 10,
-		dot					: 11
-	}
+		end					: 9
+	};
 
 	var Token = Class(
 	{
@@ -371,12 +251,6 @@ new (function(global)
 			}
 		}
 	});
-
-	// function CompiledFunction(args, body) 
-	// {
-	// 	return Function.apply(this, args.concat(body));
-	// }
-	// CompiledFunction.prototype = Function.prototype;
 
 	function parseExpression(expression, params)
 	{		
@@ -494,33 +368,6 @@ new (function(global)
 
 		return funcNamespace + "." + predicate.funcName + "(" + params.join(", ") + ")";
 	};
-/*
-	function parseCompositePredicate(reader)
-	{
-		var code = reader.expect(TokenTypes.composite).str;
-		var subPredicates = [];
-
-		reader.expect(TokenTypes.openParenthesis);
-
-		do
-		{
-			subPredicates.push(parsePredicate(reader));
-
-		} while(reader.test(TokenTypes.comma));
-
-		reader.expect(TokenTypes.closeParenthesis);
-
-		return buildPredicateExpression(code, subPredicates);
-	};*/
-
-	// function buildPredicateExpression(code, params)
-	// {
-	// 	var predicate = findCompiledPredicate(code);
-	// 	if (!predicate)
-	// 		throw ("No predicate matching code: " + code);
-
-	// 	return new PredicateExpression(predicate, params);
-	// };
 
 	function parseParameter(reader)
 	{
@@ -570,18 +417,6 @@ new (function(global)
 		return script;
 	};
 
-	// function buildParameterExpression(script, variables)
-	// {
-	// 	if (variables.length === 0)
-	// 		return new ParameterExpression(eval(script), null, null);
-
-	// 	if (script === "$vars[0]")
-	// 		return new ParameterExpression(null, variables, null);
-
-	// 	var func = new Function("vars", "return " + script + ";");
-	// 	return new ParameterExpression(null, variables, func);
-	// };
-
 	function parseReference(reader)
 	{
 		var identifier = reader.expect(TokenTypes.identifier);
@@ -594,11 +429,6 @@ new (function(global)
 
 		return script;
 	};
-
-	// function buildVariableExpression(identifier, resolvers)
-	// {
-	// 	return new VariableExpression(identifier.index, resolvers);
-	// };
 
 	function parseResolver(reader, self)
 	{
@@ -639,14 +469,5 @@ new (function(global)
 
 		return funcNamespace + "." + func + "(" + params.join(", ") + ")";
 	};
-
-	// function buildResolverExpression(prefix, keyword, params)
-	// {
-	// 	var resolver = findResolver(prefix.str + keyword.str);
-	// 	if (!resolver)
-	// 		throw ("No resolver matching code: " + code);
-
-	// 	return new ResolverExpression(resolver, params);
-	// };
 	
 })(this);

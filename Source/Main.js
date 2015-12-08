@@ -9,57 +9,29 @@ var Global = {};
 // --------------------------------------------------------------------------------------------------------------------
 (function()
 {
-	head.ready(function()
+	function init()
 	{
-		// Animations declaration:
-		Sprites.init(function()
+		Archive.init();				
+		var game = new Game();
+		game.start();				
+
+		(function update()
 		{
-			// Initialize the game:
-			// TODO: remove gamequery as it's no longer needed
-			// $("#playground").playground({height: PLAYGROUND_HEIGHT, width: PLAYGROUND_WIDTH, keyTracker: true});
+			game.update();
+			window.setTimeout(update, 100);
+		})();
 
-			// this sets the id of the loading bar:
-			
-			// $.loadCallback(function(percent)
-			// {
-			// 	$("#loadingBar").width(400*percent/100);
-			// });
+		/*
+		window.requestAnimationFrame(update);
+		function update(timestamp)
+		{
+			game.update();
+			window.requestAnimationFrame(update);
+		};*/
 
-			// $.playground().startGame(function()
-			// {
-				//Core.init();
-
-				Archive.init();
-
-				UI.init($("#screenRoot"));
-
-				var game = new Game();
-				game.start();
-				
-
-				(function update()
-				{
-					game.update();
-					window.setTimeout(update, 100);
-				})();
-
-				/*
-				window.requestAnimationFrame(update);
-				function update(timestamp)
-				{
-					game.update();
-					window.requestAnimationFrame(update);
-				};*/
-
-
-				$("#welcomeScreen").fadeTo(500,0,function(){$(this).remove();});
-				$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
-
-			// });
-
-		});
-
-	});
+		$("#welcomeScreen").fadeTo(500,0,function(){$(this).remove();});
+		$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
+	};
 
 	var libs = "Source/Libs/";
 	var utils = "Source/Utils/";
@@ -83,16 +55,18 @@ var Global = {};
 		core + "BaseObject.js",
 		core + "Components.js",
 		core + "Descriptor.js",
+		core + "gallery.js",
 		core + "Planner.js",
 		core + "System.js",
 		core + "Archive.js",
 		core + "Predicate.js",
 		ui + "UI.js",
-		ui + "Elements/BasicElements.js",
-		ui + "Elements/GameElements.js",
-		ui + "Templates/BasicTemplates.js",
-		ui + "Templates/GameTemplates.js",
-		ui + "Templates/Screens.js",
+		ui + "behaviors/basic_behaviors.js",
+		// ui + "Elements/BasicElements.js",
+		// ui + "Elements/GameElements.js",
+		// ui + "Templates/BasicTemplates.js",
+		// ui + "Templates/GameTemplates.js",
+		// ui + "Templates/Screens.js",
 		entities + "Entity.js",
 		entities + "Action.js",
 		entities + "Actor.js",
@@ -125,20 +99,46 @@ var Global = {};
 		table + "Dialog.js",
 		table + "Table.js",
 		source + "Game.js",
-		source + "Core.js",
-		definitions + "Actions.js",
-		definitions + "Keywords.js",
-		definitions + "Activities.js",
-		definitions + "Characters.js",
-		definitions + "Globals.js",
-		definitions + "Goals.js",
-		definitions + "Environments.js",
-		definitions + "Locations.js",
-		definitions + "Prototypes.js",
-		definitions + "Quests.js",
-		definitions + "Scenes.js",
-		definitions + "Sprites.js",
-		definitions + "WorldData.js");
+		source + "Core.js",		
+		onCodeLoaded);
+
+	function onCodeLoaded()
+	{
+		head.load(definitions + "Sprites.js", function()
+		{
+			Gallery.load(SpriteDefinitions);
+			Gallery.ready(onResourceLoaded);
+		});
+	};
+
+	function onResourceLoaded()
+	{
+		head.load(
+			definitions + "Actions.js",
+			definitions + "Keywords.js",
+			definitions + "Activities.js",
+			definitions + "Characters.js",
+			definitions + "Globals.js",
+			definitions + "Goals.js",
+			definitions + "Environments.js",
+			definitions + "Locations.js",
+			definitions + "Prototypes.js",
+			definitions + "Quests.js",
+			definitions + "Scenes.js",			
+			definitions + "WorldData.js",
+			onDataLoaded);
+	};
+
+	function onDataLoaded()
+	{
+		NewUI.registerTemplates("Source/UI/Templates/basic_templates.html");
+		NewUI.registerTemplates("Source/UI/Templates/game_templates.html");
+		//NewUI.registerTemplates("Source/UI/Templates/screens.html");
+
+		NewUI.ready(init);
+	};
+
+
 
 	// head.js(
 	// 	libs + "jquery-2.0.3.js",

@@ -1,5 +1,5 @@
 
-var Gallery = new (function()
+var Gallery = new (function(global)
 {
 	var sprites = {};
 	var images = {};
@@ -62,6 +62,14 @@ var Gallery = new (function()
 	this.find = function(name)
 	{
 		return sprites[name] || null;
+	};
+
+	global.$sprite = function(name)
+	{
+		var sprite = sprites[name] || null;
+		if (sprite === null) // TODO: replace it with an error sprite?
+			console.error("The sprite " + name + " does not exist!");
+		return sprite; 
 	};
 
 	function loadFolder(def)
@@ -208,5 +216,5 @@ var Gallery = new (function()
 		}
 	}
 
-})();
+})(this);
 

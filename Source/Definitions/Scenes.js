@@ -48,4 +48,10 @@ $def("planning",
 	}
 });
 
+$def("caravan_ambush",
+{
+	$base: "planning",
+	backdrop: $sprite("mountain_pass")
+});
+
 $end();

@@ -1,4 +1,82 @@
 
+111 -> a
+
+b, x = max(a, b)
+b = o1, x = o2 : foo(a = 1 b = 2).a 
+
+if ()
+{
+
+	(c, d) => (a, b, >>foo) => bar 
+
+	foo => (x -> x * x) => ((dho, a) => b => c, a)
+	get => (>>a, b, (c, d) => foo) =>  bar = a, b
+
+	bar ?good =>(a, b) cur  :bad  kel
+
+	=> (foo > bar) ?
+	success:
+	{
+		=> zel
+		(x: good, (out:, a)  )
+
+	}
+	else:
+	{
+
+	}
+
+}
+
+
+
+<event> = <event clause>
+
+<event caluse>:
+{
+	<event properties>
+	trigger = <condition clause>
+	option = <option clause>
+}
+
+<event properties>:
+<bool value keys> = <bool values>
+...
+
+<bool value> : yes|no
+<condition clause> :
+{
+	<operators> : <condition clause>
+	<bool conditions>
+	<int conditions>
+	<id conditions>
+	<clause conditions>
+}
+
+- option = 
+
+<key>:
+<events>
+<properties>
+<conditions>
+<operators>
+<scopes>
+<command>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 namespace(
 {
 	$inst('foo',
@@ -6,6 +84,38 @@ namespace(
 
 	}),
 });
+
+
+Behavior({
+
+	itemTemplate: { type: String, value: "" }
+
+	onclick: function(element, event)
+	{
+		this.itemTemplate.get(element);	
+	}
+})
+
+get: function(element)
+{
+	if (isCustomElement(element))
+	{
+		if (this.readonly)
+		{
+			
+		}
+	}
+	else
+	{
+		return this.parse(element.dataset(this.name));
+	}
+}
+
+function Behavior.init(props)
+{
+	attachProperties(props);
+	attachEventListners();
+}
 
 
 predicate = parameter + keyword + parameter ... |: , )
