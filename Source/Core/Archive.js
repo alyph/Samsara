@@ -1,11 +1,14 @@
-
-var Archive = new (function(global)
+/*global Archive: true*/
+/*exported Archive*/
+var Archive = new (function(global) 
 {
 	var objects = {};
 	var records = {};
 	var namespaces = {};
 	var currentNamespace = null;
 	var globalRegs = {};
+	var defCharCode = 46; // '.'
+	var instCharCode = 35; // '#'
 
 	this.init = function()
 	{
@@ -38,18 +41,19 @@ var Archive = new (function(global)
 
 	this.create = function(name, props)
 	{
-		load(name, props);
+		load(name, props, true);
 		compileRecords();
 		return this.get(name);
 	};
 
 	this.delete = function(obj)
 	{
-		if (objects[obj.$name] !== obj)
+		var name = obj.name();
+		if (objects[name] !== obj)
 			throw ("The given object is not in the archive.");
 
-		delete objects[obj.$name];
-		removeFromNamespaces(obj.$name, obj);
+		delete objects[name];
+		removeFromNamespaces(name, obj);
 	};
 
 	this.select = function(where)
@@ -60,18 +64,23 @@ var Archive = new (function(global)
 			var obj = objects[name];
 			if (where(obj))
 				found.push(obj);
-		};
+		}
 		return found;
 	};
 
+	this.isInstance = function(obj)
+	{
+		return obj.$name && obj.$name.charCodeAt(0) === instCharCode;
+	};
 
 	var Record = Class(
 	{
-		constructor: function(name, props, namespace)
+		constructor: function(name, props, namespace, isInstance)
 		{
 			this.name = name;
 			this.props = props;
 			this.namespace = namespace;
+			this.isInstance = isInstance;
 			this.base = null;
 			this.index = -1;
 			this.obj = null;
@@ -155,7 +164,10 @@ var Archive = new (function(global)
 				if (key[0] === '$')
 					continue;
 
-				if (!target.hasOwnProperty(key))
+				// TODO: it may open can of worms if we start allowing missing properties (accidently having bunch of plain objects!)
+				// but how do we make this explicit?
+				var isPlainObject = target.constructor === Object;
+				if (!target.hasOwnProperty(key) && !isPlainObject)
 					throw ("property does not match: " + key);
 
 				var	value = source[key];
@@ -164,7 +176,7 @@ var Archive = new (function(global)
 
 				if (newValue !== undefined)
 					target[key] = newValue;
-			};
+			}
 		}
 	});
 
@@ -220,7 +232,7 @@ var Archive = new (function(global)
 		}
 	});
 
-	function load(name, props)
+	function load(name, props, isInstance)
 	{
 		if (currentNamespace !== null)
 			name = currentNamespace.prefix + name;
@@ -234,8 +246,8 @@ var Archive = new (function(global)
 		if (!props.$base)
 			throw ("the record missing base: " + name);
 
-		records[name] = new Record(name, props, currentNamespace);
-	};
+		records[name] = new Record(name, props, currentNamespace, isInstance);
+	}
 
 	function compileRecords()
 	{
@@ -245,58 +257,59 @@ var Archive = new (function(global)
 		var queue = [];
 
 		// insert all records into working queue
+		var record;
 		for (var name in records)
 		{
-			var record = records[name];
+			record = records[name];
 			if (record.index < 0)
 			{
 				enqueueRecord(record, queue);
 			}
-		};
+		}
 
 		// construct objects in queue
 		var len = queue.length;
 		for (var i = 0; i < len; i++) 
 		{
 			initializeRecord(queue[i]);
-		};
+		}
 
 		// extend objects in queue
-		var deferredQueue = new Queue();
-		for (var i = 0; i < len; i++) 
+		var deferredQueue = new Queue(); 
+		for (i = 0; i < len; i++)  
 		{
-			var record = queue[i];
+			record = queue[i];
 			if (!processRecord(record))
 				deferredQueue.enqueue(record);
-		};
+		}
 
 		// deferred queue due to dependency
 		while (!deferredQueue.isEmpty())
 		{
 			var numDeferred = deferredQueue.len;
-			for (var i = 0; i < numDeferred; i++) 
+			for (i = 0; i < numDeferred; i++) 
 			{
-				var record = deferredQueue.dequeue();
+				record = deferredQueue.dequeue();
 				if (!processRecord(record))
 					deferredQueue.enqueue(record);
-			};
+			}
 
 			if (numDeferred === deferredQueue.len)
 				throw ("no record in deferred queue was processed, likely circular dependency.");
 		}
 
 		// finalize, move into final objects map, clear records
-		for (var i = 0; i < len; i++) 
+		for (i = 0; i < len; i++) 
 		{
-			var record = queue[i];
+			record = queue[i];
 			var obj = record.obj;
 			objects[record.name] = obj;
 			addToNamespaces(record.name, obj);
 			obj.init();
-		};
+		}
 
 		records = {};
-	};
+	}
 
 	function enqueueRecord(record, queue) 
 	{
@@ -308,7 +321,7 @@ var Archive = new (function(global)
 		}
 
 		queue.push(record);
-	};
+	}
 
 	function initializeRecord(record) 
 	{
@@ -320,7 +333,8 @@ var Archive = new (function(global)
 		if (record.obj.$name === undefined)
 			throw ("archived object must have a $name property.");
 
-		record.obj.$name = record.name;
+		var prefix = String.fromCharCode(record.isInstance ? instCharCode : defCharCode);
+		record.obj.$name = prefix + record.name;
 		/*
 		if (typeof baseCls !== 'function')
 			throw ("base must be a constructor function");
@@ -331,7 +345,7 @@ var Archive = new (function(global)
 		record.obj = new baseCls();*/
 
 		//delete record.props.$base;
-	};
+	}
 
 	function processRecord(record) 
 	{
@@ -346,7 +360,7 @@ var Archive = new (function(global)
 
 		while (binders.length > 0)
 		{
-			var binder = binders[binders.length - 1]
+			var binder = binders[binders.length - 1];
 			if (!binder.canBind())
 				return false;
 
@@ -358,7 +372,7 @@ var Archive = new (function(global)
 
 		record.finished = true;
 		return true;
-	};
+	}
 
 	function constructObject(cls)
 	{
@@ -369,7 +383,7 @@ var Archive = new (function(global)
 			throw ("constructor must have no arguments");
 
 		return new cls();
-	};
+	}
 
 	// function bindObject(target, source, record)
 	// {
@@ -495,18 +509,18 @@ var Archive = new (function(global)
 		for (var i = 0; i < l; i++) 
 		{			
 			target[i] = bindProperty(null, "", source[i], record, fromBase);
-		};		
-	};
+		}		
+	}
 
 	function bindProperty(target, key, sourceValue, record, fromBase)
 	{
-		var newValue = undefined;
+		var newValue;
 
 		// Array
 		if (Array.isArray(sourceValue))
 		{
 			var targetList = target ? target[key] : null;
-			if (targetList === null)
+			if (targetList === null || targetList === undefined)
 			{
 				newValue = targetList = [];
 			}
@@ -536,16 +550,20 @@ var Archive = new (function(global)
 		}
 		// Object
 		// TODO: handle regex (proper?)
-		else if (typeof sourceValue === 'object' && sourceValue !== null && sourceValue.constructor != RegExp)
+		else if (typeof sourceValue === 'object' && sourceValue !== null && sourceValue.constructor !== RegExp)
 		{
 			var targetObj = target ? target[key] : null;
+			if (targetObj === undefined)
+				targetObj = null;
+
 			if (typeof targetObj !== 'object')
 			{
 				throw ("type mismatch");
 			}
 
 			// Reference to the archived object
-			if (sourceValue.$name && sourceValue.$name.length > 0)
+			if ((sourceValue.$name && sourceValue.$name.length > 0) ||  // reference to archived object
+				(sourceValue.constructor !== Object && sourceValue.$canBeSubObject !== true)) // source can only be referenced, and not merged as sub object (must opt in!)
 			{
 				newValue = sourceValue;
 			}
@@ -585,13 +603,16 @@ var Archive = new (function(global)
 				}
 				
 				// TODO: (already done, confirm validity) maybe should reconstruct the targetObject as long as the sourceBase is defined.
+				// TODO: perhaps, it should be an error, if the sourceCls === Object, but the targetObj === null,
+				// this way we can make assigning plain object (as map) an explicit thing.
+				// but if the target is already a plain object, we should not care...
 				if (targetObj === null || sourceBase || (targetObj.constructor !== sourceCls && sourceCls !== Object))
 				{
 					targetObj = constructObject(sourceCls);
 					newValue = targetObj;
 				}
 
-				record.binders.push(new Binder(targetObj, sourceObj, null, (fromBase && sourceBase == null)));
+				record.binders.push(new Binder(targetObj, sourceObj, null, (fromBase && sourceBase === null)));
 
 				if (sourceBase)
 					record.binders.push(new Binder(targetObj, sourceBase, sourceBaseRec, true));
@@ -605,7 +626,7 @@ var Archive = new (function(global)
 		}
 
 		return newValue;
-	};
+	}
 
 	function resolveBase(base, namespace)
 	{
@@ -635,14 +656,14 @@ var Archive = new (function(global)
 		}
 
 		return info;
-	};
+	}
 
 	function resolveReference(name, namespace)
 	{
 		var fullName = resolveName(name, namespace);
 		var rec = records[fullName];
 		return rec ? rec.obj : objects[fullName];
-	};
+	}
 
 	function resolveName(name, namespace)
 	{
@@ -662,11 +683,11 @@ var Archive = new (function(global)
 				var useName = uses[i] + name;
 				if (records[useName] || objects[useName])
 					return useName;
-			};	
+			}	
 		}
 
 		throw ("cannot resolve name: " + name);
-	};
+	}
 
 	function addToNamespaces(name, obj)
 	{
@@ -686,8 +707,8 @@ var Archive = new (function(global)
 			}
 
 			list.push(obj);
-		};
-	};
+		}
+	}
 
 	function removeFromNamespaces(name, obj)
 	{
@@ -706,8 +727,8 @@ var Archive = new (function(global)
 				if (index >= 0)
 					list.splice(index, 1);
 			}
-		};
-	};
+		}
+	}
 
 	function beginNamespace(prefix)
 	{
@@ -717,8 +738,8 @@ var Archive = new (function(global)
 		currentNamespace = new Namespace();
 
 		if (prefix)
-			currentNamespace.prefix = prefix + '.';
-	};
+			currentNamespace.prefix = prefix.trim() + '.';
+	}
 
 	function endNamespace()
 	{
@@ -726,7 +747,7 @@ var Archive = new (function(global)
 			throw ("no namespace opened.");
 
 		currentNamespace = null;
-	};
+	}
 
 	function useNamespace(prefix)
 	{
@@ -737,21 +758,92 @@ var Archive = new (function(global)
 			throw ("not valid namespace.");
 
 		currentNamespace.uses.push(prefix + '.');
-	};
+	}
+
+	function useNamespaces(prefixs)
+	{
+		var tokens = prefixs.split(/\s+/);
+		for (var i = 0; i < tokens.length; i++) 
+		{
+			useNamespace(tokens[i]);
+		}
+	}
+
+	function loadDefinition(name, props)
+	{
+		load(name, props, false);
+	}
 
 	function loadInstance(name, props)
 	{
-		props.isInstance = true;
-		load(name, props);
-	};
+		//props.isInstance = true;
+		load(name, props, true);
+	}
 
 	function customValue(raw, parser)
 	{
 		return new CustomValue(raw, parser);
-	};
+	}
 
-	globalFunc("$def", load);
+	function loadCollection(namespace, uses, collection, isInstance)
+	{
+		beginNamespace(namespace);
+
+		if (uses)
+			useNamespaces(uses);
+
+		for (var name in collection)
+		{
+			load(name, collection[name], isInstance);
+		}
+
+		endNamespace();
+	}
+
+	function loadDefinitions(namespace, uses, collection)
+	{
+		if (arguments.length === 0)
+		{
+			throw ("missing arguments!");
+		}
+		else if (arguments.length === 1)
+		{
+			loadCollection("", "", arguments[0], false);
+		}
+		else if (arguments.length === 2)
+		{
+			loadCollection(namespace, "", arguments[1], false);
+		}
+		else
+		{
+			loadCollection(namespace, uses, collection, false);
+		}
+	}
+
+	function loadInstances(namespace, uses, collection)
+	{
+		if (arguments.length === 0)
+		{
+			throw ("missing arguments!");
+		}
+		else if (arguments.length === 1)
+		{
+			loadCollection("", "", arguments[0], true);
+		}
+		else if (arguments.length === 2)
+		{
+			loadCollection(namespace, "", arguments[1], true);
+		}
+		else
+		{
+			loadCollection(namespace, uses, collection, true);
+		}
+	}
+
+	globalFunc("$def", loadDefinition);
 	globalFunc("$inst", loadInstance);
+	globalFunc("$defs", loadDefinitions);
+	globalFunc("$insts", loadInstances);
 	globalFunc("$begin", beginNamespace);
 	globalFunc("$end", endNamespace);
 	globalFunc("$use", useNamespace);
@@ -764,7 +856,7 @@ var Archive = new (function(global)
 
 		globalRegs[name] = func;
 		global[name] = func;
-	};
+	}
 
 	function clearGlobals()
 	{
@@ -774,7 +866,7 @@ var Archive = new (function(global)
 		}
 
 		globalRegs = {};
-	};
+	}
 
 })(this);
 

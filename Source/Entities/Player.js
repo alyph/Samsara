@@ -6,6 +6,7 @@ var Player = Class(Entity,
 
 		//this.screen = null;
 		this.pov = null;
+		this.actions = null;
 		// this.game = game;
 		// this.party = game.world.spawn("PlayerParty", { $base: Party });//new Party(game);
 		// this.party.player = this;
@@ -35,6 +36,7 @@ var Player = Class(Entity,
 			throw ("Another pov choosing action.");
 
 		this.pov = pov;
+		this.actions = actions;
 
 		$("player-view")[0].bind(this);
 

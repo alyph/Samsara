@@ -1,3 +1,5 @@
+/*global World: true*/
+
 var World = Class(BaseObject,
 {
 	/*
@@ -19,7 +21,7 @@ var World = Class(BaseObject,
 		this.keeper = null;
 		this.updateQueue = [];
 		this.isUpdating = false;
-		this.isInstance = true;
+		// this.isInstance = true;
 		//this.isWaiting = false;
 		//this.updateCount = 0;
 		//this.turn = 0;
@@ -129,7 +131,7 @@ var World = Class(BaseObject,
 
 	onEntityEntered : function(entity)
 	{
-		var name = entity.$name;
+		var name = entity.name();
 		if (this.entities.hasOwnProperty(name))
 			throw ("Entity with the same name already exists! " + name);
 
@@ -141,7 +143,7 @@ var World = Class(BaseObject,
 		if (this.game === null)
 			throw ("cannot spawn entities before game has begun play!");
 
-		props.isInstance = true;
+		//props.isInstance = true;
 		var entity = Archive.create(name, props);
 		if (entity !== null)
 		{
@@ -164,12 +166,13 @@ var World = Class(BaseObject,
 		if (this.game === null)
 			throw ("cannot destroy entities before game has begun play!");
 
-		if (this.entities[entity.$name] !== entity)
+		var name = entity.name();
+		if (this.entities[name] !== entity)
 			throw ("entity does not exist in the world, cannot be destroyed");
 
 		entity.endPlay();
 		//entity.leaveWorld();
-		delete this.entities[entity.$name];
+		delete this.entities[name];
 		Archive.delete(entity);
 	},
 
@@ -210,7 +213,7 @@ var World = Class(BaseObject,
 		for (var i = 0; i < l; i++) 
 		{
 			this.updateQueue[i].update();
-		};
+		}
 
 		this.isUpdating = false;
 
@@ -248,7 +251,7 @@ var World = Class(BaseObject,
 		// {
 		// 	this.isWaiting = true;
 		// }
-	},
+	}
 
 	// beginUpdate : function()
 	// {

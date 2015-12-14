@@ -14,7 +14,7 @@ var PointOfView = Class(Entity,
 	{
 		PointOfView.$superp.init.call(this);
 
-		if (this.isInstance)
+		if (this.isInstance())
 		{
 			for (var i = this.characters.length - 1; i >= 0; i--) 
 			{

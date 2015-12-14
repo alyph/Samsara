@@ -1,27 +1,42 @@
 Global.ActionsNamespace = "action";
-
-$begin(Global.ActionsNamespace);
-
-$def("camp", 
+$defs(Global.ActionsNamespace,
 {
-	$base: ActionDefinition,
-	predicate: $predicate(
-		"scene is a 'scene.planning'")
+	"camp":
+	{
+		$base: ActionDefinition,
+		predicate: $predicate(
+			"scene is a 'scene.planning'")
+	},
+
+	"explore":
+	{
+		$base: ActionDefinition,
+		predicate: $predicate(
+			"scene is a 'scene.planning'")
+	},
+
+	"travel":
+	{
+		$base: ActionDefinition,
+		predicate: $predicate(
+			"scene is a 'scene.planning'")
+	},
+
+	"inspect":
+	{
+		$base: ActionDefinition,
+		predicate: $predicate(
+			"scene is a 'scene.encounter'"),
+		targetKey: "pois"
+	},
+
+	"leave":
+	{
+		$base: ActionDefinition,
+		predicate: $predicate(
+			"scene is a 'scene.encounter'"),
+		targetKey: "inside",
+		customLabel: "leave"
+	},
+
 });
-
-$def("explore", 
-{
-	$base: ActionDefinition,
-	predicate: $predicate(
-		"scene is a 'scene.planning'")
-});
-
-
-$def("travel", 
-{
-	$base: ActionDefinition,
-	predicate: $predicate(
-		"scene is a 'scene.planning'")
-});
-
-$end();

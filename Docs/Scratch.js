@@ -29,6 +29,14 @@ if ()
 }
 
 
+$defs("temp_locale", "keyword locale", 
+{
+	"starting_loc":
+	{
+
+	}
+});
+
 
 <event> = <event clause>
 

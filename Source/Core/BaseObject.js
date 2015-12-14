@@ -6,6 +6,8 @@ var BaseObject = Class(
 		this.$baseObj = null;
 	},
 
+	$canBeSubObject: true,
+
 	init : function()
 	{
 	},
@@ -20,5 +22,15 @@ var BaseObject = Class(
 
 			current = current.$super;
 		}
-	}
+	},
+
+	name: function()
+	{
+		return this.$name.substr(1);
+	},
+
+	isInstance : function()
+	{
+		return Archive.isInstance(this);
+	},
 });

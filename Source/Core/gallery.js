@@ -1,5 +1,6 @@
-
-var Gallery = new (function(global)
+/*global Gallery: true*/
+/*exported Gallery*/
+var Gallery = new (function(global) 
 {
 	var sprites = {};
 	var images = {};
@@ -93,7 +94,7 @@ var Gallery = new (function(global)
 				addSprite(name, sprite);
 			}
 		}
-	};
+	}
 
 	function loadSpriteSheet(def)
 	{
@@ -131,7 +132,7 @@ var Gallery = new (function(global)
 				addSprite(name, sprite);
 			}
 		}
-	};
+	}
 
 	function addSprite(name, sprite)
 	{
@@ -139,12 +140,12 @@ var Gallery = new (function(global)
 			throw ("cannot add " + name + " to sprites, name already taken!");
 
 		sprites[name] = sprite;		
-	};
+	}
 
 	function extractFileName(url)
 	{
 		return url.split('/').pop().split('.')[0];
-	};
+	}
 
 	function addImage(name, url)
 	{
@@ -159,7 +160,7 @@ var Gallery = new (function(global)
 
 		images[className] = image;
 		return image;
-	};
+	}
 
 	function loadImages()
 	{
@@ -167,9 +168,10 @@ var Gallery = new (function(global)
 		imagesLoaded = 0;
 
 		var styleStr = "";
+		var img;
 		for (var name in images)
 		{
-			var img = images[name]
+			img = images[name];
 			var url = img.url;
 			styleStr += "html /deep/ ." + name + " { background-image: url(" + url + "); } ";
 			imagesTotal++;
@@ -185,9 +187,9 @@ var Gallery = new (function(global)
 
 		//finishedHandler = finished;
 
-		for (var name in images)
+		for (name in images)
 		{
-			var img = images[name];
+			img = images[name];
 			img.DOM = new Image();
 			img.DOM.addEventListener("load", imageLoaded);
 			img.DOM.src = img.url;

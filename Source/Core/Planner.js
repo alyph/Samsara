@@ -638,7 +638,7 @@ WorldState = Class(Planner.State,
 
 	keyStr : function()
 	{
-		var key = this.def.$name;
+		var key = this.def.name();
 		if (this.params.length > 0)
 			key += "(" + this.params.toString() + ")";
 

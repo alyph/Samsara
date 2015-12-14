@@ -24,9 +24,9 @@ Core.Definitions(SceneDefinition,
 	}
 });*/
 
-$begin("scene");
+$begin("scene"); 
 
-$def("planning", 
+$def("planning",
 {
 	$base: Scene,
 
@@ -48,10 +48,15 @@ $def("planning",
 	}
 });
 
-$def("caravan_ambush",
+$def("encounter", 
 {
-	$base: "planning",
-	backdrop: $sprite("mountain_pass")
+	$base: Scene
+});
+
+$def("inspecting", 
+{
+	$base: Scene,
+	backdrop: function() { return this.prev.backdrop(); }
 });
 
 $end();

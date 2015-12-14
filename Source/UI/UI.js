@@ -12,20 +12,25 @@ var NewUI = new (function(global)
 	this.registerTemplates = function(htmlUrl)
 	{
 		numLoadingHtml++;
-		$.get(htmlUrl, function(data)
-		{
-			var tempRoot = document.createElement("div");
-			tempRoot.innerHTML = data;
-
-			var numTemplates = tempRoot.children.length;
-			for (var i = 0; i < numTemplates; i++) 
+		$.ajax(
+		{ 
+			url: htmlUrl,
+			cache: false,
+			success: function(data)
 			{
-				var template = tempRoot.children[i];
-				registerTemplate(template);
-			};
+				var tempRoot = document.createElement("div");
+				tempRoot.innerHTML = data;
 
-			numLoadingHtml--;
-			checkReady();
+				var numTemplates = tempRoot.children.length;
+				for (var i = 0; i < numTemplates; i++) 
+				{
+					var template = tempRoot.children[i];
+					registerTemplate(template);
+				};
+
+				numLoadingHtml--;
+				checkReady();
+			} 
 		});
 
 		return this;
@@ -543,15 +548,16 @@ var NewUI = new (function(global)
 		{
 			var value;
 
-			try
+			// TODO: how to make this more visible??
+			//try
 			{
 				value = this.func(data);
 			}
-			catch (e)
-			{
-				value = null;
-				console.error("Failed to evaluate binding expression:" + e.message);
-			}
+			// catch (e)
+			// {
+			// 	value = null;
+			// 	console.error("Failed to evaluate binding expression in element '" + this.element.outerHTML + "', error was: " + e.message);
+			// }
 
 			// If custom element
 			if (isCustomElement(this.element))

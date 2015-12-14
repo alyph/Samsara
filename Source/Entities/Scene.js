@@ -28,20 +28,40 @@ var Scene = Class(BaseObject,
 		this.pov = null;
 		this.pois = [];
 
+		// TEMP VARS
 		this.backdrop = null;
+		this.scenes = {};
+		this.label = "no name"; // Wrong!!! used by the function
+		this.portrait = null;
+		this.prev = null;
 	},
 
-	populatePOIs : function()
+	Backdrop: function()
 	{
-		if (this.pov.locale === null)
-			throw ("pov is not in any locale.");
+		return this.backdrop;
+	},
 
-		if (this.populator === null)
-			throw ("no populator!");
+	Label : function()
+	{
+		return this.label;
+	},
 
-		this.pois.length = 0;
-		this.populator();
+	Portrait : function()
+	{
+		return this.portrait;
 	}
+
+	// populatePOIs : function()
+	// {
+	// 	if (this.pov.locale === null)
+	// 		throw ("pov is not in any locale.");
+
+	// 	if (this.populator === null)
+	// 		throw ("no populator!");
+
+	// 	this.pois.length = 0;
+	// 	this.populator();
+	// }
 });
 
 // var Scene = Class(

@@ -36,6 +36,14 @@ var SpriteDefinitions =
 	},
 
 	{
+		image : "Content/Images/scenes.png",
+		w : 384,
+		h : 256,
+		scene_ambushed_caravan:			[0, 0],
+		scene_iron_march: 				[1, 0]
+	},
+
+	{
 		image : "Content/Images/SpritesSmall.png",
 		w : 64,
 		h : 64,
@@ -320,7 +328,7 @@ var SpriteDefinitions =
 		Explore :			[ 0, 0 ]
 	}
 ];
-
+/*
 var Sprites = new (function()
 {
 	var images = {};
@@ -495,5 +503,5 @@ var Sprites = new (function()
 		}
 	}
 
-})();
+})();*/
 

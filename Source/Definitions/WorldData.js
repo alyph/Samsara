@@ -1,10 +1,11 @@
+ 
 Global.WorldName = "world";
 
 $inst(Global.WorldName, 
 {
 	$base: World,
 	global: "@global",
-	keeper: "@keeper"
+	keeper: "@keeper",
 });
 
 $begin("locale");
@@ -34,7 +35,7 @@ $inst("forest_a",
 
 $inst("plain_b",
 {
-	$base: Locale,	
+	$base: Locale,
 	displayName: "Fen Of Serpents", portrait: "loc_desert_rock",
 	desc:$v(
 	[
@@ -97,7 +98,7 @@ $inst("pc_caster",
 {
 	$base: Character,
 	displayName: "Tiamat",
-	sprite: "Cha_Acolyte",
+	sprite: "Cha_Acolyte"
 	//position: "rear"
 });
 
@@ -105,9 +106,10 @@ $inst("pc_agile",
 {
 	$base: Character,
 	displayName: "Yagnas",
-	sprite: "Cha_Deva",
+	sprite: "Cha_Deva"
 	//position: "front"
 });
+
 
 $end();
 
@@ -122,32 +124,74 @@ $inst("player_party",
 
 $end();
 
-$begin("pov");
-$use("character");
-$use("temp_locale");
+// $begin("pov");
+// $use("character");
+// $use("temp_locale");
 
-$inst("player_party_pov", 
+// $inst("player_party_pov", 
+// {
+// 	$base: "proto.pov_base",
+// 	scene: { $base: "scene.caravan_ambush" },
+// 	locale: "@starting_loc",
+// 	controller: "@player",
+// 	characters: [ "@pc_melee", "@pc_caster", "@pc_agile" ]
+// });
+
+// $end();
+
+$insts("pov", "character temp_locale scene", 
 {
-	$base: "proto.pov_base",
-	scene: { $base: "scene.caravan_ambush" },
-	locale: "@starting_loc",
-	controller: "@player",
-	characters: [ "@pc_melee", "@pc_caster", "@pc_agile" ]
+	"player_party_pov": 
+	{
+		$base: "proto.pov_base",
+		scene: "@gamescene.caravan_ambush",
+		locale: "@starting_loc",
+		controller: "@player",
+		characters: [ "@pc_melee", "@pc_caster", "@pc_agile" ]
+	}
 });
 
-$end();
-
-
-$inst("player",
+$insts(
 {
-	$base: Player
+	"player":
+	{
+		$base: Player
+	},
+
+	"keeper":
+	{
+		$base: Keeper
+	}
 });
 
-$inst("keeper",
+$insts("gamescene", "scene",
 {
-	$base: Keeper
-});
+	"iron_march":
+	{
+		$base: "planning",
+		label: "Iron March",
+		portrait: $sprite("scene_iron_march")
+	},
 
+	"caravan_ambush":
+	{
+		$base: "encounter",
+		label: "Ambush Site",
+		backdrop: $sprite("mountain_pass"),
+		scenes:
+		{
+			pois: ["@destroyed_caravan"],
+			inside: ["@iron_march"]
+		}
+	},
+
+	"destroyed_caravan":
+	{
+		$base: "inspecting",
+		label: "Caravan Remains",
+		portrait: $sprite("scene_ambushed_caravan")
+	}
+});
 	/*
 
 World.WorldData.entities =

@@ -1,20 +1,23 @@
+/*global Entity: true*/
+
 var Entity = Class(BaseObject,
 {
 	constructor : function()
 	{
 		Entity.$super.call(this);
 		//this.$ref = true;
-		this.isInstance = false;
+		
 		//this.game = null;
 		this.world = null;
 		//this.needsUpdate = false;
 		this.isUpdating = false;
 		this.desc = new Description();
+		this.portrait = null;
 	},
 
 	init : function()
 	{
-		if (this.isInstance)
+		if (this.isInstance())
 		{
 			this.world = Archive.get(Global.WorldName);
 			this.world.onEntityEntered(this);
@@ -50,44 +53,42 @@ var Entity = Class(BaseObject,
 
 	update : function()
 	{
+		throw ("requested to update, but not implemented.");
 	},
 
-	getTitle : function()
+	Title : function()
 	{
 		return "[NO TITLE]";
 	},
 
-	getDesc : function()
+	Desc : function()
 	{
 		return "[NO DESC]";
 	},
 
-	getImage : function()
+	Image : function()
 	{
 		return "cardCityGate";
 	},
 
-	getPortrait : function()
+	Portrait : function()
 	{
-		throw ("must override!");
+		return this.portrait;
 	},
 
-	getSize: function()
+	Size: function()
 	{
 		return "";
 	},
 
 	toString : function()
 	{
-		if (this.$name !== undefined)
-			return this.$name;
-
-		throw ("no valid implementation for entity toString!");
+		return this.name();
 	},
 
-	update : function(entry)
-	{
-		throw ("must override!");
-	}
+	// update : function(entry)
+	// {
+	// 	throw ("must override!");
+	// }
 });
 

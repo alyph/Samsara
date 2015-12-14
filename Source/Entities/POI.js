@@ -7,7 +7,7 @@ PointOfInterest = Class(
 
 	portrait : function()
 	{
-		var portrait = this.entity.getPortrait();
+		var portrait = this.entity.Portrait();
 		if (!portrait)
 			throw ("invalid portrait.");
 
