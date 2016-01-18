@@ -1,10 +1,10 @@
-NewUI.Behavior("collection", 
+UI.Behavior("collection", 
 {
 	itemTemplate: { type: String, value: "", readonly: true },
 
-	ondatachanged: function(element, event)
+	onDataChanged: function(element, event)
 	{
-		var list = event.detail.data;
+		var list = event.data;
 
 		if (list !== null && !Array.isArray(list))
 		{
@@ -16,17 +16,17 @@ NewUI.Behavior("collection",
 		for (var i = element.children.length - 1; i >= l; i--) 
 		{
 			element.removeChild(element.children[i]);
-		};
+		}
 
 		if (list !== null)
 		{
 			var template = this.itemTemplate.get(element);
 			if (template)
 			{
-				for (var i = element.children.length; i < l; i++) 
+				for (i = element.children.length; i < l; i++) 
 				{
 					element.appendChild(document.createElement(template));
-				};
+				}
 			}
 			else
 			{
@@ -35,45 +35,49 @@ NewUI.Behavior("collection",
 		}
 
 		l = element.children.length;
-		for (var i = 0; i < element.children.length; i++) 
+		for (i = 0; i < element.children.length; i++) 
 		{
 			element.children[i].bind(list[i]);
-		};
+		}
 	}
 });
 
-NewUI.Behavior("sprite", 
+UI.Behavior("sprite", 
 {
-	onbindingchanged: function(element, event)
+	onBindingChanged: function(element, event)
 	{
 		// var prevSprite = this.getSprite(event.detail.previous);
-		var currSprite = this.getSprite(event.detail.current);
+		var currSprite = this.getSprite(event.current);
 
 		// if (prevSprite !== null)
 		// 	element.classList.remove(prevSprite.image.className);
 
 		if (currSprite !== null)
 		{
-			// element.classList.add(currSprite.image.className);
-			element.style.backgroundImage = "url(" + currSprite.image.url + ")";
-	
-			if (currSprite.width > 0 && currSprite.height > 0)
-			{
-				var iw = element.offsetWidth;
-				var ih = element.offsetHeight;
+			var img = currSprite.image;
 
-				var backSize = Math.round(currSprite.image.DOM.naturalWidth / currSprite.width) * iw;
-				var offsetX = -Math.round(currSprite.offsetx / currSprite.width) * iw;
-				var offsetY = -Math.round(currSprite.offsety / currSprite.height) * ih;	
-				element.style.backgroundSize = backSize + "px";
-				element.style.backgroundPosition = offsetX + "px " + offsetY + "px";
-				//cssProps["background-size"] = backSize + "px";
-				//cssProps["background-position"] = offsetX + "px " + offsetY + "px";
-			}
-			else
-			{
-				element.style.backgroundSize = element.offsetWidth + "px";
-			}
+			// element.classList.add(currSprite.image.className);
+			element.style.backgroundImage = "url(" + img.url + ")";	
+			element.style.backgroundSize = img.tilesx + "00% " + img.tilesy + "00%";
+			element.style.backgroundPosition = -currSprite.x + "00% " + -currSprite.y + "00%";
+
+			// if (currSprite.width > 0 && currSprite.height > 0)
+			// {
+			// 	//var iw = element.clientWidth;
+			// 	//var ih = element.clientHeight;
+
+			// 	var backSize = Math.round(currSprite.image.DOM.naturalWidth / currSprite.width) * iw;
+			// 	var offsetX = -Math.round(currSprite.offsetx / currSprite.width) * iw;
+			// 	var offsetY = -Math.round(currSprite.offsety / currSprite.height) * ih;	
+			// 	element.style.backgroundSize = backSize + "px";
+			// 	element.style.backgroundPosition = offsetX + "px " + offsetY + "px";
+			// 	//cssProps["background-size"] = backSize + "px";
+			// 	//cssProps["background-position"] = offsetX + "px " + offsetY + "px";
+			// }
+			// else
+			// {
+			// 	element.style.backgroundSize = element.clientWidth + "px";
+			// }
 		}
 		else
 		{
@@ -89,5 +93,34 @@ NewUI.Behavior("sprite",
 		}
 
 		return null;
+	}
+});
+
+UI.Behavior("scale", 
+{
+	scale: { type: Number, value: 1, readonly: false },
+	//originalWidth: { type: Number, value: 1, readonly: false },
+	//originalHeight: { type: Number, value: 1, readonly: false },
+
+	onElementAttached: function(element)
+	{
+		//this.originalWidth.set(element, element.clientWidth);
+		//this.originalHeight.set(element, element.clientHeight);
+		this.updateScale(element, this.scale.get(element));
+	},
+
+	updateScale: function(element, scale)
+	{
+		var scaledStyle = Math.round(scale * 100) + "%";
+		element.style.width = scaledStyle;
+		element.style.height = scaledStyle;
+
+
+		// var ow = this.originalWidth.get(element);
+		// var oh = this.originalHeight.get(element);
+		// var nw = Math.round(ow * scale);
+		// var nh = Math.round(oh * scale);
+		// element.style.width = nw + "px";
+		// element.style.height = nh + "px";
 	}
 });

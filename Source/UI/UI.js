@@ -1,11 +1,16 @@
+/* global UI: true */
+/* exported UI */
 
-var NewUI = new (function(global)
+var UI = new (function(global)
 {
+	'use strict';
+
 	var numLoadingHtml = 0;
 	var readyCallback = null;
 	var templates = {};
 	var behaviors = {};
 	var properties = {};
+	var customEvents = {};
 
 	var ATTR_BEHAVIORS = "$behaviors";
 
@@ -26,7 +31,7 @@ var NewUI = new (function(global)
 				{
 					var template = tempRoot.children[i];
 					registerTemplate(template);
-				};
+				}
 
 				numLoadingHtml--;
 				checkReady();
@@ -55,28 +60,17 @@ var NewUI = new (function(global)
 		return beh;
 	};
 
-	function checkReady()
-	{
-		if (readyCallback !== null)
-		{
-			var isReady = numLoadingHtml <= 0;
-			if (isReady)
-			{
-				var callback = readyCallback;
-				readyCallback = null;
-				callback();
-			}
-		}
-	};
+	this.calcElementOffset = calcElementOffset;
 
 
-// .########.########.##.....##.########..##..........###....########.########
-// ....##....##.......###...###.##.....##.##.........##.##......##....##......
-// ....##....##.......####.####.##.....##.##........##...##.....##....##......
-// ....##....######...##.###.##.########..##.......##.....##....##....######..
-// ....##....##.......##.....##.##........##.......#########....##....##......
-// ....##....##.......##.....##.##........##.......##.....##....##....##......
-// ....##....########.##.....##.##........########.##.....##....##....########
+// ████████╗███████╗███╗   ███╗██████╗ ██╗      █████╗ ████████╗███████╗
+// ╚══██╔══╝██╔════╝████╗ ████║██╔══██╗██║     ██╔══██╗╚══██╔══╝██╔════╝
+//    ██║   █████╗  ██╔████╔██║██████╔╝██║     ███████║   ██║   █████╗  
+//    ██║   ██╔══╝  ██║╚██╔╝██║██╔═══╝ ██║     ██╔══██║   ██║   ██╔══╝  
+//    ██║   ███████╗██║ ╚═╝ ██║██║     ███████╗██║  ██║   ██║   ███████╗
+//    ╚═╝   ╚══════╝╚═╝     ╚═╝╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝
+
+
 
 	var Template = Class(
 	{
@@ -97,6 +91,14 @@ var NewUI = new (function(global)
 				this.setup(template);
 			};
 
+			this.proto.attachedCallback = function()
+			{
+				// if (this.customEvents.elementattached)
+				// 	this.customEvents.elementattached({currentTarget:this});
+				//this.dispatchEvent(new CustomEvent("elementattached"));
+				this.dispatchCustomEvent(new ElementAttached());
+			};
+
 			this.proto.detachedCallback = function()
 			{
 				this.bind(null);
@@ -108,6 +110,7 @@ var NewUI = new (function(global)
 
 		collectElementInfo : function(element, path)
 		{
+			var i;
 			var isRoot = (path.length === 0);
 			var isCustomElement = isRoot || (element.tagName.indexOf('-') >= 0);
 
@@ -127,7 +130,7 @@ var NewUI = new (function(global)
 			{
 				var behaviorNames = element.getAttribute(ATTR_BEHAVIORS).trim().split(/\s+/);
 				element.removeAttribute(ATTR_BEHAVIORS);
-				for (var i = 0; i < behaviorNames.length; i++) 
+				for (i = 0; i < behaviorNames.length; i++) 
 				{
 					var behavior = findBehavior(behaviorNames[i]);
 					if (behavior)
@@ -138,44 +141,61 @@ var NewUI = new (function(global)
 					{
 						console.error("Cannot find behavior: " + behaviorNames[i]);
 					}
-				};
+				}
 			}
 
 			// TODO: do not allow non-custom element to have custom attributes
 			// Although here you can't check element.template to know if it's
 			// custom or not, must check if it has - in the tag
 			var attrs = element.attributes;
-			for (var i = 0; i < attrs.length; i++) 
+			for (i = 0; i < attrs.length; i++) 
 			{
 				var attr = attrs[i];
 				if (attr.name.length > 0 && attr.name[0] === '$')
-				{
-					var key = attr.name.substr(1).trim().replace(/[\s-_]+([a-zA-Z])/g,
-						function(match, p1) { return p1.toUpperCase(); });
-					
-					var prop = findProperty(key);
-					if (prop)
+				{					
+					if (attr.name.startsWith("$on-"))
 					{
-						if (prop.readonly || !isCustomElement)
-						{
-							element.dataset[key] = attr.value;
-						}
-						else
-						{
-							var propInfo = new ElementPropertyInfo();
-							propInfo.property = prop;
-							propInfo.value = prop.parse(attr.value);
-							info.properties.push(propInfo);
-						}
+						var eventBinding = new EventBindingInfo();
+						eventBinding.type = attr.name.substr(4);
+						eventBinding.listener = this.compileEventListener(attr.value);
+						info.eventBindings.push(eventBinding);
 					}
 					else
 					{
-						console.error("Cannot find property: " + key);
+						var key = attrToPropName(attr.name.substr(1));
+						var prop = findProperty(key);
+						if (prop)
+						{
+							var propFunc = this.compileBinding(attr.value);
+							if (propFunc !== null)
+							{
+								var propBinding = new ElementPropertyBinding();
+								propBinding.property = prop;
+								propBinding.func = propFunc;
+								info.propBindings.push(propBinding);
+							}
+							else if (prop.readonly || !isCustomElement)
+							{
+								element.dataset[key] = attr.value;
+							}
+							else
+							{
+								var propInfo = new ElementPropertyInfo();
+								propInfo.property = prop;
+								propInfo.value = prop.parse(attr.value);
+								info.properties.push(propInfo);
+							}
+						}
+						else
+						{
+							console.error("Cannot find property: " + key);
+						}						
 					}
 
 					element.removeAttribute(attr.name);
+					i--;
 				}
-			};
+			}
 
 			// if (info.properties.length > 0 && !isCustomElement)
 			// {
@@ -183,7 +203,7 @@ var NewUI = new (function(global)
 			// 	info.properties.length = 0; 
 			// }
 
-			if (info.bindingFunc !== null || info.behaviors.length > 0 || info.properties.length > 0)
+			if (!info.isEmpty())
 			{
 				info.path = path.concat();
 				this.elementInfos.push(info);
@@ -216,7 +236,7 @@ var NewUI = new (function(global)
 				}
 
 				path.pop();
-			};
+			}
 		},
 
 		compileBinding : function(expression)
@@ -255,7 +275,34 @@ var NewUI = new (function(global)
 			var body = "if (data === null) return null; " +
 					   "with (data) { return " + tokens.join(" + ") + "; };";
 
+			/*jshint -W054 */
 			return new Function("data", body);
+		},
+
+		compileEventListener : function(expression)
+		{
+			if (expression.startsWith("->"))
+			{
+				return this.buildRelayListener(expression.substr(2));
+			}
+			else
+			{
+				var body = "var data = this.dataContext;" +
+						   "if (data !== null) { data." + expression + "; }";
+
+				/*jshint -W054 */
+				return new Function("e", body);
+			}
+		},
+
+		buildRelayListener: function(nextEventType)
+		{
+			return function(e)
+			{
+				e.stopImmediatePropagation();
+				e.currentTarget.dispatchEvent(
+					new CustomEvent(nextEventType, { bubbles: true }));
+			};
 		}
 	});	
 
@@ -267,6 +314,15 @@ var NewUI = new (function(global)
 			this.bindingFunc = null;
 			this.behaviors = [];
 			this.properties = [];
+			this.propBindings = []; 
+			this.eventBindings = [];
+		},
+
+		isEmpty: function()
+		{
+			return (this.bindingFunc === null && 
+				this.behaviors.length === 0 && this.properties.length === 0 && 
+				this.propBindings.length === 0 && this.eventBindings.length === 0);
 		}
 	});
 
@@ -278,6 +334,24 @@ var NewUI = new (function(global)
 			this.value = null;
 		}
 	});
+
+	var ElementPropertyBinding = Class(
+	{
+		constructor : function ElementPropertyBinding()
+		{
+			this.property = null;
+			this.func = null;
+		}
+	});
+
+	class EventBindingInfo
+	{
+		constructor()
+		{
+			this.type = "";
+			this.listener = null;
+		}
+	}
 
 	var pendingTemplates = {};
 
@@ -294,7 +368,7 @@ var NewUI = new (function(global)
 					pendingTemplates[dependency] = [];
 
 				pendingTemplates[dependency].push(template);
-			};
+			}
 		}
 		else
 		{
@@ -302,7 +376,7 @@ var NewUI = new (function(global)
 		}
 	    
 	    return template;
-	};
+	}
 
 	function finishRegisteringTemplate(template)
 	{
@@ -310,7 +384,7 @@ var NewUI = new (function(global)
 
 		if (template[name])
 		{
-			Console.error("Duplicated template registeration: " + name);
+			console.error("Duplicated template registeration: " + name);
 			return;
 		}
 
@@ -333,33 +407,54 @@ var NewUI = new (function(global)
 
 				if (!pending.dependencies)
 					finishRegisteringTemplate(pending);
-			};
+			}
 
 			delete pendingTemplates[name];
 		}
-	};
+	}
+
+	function checkReady()
+	{
+		if (readyCallback !== null)
+		{
+			var isReady = numLoadingHtml <= 0;
+			if (isReady)
+			{
+				var callback = readyCallback;
+				readyCallback = null;
+				callback();
+			}
+		}
+	}
 
 	function isCustomElement(element)
 	{
 		return element.template && true;
-	};
+	}
 
-// .########.##.......########.##.....##.########.##....##.########
-// .##.......##.......##.......###...###.##.......###...##....##...
-// .##.......##.......##.......####.####.##.......####..##....##...
-// .######...##.......######...##.###.##.######...##.##.##....##...
-// .##.......##.......##.......##.....##.##.......##..####....##...
-// .##.......##.......##.......##.....##.##.......##...###....##...
-// .########.########.########.##.....##.########.##....##....##...
+
+
+// ███████╗██╗     ███████╗███╗   ███╗███████╗███╗   ██╗████████╗
+// ██╔════╝██║     ██╔════╝████╗ ████║██╔════╝████╗  ██║╚══██╔══╝
+// █████╗  ██║     █████╗  ██╔████╔██║█████╗  ██╔██╗ ██║   ██║   
+// ██╔══╝  ██║     ██╔══╝  ██║╚██╔╝██║██╔══╝  ██║╚██╗██║   ██║   
+// ███████╗███████╗███████╗██║ ╚═╝ ██║███████╗██║ ╚████║   ██║   
+// ╚══════╝╚══════╝╚══════╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝   ╚═╝   
+
 
 	function CustomElement() 
 	{
 		this.template = null;
-		this.bindings = [];
+		this.bindings = []; // TODO: can this whole list be pre-compiled and shared? <- hard because the elements need to be resolved by path.
 		this.dataContext = null;
 		this.dataObserver = null;
 		this.properties = null;
-	};
+		this.customDispatcher = null;
+
+		// TODO: test
+		//this.customEvents = {};
+	}
+
 	var customElemProto = CustomElement.prototype = Object.create(HTMLElement.prototype);
 	customElemProto.constructor = CustomElement;
 
@@ -379,39 +474,55 @@ var NewUI = new (function(global)
         for (var i = 0; i < numClasses; i++) 
         {
         	this.classList.add(templateElem.classList.item(i));
-        };
+        }
 
         // TODO: may want to inline to improve perf.
         //attachBehaviors(this);
         //initBindings(this);
 
+        // TODO: maybe we should only do these when attached
+        // and only setup the binding observer after attached.
+        // we can still accept any dataContext when bind() is called.
+        // if we do that make sure we clear that everytime (or on detach),
+        // because the attached callback may occur multiple times.
+
         var infos = this.template.elementInfos;
         var ni = infos.length;
-        for (var i = 0; i < ni; i++) 
+        for (i = 0; i < ni; i++) 
         {
         	var info = infos[i];
         	var element = traverseSubElement(this, info.path);
 
-        	if (info.bindingFunc !== null)
+        	if (info.bindingFunc !== null || info.propBindings.length > 0)
         	{
         		var binding = new Binding();
 				binding.element = element;
 				binding.func = info.bindingFunc;
+				binding.propBindings = info.propBindings;
 				this.bindings.push(binding);
         	}
-
-        	for (var b = 0; b < info.behaviors.length; b++) 
-        	{
-        		info.behaviors[b].attached(element);
-        	};
 
         	// TODO: need double check this is custom element?
         	for (var p = 0; p < info.properties.length; p++) 
         	{
         		var prop = info.properties[p];
         		prop.property.set(element, prop.value);   		
-        	};
-        };
+        	}
+
+        	for (var ei = 0; ei < info.eventBindings.length; ei++) 
+        	{
+        		var eventBinding = info.eventBindings[ei];
+        		// TODO: bind() is slow, avoid using or at least replace it with a simpler version.
+        		element.addEventListener(eventBinding.type, eventBinding.listener.bind(this));
+        	}
+
+        	// Lastly attach the behaviors, so they won't accidently receive the property set event,
+        	// They are supposed to init using onSetup event, and then start listening to onCustomPropertyChanged
+        	for (var b = 0; b < info.behaviors.length; b++) 
+        	{
+        		info.behaviors[b].attached(element);
+        	}
+        }
 
         //this.bind(null);
 	};
@@ -426,7 +537,28 @@ var NewUI = new (function(global)
 		observeData(this, data);
 		refreshBindings(this);
 
-		this.dispatchEvent(new CustomEvent("bindingchanged", { detail: { previous: oldData, current: data } }));
+		//this.dispatchEvent(new CustomEvent("bindingchanged", { detail: { previous: oldData, current: data } }));
+
+		// if (this.customEvents.bindingchanged)
+		// 	this.customEvents.bindingchanged({ currentTarget:this, detail: { previous: oldData, current: data } });
+		this.dispatchCustomEvent(new BindingChanged(oldData, data));
+	};
+
+	customElemProto.addCustomEventListener = function(type, handler)
+	{
+		if (this.customDispatcher === null)
+			this.customDispatcher = new EventDispatcher();
+
+		this.customDispatcher.addListener(type, handler, null);
+	};
+
+	customElemProto.dispatchCustomEvent = function(e)
+	{
+		if (this.customDispatcher !== null)
+		{
+			e.currentTarget = this;
+			this.customDispatcher.dispatch(e);
+		}
 	};
 
 	// customElemProto.property = function(name, value)
@@ -485,10 +617,14 @@ var NewUI = new (function(global)
 		for (var i = 0; i < numBindings; i++) 
 		{
 			element.bindings[i].apply(data);
-		};
+		}
 
 		// pass to behavior
-		element.dispatchEvent(new CustomEvent("datachanged", { detail: { data: data } }));	
+		//element.dispatchEvent(new CustomEvent("datachanged", { detail: { data: data } }));	
+		// if (element.customEvents.datachanged)
+		// 	element.customEvents.datachanged({ currentTarget: element, detail: { data: data } });
+
+		element.dispatchCustomEvent(new DataChanged(data));
 
 		// if no bindings and no behavior hanlded, set to content (must be string, must have container)
 	}
@@ -510,7 +646,7 @@ var NewUI = new (function(global)
 
 			Object.observe(data, element.dataObserver);
 		}
-	};
+	}
 
 	function traverseSubElement(element, path)
 	{
@@ -523,18 +659,18 @@ var NewUI = new (function(global)
 		for (var i = 0; i < l; i++) 
 		{
 			cursor = cursor.children[path[i]];
-		};
-		return cursor;
-	};
-
-	var BindingInfo = Class(
-	{
-		constructor : function(path, func)
-		{
-			this.path = path.concat();
-			this.func = func;
 		}
-	});
+		return cursor;
+	}
+
+	// var BindingInfo = Class(
+	// {
+	// 	constructor : function(path, func)
+	// 	{
+	// 		this.path = path.concat();
+	// 		this.func = func;
+	// 	}
+	// });
 
 	var Binding = Class(
 	{
@@ -542,46 +678,105 @@ var NewUI = new (function(global)
 		{
 			this.element = null;
 			this.func = null;
+			this.propBindings = null;
 		},
 
 		apply : function(data)
 		{
 			var value;
 
-			// TODO: how to make this more visible??
-			//try
+			var l = this.propBindings.length;
+			for (var i = 0; i < l; i++) 
 			{
-				value = this.func(data);
+				var binding = this.propBindings[i];
+				value = binding.func(data); // TODO: should try catch
+				binding.property.set(this.element, value);
 			}
-			// catch (e)
-			// {
-			// 	value = null;
-			// 	console.error("Failed to evaluate binding expression in element '" + this.element.outerHTML + "', error was: " + e.message);
-			// }
 
-			// If custom element
-			if (isCustomElement(this.element))
+			if (this.func !== null)
 			{
-				this.element.bind(value);
-			}
-			// Otherwise set content to string
-			else
-			{
-				var html = value !== null ? value.toString() : "";
-				this.element.innerHTML = html;
+				// TODO: how to make this more visible??
+				//try
+				{
+					value = this.func(data);
+				}
+				// catch (e)
+				// {
+				// 	value = null;
+				// 	console.error("Failed to evaluate binding expression in element '" + this.element.outerHTML + "', error was: " + e.message);
+				// }
+
+				// If custom element
+				if (isCustomElement(this.element))
+				{
+					this.element.bind(value);
+				}
+				// Otherwise set content to string
+				else
+				{
+					var html = value !== null ? value.toString() : "";
+					this.element.textContent = html; // TODO: maybe check === first? setting html content normally fairly expensive.
+				}				
 			}
 		}
 	});
 
-// .########..########.##.....##....###....##.....##.####..#######..########.
-// .##.....##.##.......##.....##...##.##...##.....##..##..##.....##.##.....##
-// .##.....##.##.......##.....##..##...##..##.....##..##..##.....##.##.....##
-// .########..######...#########.##.....##.##.....##..##..##.....##.########.
-// .##.....##.##.......##.....##.#########..##...##...##..##.....##.##...##..
-// .##.....##.##.......##.....##.##.....##...##.##....##..##.....##.##....##.
-// .########..########.##.....##.##.....##....###....####..#######..##.....##
 
 
+// 	███████╗██╗   ██╗███████╗███╗   ██╗████████╗███████╗
+// 	██╔════╝██║   ██║██╔════╝████╗  ██║╚══██╔══╝██╔════╝
+// 	█████╗  ██║   ██║█████╗  ██╔██╗ ██║   ██║   ███████╗
+// 	██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║   ╚════██║
+// 	███████╗ ╚████╔╝ ███████╗██║ ╚████║   ██║   ███████║
+// 	╚══════╝  ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝
+
+
+	function registerCustomEvent(eventConstructor)
+	{
+		var name = eventConstructor.name;
+		if (customEvents[name])
+			throw ("duplicated event name.");
+
+		customEvents[name] = eventConstructor;
+	}
+
+	class DataChanged
+	{
+		constructor(data)
+		{
+			this.data = data;
+		}
+	}
+	registerCustomEvent(DataChanged);
+
+	class BindingChanged
+	{
+		constructor(previous, current)
+		{
+			this.previous = previous;
+			this.current = current;
+		}
+	}
+	registerCustomEvent(BindingChanged);
+
+	class ElementAttached
+	{
+		constructor()
+		{
+		}
+	}
+	registerCustomEvent(ElementAttached);
+
+
+
+
+
+// ██████╗ ███████╗██╗  ██╗ █████╗ ██╗   ██╗██╗ ██████╗ ██████╗ 
+// ██╔══██╗██╔════╝██║  ██║██╔══██╗██║   ██║██║██╔═══██╗██╔══██╗
+// ██████╔╝█████╗  ███████║███████║██║   ██║██║██║   ██║██████╔╝
+// ██╔══██╗██╔══╝  ██╔══██║██╔══██║╚██╗ ██╔╝██║██║   ██║██╔══██╗
+// ██████╔╝███████╗██║  ██║██║  ██║ ╚████╔╝ ██║╚██████╔╝██║  ██║
+// ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝
 
 	var Behavior = Class(
 	{
@@ -600,7 +795,12 @@ var NewUI = new (function(global)
 				{
 					if (key.startsWith("on"))
 					{
-						this.listeners.push(new BehaviorListener(this, key.substr(2), value));
+						var eventName = key.substr(2);
+						var customEventType = customEvents[eventName];						
+						if (customEventType !== undefined)
+							this.listeners.push(new BehaviorCustomEventListener(this, customEventType , value));
+						else
+							this.listeners.push(new BehaviorListener(this, eventName, value));
 					}
 					else
 					{
@@ -619,7 +819,11 @@ var NewUI = new (function(global)
 				{
 					throw (`Unexpected behavior config: ${key} : ${JSON.stringify(value)}`);
 				}
-			};
+			}
+		},
+
+		init: function(element)
+		{			
 		},
 
 		attached : function(element)
@@ -637,9 +841,13 @@ var NewUI = new (function(global)
 			var l = this.listeners.length;
 			for (var i = 0; i < l; i++) 
 			{
-				var listener = this.listeners[i];
-				element.addEventListener(listener.type, listener.handler);
-			};
+				//var listener = this.listeners[i];
+				//element.addEventListener(listener.type, listener.handler);
+				//element.customEvents[listener.type] = listener.handler;
+				this.listeners[i].attachTo(element);
+			}
+
+			this.init(element);
 		}
 	});
 
@@ -652,6 +860,28 @@ var NewUI = new (function(global)
 			{
 				handler.call(behavior, event.currentTarget, event);
 			};
+		},
+
+		attachTo: function(element)
+		{
+			element.addEventListener(this.type, this.handler);
+		}
+	});
+
+	var BehaviorCustomEventListener = Class(
+	{
+		constructor : function BehaviorCustomEventListener(behavior, type, handler)
+		{
+			this.type = type;
+			this.handler = function(event)
+			{
+				handler.call(behavior, event.currentTarget, event);
+			};
+		},
+
+		attachTo: function(element)
+		{
+			element.addCustomEventListener(this.type, this.handler);
 		}
 	});
 
@@ -680,16 +910,16 @@ var NewUI = new (function(global)
 	function findBehavior(name)
 	{
 		return behaviors[name] || null;
-	};
+	}
 
 
-// .########..########...#######..########..########.########..########.##....##
-// .##.....##.##.....##.##.....##.##.....##.##.......##.....##....##.....##..##.
-// .##.....##.##.....##.##.....##.##.....##.##.......##.....##....##......####..
-// .########..########..##.....##.########..######...########.....##.......##...
-// .##........##...##...##.....##.##........##.......##...##......##.......##...
-// .##........##....##..##.....##.##........##.......##....##.....##.......##...
-// .##........##.....##..#######..##........########.##.....##....##.......##...
+// ██████╗ ██████╗  ██████╗ ██████╗ ███████╗██████╗ ████████╗██╗   ██╗
+// ██╔══██╗██╔══██╗██╔═══██╗██╔══██╗██╔════╝██╔══██╗╚══██╔══╝╚██╗ ██╔╝
+// ██████╔╝██████╔╝██║   ██║██████╔╝█████╗  ██████╔╝   ██║    ╚████╔╝ 
+// ██╔═══╝ ██╔══██╗██║   ██║██╔═══╝ ██╔══╝  ██╔══██╗   ██║     ╚██╔╝  
+// ██║     ██║  ██║╚██████╔╝██║     ███████╗██║  ██║   ██║      ██║   
+// ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝      ╚═╝   
+
 
 	var CustomProperty = Class(
 	{
@@ -821,12 +1051,52 @@ var NewUI = new (function(global)
 		}
 		properties[name] = prop;
 		return prop;
-	};
+	}
 
 	function findProperty(name)
 	{
 		return properties[name] || null;
-	};
+	}
+
+	function attrToPropName(attrName)
+	{
+		return attrName.trim().replace(/[\s-_]+([a-zA-Z])/g, 
+			function(match, p1) { return p1.toUpperCase(); });
+	}
+
+
+
+// 	██╗  ██╗███████╗██╗     ██████╗ ███████╗██████╗ ███████╗
+// 	██║  ██║██╔════╝██║     ██╔══██╗██╔════╝██╔══██╗██╔════╝
+// 	███████║█████╗  ██║     ██████╔╝█████╗  ██████╔╝███████╗
+// 	██╔══██║██╔══╝  ██║     ██╔═══╝ ██╔══╝  ██╔══██╗╚════██║
+// 	██║  ██║███████╗███████╗██║     ███████╗██║  ██║███████║
+// 	╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝
+
+	function calcElementOffset(element, reference)
+	{
+		// var toRect = element.getBoundingClientRect();
+		// var fromRect = reference.getBoundingClientRect();
+		// var left = toRect.left - fromRect.left;
+		// var top = toRect.top - fromRect.top;
+		return calcPageOffset(element).sub(calcPageOffset(reference));
+	}	
+
+	function calcPageOffset(element)
+	{
+		var current = element;
+		var parent;
+		var left = 0;
+		var top = 0;
+		while ((parent = current.offsetParent) !== null)
+		{
+			left += current.offsetLeft;
+			top += current.offsetTop;
+			current = parent;
+		}
+		return new Vector2(left, top);
+	}
+	
 
 })(this);
 
@@ -852,7 +1122,7 @@ var NewUI = new (function(global)
 
 
 
-
+/*
 
 
 
@@ -1420,7 +1690,7 @@ var UI = new (function(global)
 		if (info.override !== OVERRIDE_NONE)
 			header = header.substr(1);
 
-		var tokens = header.split(/\s*#\s*/);
+		var tokens = header.split(/\s*#\s* /);asdfsadf wrong shit remove the space
 		info.template = tokens[0];
 		info.id = tokens.length >= 2 ? tokens[1] : null; 
 		return info
@@ -1579,4 +1849,6 @@ var UI = new (function(global)
 		}
 	}
 	
-})(this);
+})(this);*/
+
+

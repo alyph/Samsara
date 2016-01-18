@@ -1,3 +1,4 @@
+'use strict';
 /*
 var SceneDefinition = Class(
 {
@@ -17,11 +18,11 @@ var Sections =
 // Scene
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var Scene = Class(BaseObject,
+class Scene extends BaseObject
 {
-	constructor : function()
+	constructor()
 	{
-		Scene.$super.call(this);
+		super();
 
 		this.populator = null;
 
@@ -34,19 +35,19 @@ var Scene = Class(BaseObject,
 		this.label = "no name"; // Wrong!!! used by the function
 		this.portrait = null;
 		this.prev = null;
-	},
+	}
 
-	Backdrop: function()
+	Backdrop()
 	{
 		return this.backdrop;
-	},
+	}
 
-	Label : function()
+	Label()
 	{
 		return this.label;
-	},
+	}
 
-	Portrait : function()
+	Portrait()
 	{
 		return this.portrait;
 	}
@@ -62,7 +63,7 @@ var Scene = Class(BaseObject,
 	// 	this.pois.length = 0;
 	// 	this.populator();
 	// }
-});
+}
 
 // var Scene = Class(
 // {

@@ -13,10 +13,8 @@ var Gallery = new (function(global)
 		constructor : function()
 		{
 			this.image = null;
-			this.width = 0;
-			this.height = 0;
-			this.offsetx = 0;
-			this.offsety = 0;
+			this.x = 0;
+			this.y = 0;
 		}
 	});
 
@@ -27,6 +25,10 @@ var Gallery = new (function(global)
 			this.url = "";
 			this.className = "";
 			this.DOM = null;
+			this.width = 0;
+			this.height = 0;
+			this.tilesx = 1;
+			this.tilesy = 1;
 		}
 	});
 
@@ -108,6 +110,9 @@ var Gallery = new (function(global)
 		if (w !== undefined && h === undefined)
 			h = w;
 
+		info.width = w;
+		info.height = h;
+
 		for (var name in def)
 		{
 			if (name === 'image' || name === 'w' || name === 'h')
@@ -123,10 +128,8 @@ var Gallery = new (function(global)
 					var x = def[name][0] || 0;
 					var y = def[name][1] || 0;
 
-					sprite.width = w;
-					sprite.height = h;
-					sprite.offsetx = x * w;
-					sprite.offsety = y * h;
+					sprite.x = x;
+					sprite.y = y;
 				}
 
 				addSprite(name, sprite);
@@ -191,6 +194,7 @@ var Gallery = new (function(global)
 		{
 			img = images[name];
 			img.DOM = new Image();
+			img.DOM.id = name;
 			img.DOM.addEventListener("load", imageLoaded);
 			img.DOM.src = img.url;
 
@@ -200,9 +204,30 @@ var Gallery = new (function(global)
 		}
 	}
 
-	function imageLoaded()
+	function imageLoaded(event)
 	{
 		imagesLoaded++;
+
+		var img = images[event.target.id];
+		if (img)
+		{
+			if (img.DOM !== event.target)
+				throw ("image and DOM mismatch!");
+
+			if (img.width > 0)
+			{
+				img.tilesx = Math.round(img.DOM.naturalWidth / img.width);
+			}
+
+			if (img.height > 0)
+			{
+				img.tilesy = Math.round(img.DOM.naturalHeight / img.height);
+			}
+		}
+		else
+		{
+			console.log(`Image was loaded but cannot be found in the list ${event.target.id}, ${event.target.src}`);
+		}
 
 		checkReady();
 	}

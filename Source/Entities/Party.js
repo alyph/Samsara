@@ -1,8 +1,10 @@
-var Party = Class(Entity,
+'use strict';
+
+class Party extends Entity
 {
-	constructor : function()
+	constructor()
 	{
-		Party.$super.call(this);
+		super();
 
 		//this.controller = null;
 		this.members = [];
@@ -24,20 +26,20 @@ var Party = Class(Entity,
 		// this.localActivities = [];
 
 		// this.scene = null;
-	},
+	}
 
-	loaded : function()
+	loaded()
 	{
 		for (var i = this.members.length - 1; i >= 0; i--) 
 		{
 			this.members[i].party = this;
-		};
-	},
+		}
+	}
 
-	addMember : function(member)
+	addMember(member)
 	{
 		this.members.push(member);
-	},
+	}
 
 	// preStep : function()
 	// {
@@ -152,4 +154,4 @@ var Party = Class(Entity,
 	// 		this.scene.update(entry);
 	// 	}		
 	// }
-});
+}

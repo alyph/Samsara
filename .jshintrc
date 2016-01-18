@@ -9,17 +9,18 @@
 	// Documentation: http://www.jshint.com/docs/options/
 	"browser": true,
 	//"esnext": true,
-	"globalstrict": false,
+	"globalstrict": true,
 	"strict": false,
 	"esnext": true,
 	//"esversion": "6",
 	"supernew": true,
 	"eqeqeq": true,
 	"quotmark": false,
+	"newcap": false,
 	"indent": 1,
 	"undef": true,
 	"unused": "vars",  
-	"predef": ["console"],
+	"predef": ["console", "$"],
 	"globals": {
 		 "Global"				:true
 		,"$inst"				:false 
@@ -34,9 +35,13 @@
 		,"$sprite"				:false
 		,"$predicate"			:false
 		,"Class"				:false
+		,"MathEx"				:false
+		,"Vector2"				:false
 		,"Queue"				:false
 		,"Archive"				:false
 		,"Gallery"				:false
+		,"EventDispatcher"		:false
+		,"UI"					:false
 		,"Description"			:false
 		,"World"				:false
 		,"ActionDefinition"		:false

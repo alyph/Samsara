@@ -1,28 +1,30 @@
-var Character = Class(Entity,
+'use strict';
+
+class Character extends Entity
 {
-	constructor : function()
+	constructor()
 	{
-		Character.$super.call(this);
+		super();
 
 		this.displayName ="nameless";
 		this.sprite = null;
 		this.size = "normal";
 		this.party = null;
 		this.pov = null;
-	},
+	}
 
-	getTitle : function()
+	getTitle()
 	{
 		return this.displayName;
-	},
+	}
 
-	getImage : function()
+	getImage()
 	{
 		return Sprites[this.sprite];
-	},
+	}
 
-	getSize: function()
+	getSize()
 	{
 		return this.size;
 	} 
-});
+}

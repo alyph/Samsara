@@ -1,11 +1,15 @@
-var Game = Class(BaseObject,
-{
-	constructor : function()
-	{
-		Game.$super.call(this);
-	},
+'use strict';
 
-	start : function()
+class Game extends BaseObject
+{
+	constructor()
+	{
+		super();
+
+		this.world = null;
+	}
+
+	start()
 	{
 		// this.screen = UI.showScreen("gameScreen");
 
@@ -16,11 +20,11 @@ var Game = Class(BaseObject,
 
 		this.world = Archive.get(Global.WorldName);
 		this.world.beginPlay(this);
-	},
+	}
 
-	update : function()
+	update()
 	{
 		this.world.update();
 	}
-});
+}
 

@@ -1,5 +1,5 @@
 
-<template id="player-view">
+<template id="player-view" $behaviors="player-view">
 	<style>
 	:host
 	{ 
@@ -9,37 +9,100 @@
 	}
 	#backdrop
 	{ 
+		position: absolute; 
+		width: 100%;
+		height: 100%;
+	}
+	#foreground
+	{
+		position: absolute; 
+		top: 0px;
 		width: 100%;
 		height: 100%;
 	}
 	#actions
 	{
 		position: absolute;
-		top: 0px;
-		right: 0px;
+		top: 48px;
+		bottom: 48px;
+		right: 48px;
+		width: 384px;
 	}
 	</style>
-	<sprite-img id="backdrop">{{pov.scene.Backdrop()}}</sprite-img>
-	<action-list id="actions">{{actions}}</action-list>
+	<sprite-img id="backdrop">{{backdrop}}</sprite-img>
+	<div id="foreground"></div>
+	<action-list id="actions" $on-action-selected="finishChooseAction(e.target.dataContext)">{{actions}}</action-list>
 </template>
 
-<template id="action-list" $behaviors="collection" $item-template="action-view">
+<template id="action-list" $behaviors="action-list" 
+	$action-container-template="action-container" $action-item-template="action-view">
 	<content></content>
 	<!--div>
 		<content></content>
 	</div-->	
 </template>
 
-<template id="action-view">
+<template id="action-container">
 	<style>
-	#portrait
+	:host
 	{
+		display: block;
 		width: 192px;
 		height: 128px;
+		pointer-events: none;
+	}
+	:host(:hover)
+	{
+		transform: scale(1.2);
+	}		
+	</style>
+	<content></content>
+</template>
+
+<!--$scale="0.83" $behaviors="scale"-->
+<template id="action-view" $on-click="->action-selected">
+	<style>
+	:host
+	{
+		display: block;
+		width:100%;
+		height:100%;
+		pointer-events: auto;
+		margin: auto;
+	}
+	#box
+	{
+		position: relative;
+		width:100%;
+		height:100%;		
+	}
+	#portrait
+	{
+		width: 100%;
+		height: 100%;
+		border: 4px solid black;
+		box-sizing: border-box;
+	}
+	#label
+	{
+		position: absolute;
+		top: -8px;
+		right: 10px;
+		white-space: nowrap;
+		background-color: skyblue;
+		color: black;
+		border: black solid 3px;
+		padding: 2px 16px;
+		min-width: 80%;
+		text-align: center;
+		transform: skewX(-16deg) rotate(-3deg);
+		font-family: cursive;
+		font-size: 14px;
+		box-sizing: border-box;
 	}
 	</style>
-	<div>
+	<div id="box">
 		<sprite-img id="portrait">{{Portrait()}}</sprite-img>
-		<div>{{Label()}}</div>
+		<div id="label">{{Label()}}</div>
 	</div>
 </template>

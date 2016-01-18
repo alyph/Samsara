@@ -1,32 +1,34 @@
-var Keeper = Class(Entity,
+'use strict';
+
+class Keeper extends Entity
 {
-	constructor : function()
+	constructor()
 	{
-		Keeper.$super.call(this);
+		super();
 
 		this.povs = [];
 		this.focus = null;
-	},
+	}
 
-	beginPlay : function(game)
+	beginPlay(game)
 	{
 		this.beginUpdate();
-	},
+	}
 
-	endPlay : function()
+	endPlay()
 	{
-	},
+	}
 
-	update : function()
+	update()
 	{
-		if (this.focus == null)
+		if (this.focus === null)
 		{
 			this.focus = MathEx.randomElementOfArray(this.povs);
 			this.focus.chooseAction();
 		}
-	},
+	}
 
-	handleAction: function(pov, action)
+	handleAction(pov, action)
 	{
 		if (pov !== this.focus)
 			throw ("wrong pov.");
@@ -34,13 +36,14 @@ var Keeper = Class(Entity,
 		this.focus = null;
 
 		// TODO: do action
-	},
+		action.perform(pov);
+	}
 
-	activatePOV : function(pov)
+	activatePOV(pov)
 	{
 		if (this.povs.indexOf(pov) >= 0)
 			throw ("pov already activated.");
 
 		this.povs.push(pov);
 	}
-});
+}

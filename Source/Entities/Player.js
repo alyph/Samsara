@@ -1,12 +1,23 @@
-var Player = Class(Entity,
+'use strict';
+
+/*exported Player*/
+class Player extends Entity
 {
-	constructor : function()
+	constructor()
 	{
-		Player.$super.call(this);
+		//Player.$super.call(this);
+		super();
 
 		//this.screen = null;
 		this.pov = null;
 		this.actions = null;
+		this.pendingActions = null;
+		this.backdrop = null;
+		this.events = new EventDispatcher();
+		this.waiting = false;
+
+		$("player-view")[0].bind(this);
+		//this.mediator = new PlayerMediator(this);
 		// this.game = game;
 		// this.party = game.world.spawn("PlayerParty", { $base: Party });//new Party(game);
 		// this.party.player = this;
@@ -15,7 +26,7 @@ var Player = Class(Entity,
 		// this.queuedActions = [];
 
 		//game.screen.actions.on("click", this.onAction, this);
-	},
+	}
 
 	// enterWorld : function(world)
 	// {
@@ -30,18 +41,64 @@ var Player = Class(Entity,
 		
 	// },
 
-	chooseAction : function(pov, actions)
+	chooseAction(pov, actions)
 	{
 		if (this.pov !== null)
 			throw ("Another pov choosing action.");
 
 		this.pov = pov;
-		this.actions = actions;
+		this.pendingActions = actions;
 
-		$("player-view")[0].bind(this);
+		var newScene = pov.scene;
+		if (this.actions !== null)
+		{
+			for (var i = 0; i < this.actions.length; i++) 
+			{
+				if (this.actions[i].target === newScene)
+				{
+					this.beginTransitionFromAction(this.actions[i], newScene);
+					return;
+				}
+			}
+		}
+
+		this.finishTransition();
+
+		//this.actions = actions;
+
+		// this.mediator.beginChooseAction();
+
+		
 
 		// TODO: UI
 		//this.screen.scene.setData(pov.scene);
+	}
+
+	beginTransitionFromAction(action, scene)
+	{
+		var panel = new Panel();
+		panel.portrait = scene.portrait;
+		var event = new PanelAddedEvent(panel);
+		event.fromAction = action;
+		this.events.dispatch(event);
+	}
+
+	finishTransition()
+	{
+		this.backdrop = this.pov.scene.Backdrop();
+		this.actions = this.pendingActions;
+		this.waiting = true;
+	}
+
+	finishChooseAction(action)
+	{
+		if (this.waiting)
+		{
+			this.waiting = false;
+			var pov = this.pov;		
+			this.pov = null;
+			pov.actionChosen(action);
+		}
 	}
 
 	// play : function(finished)
@@ -126,4 +183,73 @@ var Player = Class(Entity,
 	// {
 	// 	return this.party.step();
 	// } 
-});
+}
+
+class PanelAddedEvent
+{
+	constructor(panel)
+	{
+		this.panel = panel;
+		this.fromAction = null;
+	}
+}
+
+class Panel
+{
+	constructor()
+	{
+		this.portrait = null;
+	}
+}
+
+// class PlayerMediator
+// {
+// 	constructor(player)
+// 	{
+// 		this.player = player;
+// 		this.backdrop = null;
+// 		this.actions = null;
+// 		this.events = new EventDispatcher();
+
+// 		$("player-view")[0].bind(this);
+// 	}
+
+// 	beginChooseAction()
+// 	{
+// 		var newScene = this.player.pov.scene;
+
+// 		if (this.actions !== null)
+// 		{
+// 			for (var i = 0; i < this.actions.length; i++) 
+// 			{
+// 				if (this.actions[i].target === newScene)
+// 				{
+// 					this.beginTransitionFromAction(this.actions[i], newScene);
+// 					return;
+// 				}
+// 			}
+// 		}
+
+// 		this.finishTransition();
+// 	}
+
+// 	finishChooseAction(action)
+// 	{
+// 		this.player.finishChooseAction(action);
+// 	}
+
+// 	beginTransitionFromAction(action, scene)
+// 	{
+// 		var panel = new Panel();
+// 		panel.portrait = scene.portrait;
+// 		var event = new PanelAddedEvent(panel);
+// 		event.fromAction = action;
+// 		this.events.dispatch(event);
+// 	}
+
+// 	finishTransition()
+// 	{
+// 		this.backdrop = this.player.pov.scene.Backdrop();
+// 		this.actions = this.player.actions;
+// 	}
+// }

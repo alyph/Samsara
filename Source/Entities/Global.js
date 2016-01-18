@@ -1,9 +1,11 @@
-var GlobalDefinition = Class(BaseObject,
+'use strict';
+
+class GlobalDefinition extends BaseObject
 {
-	constructor : function()
+	constructor()
 	{
-		GlobalDefinition.$super.call(this);
+		super();
 
 		this.actionsNamespace = "";
 	}
-});
+}

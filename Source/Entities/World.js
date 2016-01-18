@@ -1,6 +1,7 @@
-/*global World: true*/
+'use strict';
 
-var World = Class(BaseObject,
+/*exported World*/
+class World extends BaseObject
 {
 	/*
 	$statics:
@@ -12,9 +13,9 @@ var World = Class(BaseObject,
 	},
 */
 
-	constructor : function()
+	constructor()
 	{
-		World.$super.call(this);
+		super();
 		this.game = null;
 		this.global = null;
 		this.entities = {};
@@ -25,16 +26,16 @@ var World = Class(BaseObject,
 		//this.isWaiting = false;
 		//this.updateCount = 0;
 		//this.turn = 0;
-	},
+	}
 
-	beginPlay : function(game)
+	beginPlay(game)
 	{
 		this.game = game;
 		for (var name in this.entities)
 		{
 			this.entities[name].beginPlay(game);
 		}
-	},
+	}
 
 	// create : function()
 	// {
@@ -116,29 +117,29 @@ var World = Class(BaseObject,
 		Cloner.extend(entity, data);
 	},
 */
-	getEntity : function(name)
+	getEntity(name)
 	{
 		var entity = this.entities[name];
 		if (entity === undefined)
 			throw ("cannot find entity " + name);
 		return entity;
-	},
+	}
 
-	findEntity : function(name)
+	findEntity(name)
 	{
 		return this.entities[name] || null;
-	},
+	}
 
-	onEntityEntered : function(entity)
+	onEntityEntered(entity)
 	{
 		var name = entity.name();
 		if (this.entities.hasOwnProperty(name))
 			throw ("Entity with the same name already exists! " + name);
 
 		this.entities[name] = entity;
-	},
+	}
 
-	spawn : function(name, props)
+	spawn(name, props)
 	{
 		if (this.game === null)
 			throw ("cannot spawn entities before game has begun play!");
@@ -159,9 +160,9 @@ var World = Class(BaseObject,
 		// this.entities[name] = entity;
 		// entity.beginPlay(this.game, this);
 		// return entity;
-	},
+	}
 
-	destroy : function(entity)
+	destroy(entity)
 	{
 		if (this.game === null)
 			throw ("cannot destroy entities before game has begun play!");
@@ -174,7 +175,7 @@ var World = Class(BaseObject,
 		//entity.leaveWorld();
 		delete this.entities[name];
 		Archive.delete(entity);
-	},
+	}
 
 	// run : function()
 	// {
@@ -184,18 +185,18 @@ var World = Class(BaseObject,
 	// 	} while(!this.isWaiting);
 	// },
 
-	addToUpdate : function(entity)
+	addToUpdate(entity)
 	{
 		if (this.isUpdating)
 			throw ("cannot modify update queue when updating");
 
-		if (entity.world != this)
+		if (entity.world !== this)
 			throw ("cannot update entity not in the world");
 
 		this.updateQueue.push(entity);
-	},
+	}
 
-	removeFromUpdate : function(entity)
+	removeFromUpdate(entity)
 	{
 		if (this.isUpdating)
 			throw ("cannot modify update queue when updating");
@@ -203,9 +204,9 @@ var World = Class(BaseObject,
 		var idx = this.updateQueue.indexOf(entity);
 		if (idx >= 0)
 			this.updateQueue.splice(idx, 1);
-	},
+	}
 
-	update : function()
+	update()
 	{
 		this.isUpdating = true;
 
@@ -281,57 +282,57 @@ var World = Class(BaseObject,
 	// 		this.run();
 	// 	}
 	// }
-});
+}
 
 
-World.UpdateEntry = function()
-{
-	var STATE_Instant = 0;
-	var STATE_Updating = 1;
-	var STATE_Finished = 2;
+// World.UpdateEntry = function()
+// {
+// 	var STATE_Instant = 0;
+// 	var STATE_Updating = 1;
+// 	var STATE_Finished = 2;
 
-	return Class(
-	{
-		constructor : function(world)
-		{
-			this.world = world;
-			this.entity = null;
-			this.state = STATE_Instant;
-		},
+// 	return Class(
+// 	{
+// 		constructor : function(world)
+// 		{
+// 			this.world = world;
+// 			this.entity = null;
+// 			this.state = STATE_Instant;
+// 		},
 
-		isFinished : function()
-		{
-			return this.state === STATE_Instant || this.state === STATE_Finished;
-		},
+// 		isFinished : function()
+// 		{
+// 			return this.state === STATE_Instant || this.state === STATE_Finished;
+// 		},
 
-		update : function(entity)
-		{
-			this.entity = entity;
-			this.state = STATE_Instant;
+// 		update : function(entity)
+// 		{
+// 			this.entity = entity;
+// 			this.state = STATE_Instant;
 
-			entity.update(this);
+// 			entity.update(this);
 
-			if (this.state === STATE_Instant)
-				this.world.updateEntryFinished(this);
-		},
+// 			if (this.state === STATE_Instant)
+// 				this.world.updateEntryFinished(this);
+// 		},
 
-		begin : function()
-		{
-			if (this.state !== STATE_Instant)
-				throw ("cannot begin update, if it's already updating or finished!");
+// 		begin : function()
+// 		{
+// 			if (this.state !== STATE_Instant)
+// 				throw ("cannot begin update, if it's already updating or finished!");
 
-			this.state = STATE_Updating;
-		},
+// 			this.state = STATE_Updating;
+// 		},
 
-		end : function()
-		{
-			if (this.state !== STATE_Updating)
-				throw ("cannot end update, if it is not updating currently!");
+// 		end : function()
+// 		{
+// 			if (this.state !== STATE_Updating)
+// 				throw ("cannot end update, if it is not updating currently!");
 
-			this.state = STATE_Finished;
-			this.world.updateEntryFinished(this);
-		}
-	});
-}();
+// 			this.state = STATE_Finished;
+// 			this.world.updateEntryFinished(this);
+// 		}
+// 	});
+// }();
 
 

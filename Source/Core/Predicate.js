@@ -1,3 +1,5 @@
+'use strict';
+
 var _ = {};
 
 new (function(global)
@@ -33,19 +35,19 @@ new (function(global)
 		},
 	});
 
-	var GlobalPredicate = Class(BaseObject,
+	class GlobalPredicate extends BaseObject
 	{
-		constructor : function()
+		constructor()
 		{
-			GlobalPredicate.$super.call(this);
+			super();
 
 			this.params = null;
 			this.expression = "";
 			this.funcName = "";
 			this.isCompiled = false;
-		},
+		}
 
-		compile : function()
+		compile()
 		{
 			if (this.expression === null)
 				throw ("no expression.");
@@ -53,21 +55,21 @@ new (function(global)
 			var result = parseExpression(this.expression);
 			var func = result[1];
 			this.doneCompile(func);
-		},
+		}
 
-		doneCompile : function(func)
+		doneCompile(func)
 		{
 			var baseFuncName = this.funcName;
 			var suffix = 1;
 			while (functable.hasOwnProperty(this.funcName))
 			{
 				this.funcName = baseFuncName + (suffix++);
-			};
+			}
 
 			functable[this.funcName] = func;
 			this.isCompiled = true;
 		}
-	});
+	}
 
 	var Resolver = Class(
 	{

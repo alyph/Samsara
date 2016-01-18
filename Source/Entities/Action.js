@@ -1,25 +1,26 @@
 /*global ActionDefinition: true*/
+'use strict';
 
-var ActionDefinition = Class(BaseObject,
+class ActionDefinition extends BaseObject
 {
-	constructor : function()
+	constructor()
 	{
-		ActionDefinition.$super.call(this);
+		super();
 
 		this.predicate = null;
 		this.targetKey = "";
 		this.customLabel = null;
-	},
+	}
 
-	populateActions : function(pov, actions)
+	populateActions(pov, actions)
 	{
 		if (this.evaluate(pov))
 		{
 			this.instantiate(pov, actions);
 		}
-	},
+	}
 
-	evaluate : function(pov)
+	evaluate(pov)
 	{
 		if (this.predicate === null)
 			return true;
@@ -31,9 +32,9 @@ var ActionDefinition = Class(BaseObject,
 		};
 
 		return this.predicate.eval(keyValues);
-	},
+	}
 
-	instantiate : function(pov, actions)
+	instantiate(pov, actions)
 	{
 		var targetScenes = pov.scene.scenes[this.targetKey];
 		if (targetScenes)
@@ -43,37 +44,47 @@ var ActionDefinition = Class(BaseObject,
 				actions.push(new Action(this, targetScenes[i]));
 			}
 		}
-	},
+	}
 
-	Label : function(target)
+	Label(target)
 	{
 		if (this.customLabel)
 			return this.customLabel;
 
 		return target.Label();
-	},
+	}
 
-	Portrait : function(target)
+	Portrait(target)
 	{
 		return target.Portrait();
 	}
-});
 
-var Action = Class(
+	perform(pov, target)
+	{
+		pov.scene = target;
+	}
+}
+
+class Action
 {
-	constructor : function(def, target)
+	constructor(def, target)
 	{
 		this.def = def;
 		this.target = target; // HACK: target right now is a scene prototype?!
-	},
+	}
 
-	Label : function()
+	Label()
 	{
 		return this.def.Label(this.target);
-	},
+	}
 
-	Portrait : function()
+	Portrait()
 	{
 		return this.def.Portrait(this.target);
 	}
-});
+
+	perform(pov)
+	{
+		this.def.perform(pov, this.target);
+	}
+}

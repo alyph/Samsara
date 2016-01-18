@@ -1,3 +1,4 @@
+
 var Activity = Class(WorldAction,
 {
 	constructor : function(def, params, context)

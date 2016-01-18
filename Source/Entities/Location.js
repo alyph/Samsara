@@ -1,9 +1,10 @@
+'use strict';
 
-var Locale = Class(Entity, 
+class Locale extends Entity
 {
-	constructor : function()
+	constructor()
 	{
-		Locale.$super.call(this);
+		super();
 
 		this.displayName = "";
 		this.portrait = null;
@@ -11,9 +12,9 @@ var Locale = Class(Entity,
 		// this.froms = [];
 		// this.within = null;
 		// this.contained = [];
-	},
+	}
 
-	getPortrait : function()
+	getPortrait()
 	{
 		return Sprites[this.portrait];
 	}
@@ -67,7 +68,7 @@ var Locale = Class(Entity,
 	// 		return this.froms;
 	// 	}
 	// }
-});
+}
 
 // var Region = Class(Entity,
 // {

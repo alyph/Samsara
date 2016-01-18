@@ -31,7 +31,7 @@ var Global = {};
 
 		$("#welcomeScreen").fadeTo(500,0,function(){$(this).remove();});
 		$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
-	};
+	}
 
 	var libs = "Source/Libs/";
 	var utils = "Source/Utils/";
@@ -55,6 +55,7 @@ var Global = {};
 		core + "BaseObject.js",
 		core + "Components.js",
 		core + "Descriptor.js",
+		core + "events.js",
 		core + "gallery.js",
 		core + "Planner.js",
 		core + "System.js",
@@ -62,6 +63,7 @@ var Global = {};
 		core + "Predicate.js",
 		ui + "UI.js",
 		ui + "behaviors/basic_behaviors.js",
+		ui + "behaviors/game_behaviors.js",
 		// ui + "Elements/BasicElements.js",
 		// ui + "Elements/GameElements.js",
 		// ui + "Templates/BasicTemplates.js",
@@ -109,7 +111,7 @@ var Global = {};
 			Gallery.load(SpriteDefinitions);
 			Gallery.ready(onResourceLoaded);
 		});
-	};
+	}
 
 	function onResourceLoaded()
 	{
@@ -127,16 +129,16 @@ var Global = {};
 			definitions + "Scenes.js",			
 			definitions + "WorldData.js",
 			onDataLoaded);
-	};
+	}
 
 	function onDataLoaded()
 	{
-		NewUI.registerTemplates("Source/UI/Templates/basic_templates.html");
-		NewUI.registerTemplates("Source/UI/Templates/game_templates.html");
+		UI.registerTemplates("Source/UI/Templates/basic_templates.html");
+		UI.registerTemplates("Source/UI/Templates/game_templates.html");
 		//NewUI.registerTemplates("Source/UI/Templates/screens.html");
 
-		NewUI.ready(init);
-	};
+		UI.ready(init);
+	}
 
 
 

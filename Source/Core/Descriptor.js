@@ -1,4 +1,6 @@
-Descriptor = Class(
+'use strict';
+
+var Descriptor = Class(
 {
 	constructor : function()
 	{
@@ -7,15 +9,15 @@ Descriptor = Class(
 	}
 });
 
-Keyword = Class(BaseObject,
+class Keyword extends BaseObject
 {
-	constructor : function()
+	constructor()
 	{
-		Keyword.$super.call(this);
+		super();
 	}
-});
+}
 
-Description = Class(
+var Description = Class(
 {
 	constructor : function()
 	{
@@ -73,7 +75,7 @@ Description = Class(
 	}
 });
 
-DescriptionQueryResult = Class(
+var DescriptionQueryResult = Class(
 {
 	constructor : function(desc, keyword)
 	{

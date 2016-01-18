@@ -1,10 +1,12 @@
-/*global Entity: true*/
 
-var Entity = Class(BaseObject,
+'use strict';
+
+/*exported Entity*/
+class Entity extends BaseObject
 {
-	constructor : function()
+	constructor()
 	{
-		Entity.$super.call(this);
+		super();
 		//this.$ref = true;
 		
 		//this.game = null;
@@ -13,16 +15,16 @@ var Entity = Class(BaseObject,
 		this.isUpdating = false;
 		this.desc = new Description();
 		this.portrait = null;
-	},
+	}
 
-	init : function()
+	init()
 	{
 		if (this.isInstance())
 		{
 			this.world = Archive.get(Global.WorldName);
 			this.world.onEntityEntered(this);
 		}
-	},
+	}
 
 	// enterWorld : function(world)
 	// {
@@ -34,61 +36,61 @@ var Entity = Class(BaseObject,
 	// 	this.world = null;
 	// },
 
-	beginPlay : function(game)
+	beginPlay(game)
 	{
-	},
+	}
 
-	endPlay : function()
+	endPlay()
 	{
-	},
+	}
 
-	beginUpdate: function()
+	beginUpdate()
 	{
 		if (this.isUpdating)
 			return;
 
 		this.isUpdating = true;
 		this.world.addToUpdate(this);
-	},
+	}
 
-	update : function()
+	update()
 	{
 		throw ("requested to update, but not implemented.");
-	},
+	}
 
-	Title : function()
+	Title()
 	{
 		return "[NO TITLE]";
-	},
+	}
 
-	Desc : function()
+	Desc()
 	{
 		return "[NO DESC]";
-	},
+	}
 
-	Image : function()
+	Image()
 	{
 		return "cardCityGate";
-	},
+	}
 
-	Portrait : function()
+	Portrait()
 	{
 		return this.portrait;
-	},
+	}
 
-	Size: function()
+	Size()
 	{
 		return "";
-	},
+	}
 
-	toString : function()
+	toString()
 	{
 		return this.name();
-	},
+	}
 
 	// update : function(entry)
 	// {
 	// 	throw ("must override!");
 	// }
-});
+}
 

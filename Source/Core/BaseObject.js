@@ -1,36 +1,40 @@
-var BaseObject = Class(
+'use strict';
+
+class BaseObject
 {
-	constructor : function()
+	constructor()
 	{
 		this.$name = "";
 		this.$baseObj = null;
-	},
+	}
 
-	$canBeSubObject: true,
+	//$canBeSubObject: true,
 
-	init : function()
+	init()
 	{
-	},
+	}
 
-	isA: function(cls)
-	{
-		var current = this.$class;
-		while (current)
-		{
-			if (current === cls)
-				return true;
+	// isA(cls)
+	// {
+	// 	var current = this.$class;
+	// 	while (current)
+	// 	{
+	// 		if (current === cls)
+	// 			return true;
 
-			current = current.$super;
-		}
-	},
+	// 		current = current.$super;
+	// 	}
+	// }
 
-	name: function()
+	name()
 	{
 		return this.$name.substr(1);
-	},
+	}
 
-	isInstance : function()
+	isInstance()
 	{
 		return Archive.isInstance(this);
-	},
-});
+	}
+}
+
+BaseObject.prototype.$canBeSubObject = true;

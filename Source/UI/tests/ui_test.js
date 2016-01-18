@@ -87,11 +87,11 @@
 
 			//$("#screenRoot")[0].dataset.strange = "asdfs''df\"asdfsaf";
 
-			NewUI.registerTemplates("templates.html").ready(function()
+			UI.registerTemplates("templates.html").ready(function()
 			{
-				NewUI.registerTemplates("secondtemplates.html");
+				UI.registerTemplates("secondtemplates.html");
 
-				NewUI.ready(function()
+				UI.ready(function()
 				{
 					$("#welcomeScreen").fadeTo(100,0,function(){$(this).remove();});
 					$("army-view")[0].bind(army);
