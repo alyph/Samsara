@@ -390,3 +390,4 @@ var Events =
 		source.__eventHub.pendings.length = 0;
 	}
 };
+

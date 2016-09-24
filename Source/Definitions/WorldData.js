@@ -164,34 +164,6 @@ $insts(
 	}
 });
 
-$insts("gamescene", "scene",
-{
-	"iron_march":
-	{
-		$base: "planning",
-		label: "Iron March",
-		portrait: $sprite("scene_iron_march")
-	},
-
-	"caravan_ambush":
-	{
-		$base: "encounter",
-		label: "Ambush Site",
-		backdrop: $sprite("mountain_pass"),
-		scenes:
-		{
-			pois: ["@destroyed_caravan"],
-			inside: ["@iron_march"]
-		}
-	},
-
-	"destroyed_caravan":
-	{
-		$base: "inspecting",
-		label: "Caravan Remains",
-		portrait: $sprite("scene_ambushed_caravan")
-	}
-});
 	/*
 
 World.WorldData.entities =

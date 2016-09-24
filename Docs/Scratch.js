@@ -4,6 +4,8 @@
 b, x = max(a, b)
 b = o1, x = o2 : foo(a = 1 b = 2).a 
 
+(x, y) => (x + y, x *x) => 
+
 if ()
 {
 
@@ -125,8 +127,11 @@ function Behavior.init(props)
 	attachEventListners();
 }
 
+min(1, 3)
+((1 + ( scene is a '')) is )
 
-predicate = parameter + keyword + parameter ... |: , )
+statement := resolver | predicate
+predicate := parameter + keyword + parameter ... |: , )
 parameter = resolver + reference + code + ... |: keyword ,  )
 resolver = keyword + (predicate, precicate ...)
 reference = identifier + . resolver + . resolver ...

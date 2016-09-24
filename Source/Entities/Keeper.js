@@ -24,7 +24,7 @@ class Keeper extends Entity
 		if (this.focus === null)
 		{
 			this.focus = MathEx.randomElementOfArray(this.povs);
-			this.focus.chooseAction();
+			this.focus.act();
 		}
 	}
 

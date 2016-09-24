@@ -1,9 +1,9 @@
-'use strict';
-
 var _ = {};
 
 new (function(global)
 {
+	'use strict';
+
 	var predicates = {};
 	var predicateKeywords = {};
 
@@ -12,28 +12,31 @@ new (function(global)
 	var functable = _;
 	var funcNamespace = "_";
 
-	var Predicate = Class(
+	global.$predicate = createPredicate;
+	global.$resolver = createResolver;
+
+	class Predicate
 	{
-		constructor : function()
+		constructor()
 		{
 			this.params = null;
 			this.func = null;
-		},
+		}
 
-		eval : function(keyValues)
+		eval(keyValues)
 		{
 			var values = this.params.toValues(keyValues);
 			return this.evalVargs.apply(this, values);
-		},
+		}
 
-		evalVargs : function(vargs)
+		evalVargs(vargs)
 		{
 			if (arguments.length < this.params.length)
 				throw ("less arguments than required.");
 
 			return this.func.apply(this, arguments);
-		},
-	});
+		}
+	}
 
 	class GlobalPredicate extends BaseObject
 	{
@@ -52,7 +55,7 @@ new (function(global)
 			if (this.expression === null)
 				throw ("no expression.");
 
-			var result = parseExpression(this.expression);
+			var result = compileExpression(this.expression);
 			var func = result[1];
 			this.doneCompile(func);
 		}
@@ -71,19 +74,6 @@ new (function(global)
 		}
 	}
 
-	var Resolver = Class(
-	{
-		constructor : function()
-		{
-		},
-
-		eval : function(vargs)
-		{
-			throw ("not implemented!");
-		}
-	});
-
-	global.$predicate = createPredicate;
 	function createPredicate(statement, expression)
 	{
 		var isGlobal = arguments.length >= 2;
@@ -111,7 +101,7 @@ new (function(global)
 					predicateKeywords[token] = true;
 					key += token;
 				}
-			};
+			}
 
 			if (predicates.hasOwnProperty(key))
 			{
@@ -119,7 +109,7 @@ new (function(global)
 			}
 
 			var funcName = keywords.join('_');
-			var predicate = new GlobalPredicate();
+			let predicate = new GlobalPredicate();
 			predicate.params = params;
 			predicate.expression = expression;
 			predicate.funcName = funcName;
@@ -138,13 +128,13 @@ new (function(global)
 		}
 		else // local predicate, only need a parameter list, since no other predicates will actually reference it.
 		{
-			var predicate = new Predicate();
-			var result = parseExpression(statement);
-			predicate.params = $p.apply(this, result[0]);
+			let predicate = new Predicate();
+			var result = compileExpression(statement);
+			predicate.params = $p.apply(null, result[0]);
 			predicate.func = result[1];
 			return predicate;
 		}
-	};
+	}
 
 	function findCompiledPredicate(key)
 	{
@@ -153,13 +143,76 @@ new (function(global)
 			predicate.compile();
 
 		return predicate;
-	};
+	}
+
+	class Resolver
+	{
+		constructor()
+		{
+			this.funcName = "";
+		}
+
+		parse(params)
+		{
+			// TODO: verify the number of parameters
+			return funcNamespace + "." + this.funcName + "(" + params.join(", ") + ")";
+		}
+	}
+
+	// TODO: save prop into a var
+	createResolver("prop", function(obj, key)
+	{
+		return obj ? obj[key] : undefined;
+	}); 
+
+	createResolver("all", null, function(params)
+	{
+		return "(" + params.join(") && (") + ")";
+	});
+
+	createResolver("any", null, function(params)
+	{
+		return "(" + params.join(") || (") + ")";
+	});
+
+	function createResolver(name, func, parser)
+	{
+		if (resolvers.hasOwnProperty(name))
+			throw ("Resolver with name " + name + " is already taken.");
+
+		var resolver = new Resolver();
+
+		if (func)
+		{
+			resolver.funcName = assignToFuncTable(name, func);	
+		}
+		
+		if (parser)
+		{
+			resolver.parse = parser;
+		}
+
+		resolvers[name] = resolver;
+		return resolver;
+	}
 
 	function findResolver(key)
 	{
 		return resolvers[key] || null;
 	}
 
+	function assignToFuncTable(name, func)
+	{
+		var assignedName = name;
+		var suffix = 1;
+		while (functable.hasOwnProperty(assignedName))
+		{
+			assignedName = name + (suffix++);
+		}
+
+		functable[assignedName] = func;
+		return assignedName;
+	}
 
 	var TokenTypes =
 	{
@@ -170,7 +223,7 @@ new (function(global)
 		openParenthesis		: 4,
 		closeParenthesis	: 5,
 		dot					: 6,
-		Comma 				: 7,
+		comma 				: 7,
 		string 				: 8,
 		end					: 9
 	};
@@ -254,11 +307,11 @@ new (function(global)
 		}
 	});
 
-	function parseExpression(expression, params)
+	function compileExpression(expression, params)
 	{		
 		var tokens = tokenize(expression, params);
 		var reader = new TokenReader(tokens);
-		var funcBody = "return (" + parsePredicate(reader) + ");";
+		var funcBody = "return (" + parseExpression(reader, true) + ");";
 		var args = reader.identifiers;
 
 		if (params)
@@ -268,13 +321,13 @@ new (function(global)
 			{
 				if (!params.has(args[i]))
 					throw ("The identifier " + args[i] + " used in the expression " + expression + " are not found in the parameter list defined by the statement.");
-			};
+			}
 
 			args = [].concat(params);
 		}
 
 		return [args, Function.apply(null, args.concat(funcBody))];
-	};
+	}
 
 	function tokenize(expression, params)
 	{
@@ -337,12 +390,18 @@ new (function(global)
 		tokens.push(endToken);
 
 		return tokens;
-	};
+	}
 
-	function parsePredicate(reader)
+	function parsePredicate(reader, firstParam)
 	{
 		var key = "";
 		var params = [];
+
+		if (firstParam)
+		{
+			key = "?";
+			params.push(firstParam);
+		}
 		
 		var next = reader.peek();
 		while (next.type !== TokenTypes.end &&
@@ -358,7 +417,7 @@ new (function(global)
 			else
 			{
 				key += "?";
-				params.push(parseParameter(reader));
+				params.push(parseExpression(reader, false));
 			}
 
 			next = reader.peek();
@@ -369,11 +428,10 @@ new (function(global)
 			throw ("cannot find predicate: " + key);
 
 		return funcNamespace + "." + predicate.funcName + "(" + params.join(", ") + ")";
-	};
+	}
 
-	function parseParameter(reader)
+	function parseExpression(reader, canBePredicate)
 	{
-		var parenthesisCount = 0;
 		var script = "";
 
 		while (true)
@@ -381,43 +439,96 @@ new (function(global)
 			var next = reader.peek();
 
 			if (next.type === TokenTypes.end || 
-				next.type === TokenTypes.comma)				
+				next.type === TokenTypes.comma ||
+				next.type === TokenTypes.closeParenthesis)				
 			{
 				break;
 			}
 			else if (next.type === TokenTypes.openParenthesis)
 			{
-				parenthesisCount++;
-			}
-			else if (next.type === TokenTypes.closeParenthesis)
-			{
-				if (--parenthesisCount < 0)
-					break;
+				script += reader.next().str + parseExpression(reader, true);
+				while (reader.test(TokenTypes.comma))
+				{
+					script += ", " + parseExpression(reader, true);
+				}
+				script += reader.expect(TokenTypes.closeParenthesis).str;
 			}
 			else
 			{
 				reader.analyzeSymbol(next);
 				if (next.type === TokenTypes.keyword)
 				{
-					break;
+					if (canBePredicate)
+						script = parsePredicate(reader, script);
+					else
+						break;
 				}
 				else if (next.type === TokenTypes.identifier)
 				{
 					script += parseReference(reader);
-					continue;
 				}
 				else if (next.type === TokenTypes.resolver)
 				{
 					script += parseResolver(reader);
-					continue;
+				}
+				else
+				{
+					script += reader.next().str;
 				}
 			}
-
-			script += reader.next().str;
 		}
 
 		return script;
-	};
+	}
+
+
+	// function parseParameter(reader)
+	// {
+	// 	var parenthesisCount = 0;
+	// 	var script = "";
+
+	// 	while (true)
+	// 	{
+	// 		var next = reader.peek();
+
+	// 		if (next.type === TokenTypes.end || 
+	// 			next.type === TokenTypes.comma)				
+	// 		{
+	// 			break;
+	// 		}
+	// 		else if (next.type === TokenTypes.openParenthesis)
+	// 		{
+	// 			parenthesisCount++;
+	// 		}
+	// 		else if (next.type === TokenTypes.closeParenthesis)
+	// 		{
+	// 			if (--parenthesisCount < 0)
+	// 				break;
+	// 		}
+	// 		else
+	// 		{
+	// 			reader.analyzeSymbol(next);
+	// 			if (next.type === TokenTypes.keyword)
+	// 			{
+	// 				break;
+	// 			}
+	// 			else if (next.type === TokenTypes.identifier)
+	// 			{
+	// 				script += parseReference(reader);
+	// 				continue;
+	// 			}
+	// 			else if (next.type === TokenTypes.resolver)
+	// 			{
+	// 				script += parseResolver(reader);
+	// 				continue;
+	// 			}
+	// 		}
+
+	// 		script += reader.next().str;
+	// 	}
+
+	// 	return script;
+	// }
 
 	function parseReference(reader)
 	{
@@ -430,46 +541,51 @@ new (function(global)
 		}
 
 		return script;
-	};
+	}
 
 	function parseResolver(reader, self)
 	{
-		var func = "";
+		//var func = "";
 		var params = [];
-
 		var resolverToken = reader.next();
-
 		var resolver = findResolver(resolverToken.str);
-		if (resolver !== null)
-			func = resolver.funcName;
+		// if (resolver !== null)
+		// 	func = resolver.funcName;
 
 		if (arguments.length >= 2)
 		{
 			params.push(self);
 
-			if (func === "")
+			if (resolver === null)
 			{
-				func = "prop";
+				resolver = findResolver("prop");
 				params.push(resolverToken.str);
 			}
+			// if (func === "")
+			// {
+			// 	func = "prop";
+			// 	params.push(resolverToken.str);
+			// }
 		}
 
-		if (func === "")
-			throw ("Cannot find proper resolver function: " + resolverToken.str);
+		if (resolver === null)
+			throw ("Cannot find proper resolver: " + resolverToken.str);
 
 
 		if (reader.test(TokenTypes.openParenthesis))
 		{			
 			do
 			{
-				params.push(parsePredicate(reader));
+				params.push(parseExpression(reader, true));
 
 			} while(reader.test(TokenTypes.comma));
 
 			reader.expect(TokenTypes.closeParenthesis);
 		}
 
-		return funcNamespace + "." + func + "(" + params.join(", ") + ")";
-	};
+		return resolver.parse(params);
+	}
 	
 })(this);
+
+

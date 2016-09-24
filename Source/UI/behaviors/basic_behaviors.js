@@ -1,6 +1,8 @@
 UI.Behavior("collection", 
 {
 	itemTemplate: { type: String, value: "", readonly: true },
+	itemTemplates: { type: String, value: "", readonly: true },
+	classToTemplateMap: { type: Object, value: null, readonly: false },
 
 	onDataChanged: function(element, event)
 	{
@@ -12,6 +14,11 @@ UI.Behavior("collection",
 			list = null;
 		}
 
+		if (list !== null)
+		{
+			this.initTemplateMap(element);
+		}
+
 		var l = list !== null ? list.length : 0;
 		for (var i = element.children.length - 1; i >= l; i--) 
 		{
@@ -20,24 +27,68 @@ UI.Behavior("collection",
 
 		if (list !== null)
 		{
-			var template = this.itemTemplate.get(element);
-			if (template)
+			for (i = element.children.length; i < l; i++) 
 			{
-				for (i = element.children.length; i < l; i++) 
+				var template = this.getItemTemplate(element, list[i]);
+				if (template)
 				{
 					element.appendChild(document.createElement(template));
 				}
-			}
-			else
-			{
-				console.error("No item template specified.");
-			}
+				else
+				{
+					console.error("No item template specified.");
+				}
+			}			
 		}
 
 		l = element.children.length;
 		for (i = 0; i < element.children.length; i++) 
 		{
 			element.children[i].bind(list[i]);
+		}
+	},
+
+	initTemplateMap: function(element)
+	{
+		var map = this.classToTemplateMap.get(element);
+		var templates = this.itemTemplates.get(element);
+		if (!map && templates)
+		{
+			map = new Map();
+			var templateNames = templates.split(/\s+/);
+			for (var i = 0; i < templateNames.length; i++) 
+			{
+				var name = templateNames[i];
+				var template = UI.findTemplate(name);
+				if (!template)
+				{
+					console.error(`the template ${name} in itemTemplates list does not exist!`);
+					continue;
+				}
+
+				if (!template.dataClass)
+				{
+					console.error(`the template ${name} has no data class!`);
+					continue;
+				}
+
+				map.set(template.dataClass, name);
+			}
+
+			this.classToTemplateMap.set(element, map);
+		}
+	},
+
+	getItemTemplate: function(element, data)
+	{
+		var map = this.classToTemplateMap.get(element);
+		if (map !== null)
+		{
+			return map.get(data.constructor.name);
+		}
+		else
+		{
+			return this.itemTemplate.get(element);
 		}
 	}
 });

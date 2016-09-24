@@ -35,6 +35,8 @@ class Scene extends BaseObject
 		this.label = "no name"; // Wrong!!! used by the function
 		this.portrait = null;
 		this.prev = null;
+		this.description = "NO DESC";
+		this.script = [];
 	}
 
 	Backdrop()
@@ -50,6 +52,18 @@ class Scene extends BaseObject
 	Portrait()
 	{
 		return this.portrait;
+	}
+
+	addLink(name, scene)
+	{
+		var links = this.scenes[name];
+		if (!links)
+		{			
+			this.scenes[name] = links = [];
+		}
+
+		if (links.indexOf(scene) < 0)
+			links.push(scene);
 	}
 
 	// populatePOIs : function()

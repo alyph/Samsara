@@ -10,6 +10,7 @@ class PointOfView extends Entity
 		this.characters = [];
 		this.locale = null;
 		this.scene = null;
+		this.execIdx = 0;
 	}
 
 	init()
@@ -33,6 +34,44 @@ class PointOfView extends Entity
 	beginPlay(game)
 	{
 		this.world.keeper.activatePOV(this);
+	}
+
+	act()
+	{
+		while (this.execute()) {}
+	}
+
+	execute()
+	{
+		if (this.execIdx >= this.scene.script.length)
+		{
+			this.execIdx = 0;
+			this.chooseAction();
+			return false;
+		}
+		else
+		{
+			let instruction = this.scene.script[this.execIdx++];
+			return this["exec"+instruction.type](instruction);
+		}
+	}
+
+	execRandomScene(instr)
+	{
+		var sceneDef = MathEx.randomElementOfArray(instr.scenes);
+		if (!sceneDef)
+			throw ("fail to find a random scene def.");
+
+		var name = sceneDef.name() + "_inst";
+		var old = Archive.find(name);
+		if (old !== null)
+			Archive.delete(old);
+
+		var scene = Archive.create(name, { $base: sceneDef.name() });
+		scene.pov = this;
+		this.scene = scene;
+
+		return true;
 	}
 
 	populateActions()

@@ -62,6 +62,11 @@ var UI = new (function(global)
 
 	this.calcElementOffset = calcElementOffset;
 
+	this.findTemplate = function(name)
+	{
+		return templates[name] || null;
+	};
+
 
 // ████████╗███████╗███╗   ███╗██████╗ ██╗      █████╗ ████████╗███████╗
 // ╚══██╔══╝██╔════╝████╗ ████║██╔══██╗██║     ██╔══██╗╚══██╔══╝██╔════╝
@@ -81,6 +86,7 @@ var UI = new (function(global)
 			this.proto = Object.create(CustomElement.prototype);			
 			this.elementInfos = [];
 			this.dependencies = null;
+			this.dataClass = templateElement.dataset["class"] || "";
 			//this.bindingInfos = [];
 			//this.behaviors = [];
 			
@@ -301,7 +307,7 @@ var UI = new (function(global)
 			{
 				e.stopImmediatePropagation();
 				e.currentTarget.dispatchEvent(
-					new CustomEvent(nextEventType, { bubbles: true }));
+					new CustomEvent(nextEventType, { bubbles: true, detail: { data: this.dataContext } }));
 			};
 		}
 	});	
@@ -1029,6 +1035,31 @@ var UI = new (function(global)
 		}
 	});
 
+	var ObjectProperty = Class(CustomProperty,
+	{
+		constructor : function ObjectProperty(name, readonly)
+		{
+			ObjectProperty.$super.call(this, name, readonly);
+		},
+
+		parse : function(str)
+		{
+			throw ("NOT IMPLEMENTED!");
+		},
+
+		stringify : function(value)
+		{
+			throw ("NOT IMPLEMENTED!");
+		},
+
+		coerce : function(value)
+		{
+			if (typeof value !== 'object')
+				return null;
+			return value;
+		}
+	});
+
 	function defineProperty(name, type, readonly)
 	{
 		if (properties[name] !== undefined)
@@ -1044,6 +1075,10 @@ var UI = new (function(global)
 		else if (type === Number)
 		{
 			prop = new NumberProperty(name, readonly);
+		}
+		else if (type === Object)
+		{
+			prop = new ObjectProperty(name, readonly);
 		}
 		else
 		{

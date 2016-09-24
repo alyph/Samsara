@@ -7,7 +7,28 @@
 		width: 100%;
 		height: 100%;
 	}
-	#backdrop
+	paragraph-list
+	{
+		position: absolute;
+		left: 100px;
+		top: 64px;
+		width: 640px;
+		font: 12px "Minecraftia", cursive;
+	}
+	paragraph-list > *
+	{
+		display: block;
+		position: relative;
+		margin-top: 20px;
+	}
+	@font-face
+	{
+	    font-family: 'Minecraftia';
+	    src: url('../Content/Fonts/Minecraftia.ttf') format('truetype');
+	    font-weight: normal;
+	    font-style: normal;
+	}
+/*	#backdrop
 	{ 
 		position: absolute; 
 		width: 100%;
@@ -27,20 +48,77 @@
 		bottom: 48px;
 		right: 48px;
 		width: 384px;
-	}
+	}*/	
 	</style>
-	<sprite-img id="backdrop">{{backdrop}}</sprite-img>
+	<paragraph-list $on-action-selected="finishChooseAction(e.detail.data)">{{paragraphs}}</paragraph-list>
+	<!--sprite-img id="backdrop">{{backdrop}}</sprite-img>
 	<div id="foreground"></div>
-	<action-list id="actions" $on-action-selected="finishChooseAction(e.target.dataContext)">{{actions}}</action-list>
+	<action-list id="actions" $on-action-selected="finishChooseAction(e.target.dataContext)">{{actions}}</action-list-->
 </template>
 
-<template id="action-list" $behaviors="action-list" 
+<template id="paragraph-list" $behaviors="collection" 
+	$item-templates="narrative-view actionchoice-view">
+	<style>
+	:host
+	{
+		display: block;
+	}		
+	</style>
+	<content></content>
+</template>
+
+<template id="narrative-view" data-class="Narrative">
+	<style>
+	</style>
+	<p>{{text}}</p>
+</template>
+
+<template id="actionchoice-view" data-class="ActionChoice">
+	<action-list>{{actions}}</action-list>
+</template>
+
+<template id="action-list" $behaviors="collection" 
+	$item-template="action-view">
+	<style>
+	:host
+	{
+		display: block;
+	}		
+	</style>
+	<content></content>
+</template>
+
+<template id="action-view" $on-click="->action-selected">
+	<style>
+	:host
+	{
+		display: inline-block;
+		margin: 0px 20px;
+	}
+	#root
+	{
+		min-width: 160px;
+		cursor: pointer;
+		padding: 4px;		
+	}
+	#label
+	{		
+	}
+	#root:hover #label
+	{
+		text-decoration: underline;
+	}
+	</style>
+	<div id="root">
+		<div id="label">{{Label()}}</div>
+	</div>
+</template>
+
+
+<!--template id="action-list" $behaviors="action-list" 
 	$action-container-template="action-container" $action-item-template="action-view">
 	<content></content>
-	<!--div>
-		<content></content>
-	</div-->	
-</template>
+</template-->
 
 <template id="action-container">
 	<style>
@@ -60,7 +138,7 @@
 </template>
 
 <!--$scale="0.83" $behaviors="scale"-->
-<template id="action-view" $on-click="->action-selected">
+<!--template id="action-view" $on-click="->action-selected">
 	<style>
 	:host
 	{
@@ -105,4 +183,4 @@
 		<sprite-img id="portrait">{{Portrait()}}</sprite-img>
 		<div id="label">{{Label()}}</div>
 	</div>
-</template>
+</template-->

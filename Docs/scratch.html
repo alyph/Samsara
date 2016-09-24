@@ -1,0 +1,50 @@
+<template id="action-view" $on-click="->action-selected">
+	<style>
+	:host
+	{
+		display: inline-block;
+		margin: 0px 20px;
+	}
+	#root
+	{
+		min-width: 160px;
+		cursor: pointer;
+		padding: 4px;		
+	}
+	#label
+	{		
+	}
+	#root:hover #label
+	{
+		text-decoration: underline;
+	}
+	</style>
+	<div id="root">
+		{{sdfasdf}}
+		<div id="label">{{Label()}}</div>
+		<ul>
+		#func(things)
+		#foreach (thing in things)
+		{ <ui></ui>	}
+		</ul>
+	</div>
+</template>
+
+<div id="parentElement">
+   <span id="childElement">foo bar</span>
+</div>
+
+<script>
+	var newNode = document.createElement("span");
+
+	// Get a reference to the parent node
+	var parentDiv = document.getElementById("childElement").parentNode;
+
+	// Begin test case [ 1 ] : Exist a childElement --> All working correctly
+	var sp2 = document.getElementById("childElement");
+	parentDiv.insertBefore(newNode, sp2);
+
+	var sp1_content = document.createTextNode("");
+
+	parentDiv.insertBefore(sp1_content, sp2);	
+</script>

@@ -10,6 +10,7 @@ class ActionDefinition extends BaseObject
 		this.predicate = null;
 		this.targetKey = "";
 		this.customLabel = null;
+		this.prePerform = null;
 	}
 
 	populateActions(pov, actions)
@@ -61,7 +62,11 @@ class ActionDefinition extends BaseObject
 
 	perform(pov, target)
 	{
+		if (this.prePerform !== null)
+			this.prePerform(pov, target);
+
 		pov.scene = target;
+		target.pov = pov;
 	}
 }
 

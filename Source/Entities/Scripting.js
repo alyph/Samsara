@@ -18,3 +18,4 @@ $predicate("$child is a $base", function(child, base)
 
 	return false;
 });
+

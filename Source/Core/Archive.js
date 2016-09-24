@@ -153,7 +153,9 @@ var Archive = new (function(global)
 			var target = this.target;
 
 			if (this.sourceIsBase && target.hasOwnProperty('$baseObj'))
+			{
 				target.$baseObj = source;
+			}	
 
 			var keys = Object.keys(source);
 			for (var i = keys.length - 1; i >= 0; i--) 
@@ -313,6 +315,9 @@ var Archive = new (function(global)
 
 	function enqueueRecord(record, queue) 
 	{
+		if (queue.indexOf(record) >= 0)
+			throw ("The record is already in the queue.");
+
 		record.base = resolveBase(record.props.$base, record.namespace);
 		var baseRec = record.base.rec;
 		if (baseRec && baseRec.index < 0)
@@ -320,6 +325,7 @@ var Archive = new (function(global)
 			enqueueRecord(baseRec, queue);
 		}
 
+		record.index = queue.length;
 		queue.push(record);
 	}
 
@@ -355,7 +361,9 @@ var Archive = new (function(global)
 			binders.push(new Binder(record.obj, record.props, null, false));
 
 			if (record.base.obj)
+			{
 				binders.push(new Binder(record.obj, record.base.obj, record.base.rec, true));
+			}
 		}
 
 		while (binders.length > 0)
@@ -379,7 +387,7 @@ var Archive = new (function(global)
 		if (typeof cls !== 'function')
 			throw ("base must be a constructor function");
 
-		if (cls.length !== 0)
+		if (cls.length !== 0 && cls !== Object)
 			throw ("constructor must have no arguments");
 
 		return new cls();
