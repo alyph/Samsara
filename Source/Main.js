@@ -46,8 +46,8 @@ var Global = {};
 
 	head.load(
 		libs + "jquery-2.0.3.js",
-		libs + "jquery-ui-1.8.23.custom.min.js",
-		libs + "jquery.gamequery.js",
+		//libs + "jquery-ui-1.8.23.custom.min.js",
+		//libs + "jquery.gamequery.js",
 		libs + "jsface.js",
 		utils + "MathEx.js",
 		utils + "Containers.js",

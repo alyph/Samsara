@@ -1,3 +1,67 @@
+var ifClause =
+{
+	keyword: "if elif",
+	expression: "(expr%b)",
+	content: "component",
+	group: "clauses"
+};
+
+var elseClause =
+{
+	keyword: "else",
+	content: "elseClause"
+};
+
+var foreachClause =
+{
+	keyword: "foreach",
+	expression: "(item%s in list%b)",
+	content: "itemComp"
+};
+
+var switchClause =
+{
+	keyword: "switch",
+	expression: "(expr%b)",
+};
+
+var caseClause =
+{
+	keyword: "case",
+	expression: "case value%c:",
+	content: "component",
+	group: "cases"
+};
+
+var defaultClause =
+{
+	keyword: "default",
+	expression: ":",
+	content: "default"
+};
+
+
+
+(if)
+clauses = [] (binding, component)
+elseClause = null;
+
+clause.cond;
+clause.component;
+
+
+(foreach)
+itemProp;
+list (binding)
+itemComp (component)
+
+(switch)
+
+expr (binding)
+cases [] (const, component)
+
+
+
 
 111 -> a
 

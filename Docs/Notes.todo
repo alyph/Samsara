@@ -2,6 +2,29 @@
 
 TODO:
 
+	✔	directive parsing revamp (high level tokenizing) @done (16-10-11 21:52)
+	✔	able to replace \# \{ @done (16-10-11 21:52)
+	✔	parse directive expr @done (16-10-12 22:43)
+	✔	parse data binding, text binding @done (16-10-13 22:05)
+	✔	lexer @done (16-10-14 22:51)
+	✔	fix data binding regex, likely will need split to open binding { and close } @done (16-10-15 15:56)
+	✔	new function throw exception, need try catch @done (16-10-15 15:56)
+	✔	directive config @done (16-10-15 22:04)
+	☐	clause group, content (what happens if they are "")
+	☐	escaped blah, doesn't need 3 different token types, just merge them all.
+
+	☐	element binding (property, attribute, event)
+	☐	runtime instance hookup (traverse path, binding, directive instances)
+
+	☐	observable object (passive style)
+	☐	component wise <script> (data object prototype)
+
+	☐	clean up template and element to use component 
+
+	☐	any error logging needed.
+
+-----------------------------------------------------------------------
+
 	☐	route init() (should renamed to loaded()), add all objects to the map, then call loaded() on them.
 	☐	opportunity based combat actions
 

@@ -9,6 +9,7 @@ var UI = new (function(global)
 	var readyCallback = null;
 	var templates = {};
 	var behaviors = {};
+	var directives = {};
 	var properties = {};
 	var customEvents = {};
 
@@ -58,6 +59,17 @@ var UI = new (function(global)
 		var beh = new Behavior(name, config);
 		behaviors[name] = beh;
 		return beh;
+	};
+
+	this.Directive = function(config, cls)
+	{
+		let directive = new DirectiveDefinition(config, cls);
+		let name = directive.name;
+		if (directives[name] || name === Keyword.end)
+			throw (`The directive with name ${name} is already registered.`);
+
+		directives[name] = directive;
+		return directive;
 	};
 
 	this.calcElementOffset = calcElementOffset;
@@ -439,6 +451,1088 @@ var UI = new (function(global)
 	}
 
 
+//  ██████╗ ██████╗ ███╗   ███╗██████╗  ██████╗ ███╗   ██╗███████╗███╗   ██╗████████╗
+// ██╔════╝██╔═══██╗████╗ ████║██╔══██╗██╔═══██╗████╗  ██║██╔════╝████╗  ██║╚══██╔══╝
+// ██║     ██║   ██║██╔████╔██║██████╔╝██║   ██║██╔██╗ ██║█████╗  ██╔██╗ ██║   ██║   
+// ██║     ██║   ██║██║╚██╔╝██║██╔═══╝ ██║   ██║██║╚██╗██║██╔══╝  ██║╚██╗██║   ██║   
+// ╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ╚██████╔╝██║ ╚████║███████╗██║ ╚████║   ██║   
+//  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝      ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═══╝   ╚═╝   
+
+// component definion
+//	- compile and parse the given content (DocumentFragment)
+//	- compile the binding list (element -> binding func)
+//	- compile the directives (each directive will be assigned a placeholder element, 
+//	  and the content will be put into a doc frag and compiled as a new component)
+//	- compile the events
+//	- compile scripts
+//
+// component (instance)
+//	- component will be instanced upon a set of root nodes (and their descendants) attached using the doc frag
+//	- component will then assign certain placeholder nodes to the directives, so the total root nodes may grow.
+//	- the initial data for the component will be null, so all bindings and directives will be operating on a default value.
+//	- when data is set, all bindings are refreshed, and all directives update.
+//
+// data binding
+//	- content binding (always string? to assigned to text content? will compare and ignore if equal to the old)
+//	- attribute binding (also always string, pretty much the same as content binding)
+//	- property binding (only bindable to a custom element, a directive and its component,
+//	  does not matter if the value changes or not, always force update the corresponding element/directive/component)
+//	  UNLESS maybe when it's premitive value, then we can ignore?
+//	- some directives will assign the entire parent's property set to the child components, in that case, 
+//	  just assigning the set object instead of copying each property is probably fine.
+
+	class Component
+	{
+		constructor(definition)
+		{
+			this.definition = definition;
+			this.firstNode = null;
+			this.lastNode = null;
+			this.data = {}; // TODO: user defined data class (with helper functions etc.)
+			this.bindings = [];
+			this.directives = [];
+		}
+
+		isAttached()
+		{
+			return this.firstNode !== null;
+		}
+
+		attach(parentNode, beforeThisNode)
+		{
+			if (this.isAttached())
+				throw ("Trying to attach the component again when it's already attached.");
+
+			let clonedContent = document.importNode(this.definition.content, true);
+			if (!clonedContent || !clonedContent.firstChild)
+				throw ("Invalid component content");
+
+			this.firstNode = clonedContent.firstChild;
+			this.lastNode = clonedContent.lastChild;
+
+			if (!parentNode)
+				throw ("Component must be attached to a parent node.");
+
+			if (beforeThisNode && beforeThisNode.parentNode !== parentNode)
+				throw ("The 'before this' node must be the child of the parent node.");
+
+			parentNode.insertBefore(clonedContent, beforeThisNode);
+
+			// hook up the following:
+			// custom element property bindings
+			// attribute binding
+			// text bindings
+			// event bindings
+			// directives
+		}
+
+		detach()
+		{
+			// unbind 
+		}
+
+		replace(replacedNode)
+		{
+			let parentNode = replacedNode.parentNode;
+			if (!parentNode)
+				throw ("To replace a node, the replaced node must have a parent.");
+
+			this.attach(parentNode, replacedNode);
+		}
+
+		setData(data)
+		{
+			for (let key in data)
+			{
+				this.setDataProp(key, data[key]);
+			}
+
+			this.refresh();
+		}
+
+		setDataProp(key, value)
+		{
+			// TODO: hook up with the object (so the object can trigger component referesh)
+			this.data[key] = value;
+		}
+
+		refresh()
+		{
+			let data = this.data;
+
+			// apply each data binding
+			let bindings = this.bindings;
+			for (let i = 0; i < bindings.length; i++)
+			{
+				let bindingInst = bindings[i];
+				bindingInst.binding.apply(bindingInst.node, data);
+			}
+
+			// refresh all directives
+			let directives = this.directives;
+			for (let i = 0; i < directives.length; i++) 
+			{
+				let directiveInst = directives[i];
+				directiveInst.directive.apply(directiveInst, data);
+			}
+		}
+	}
+
+	class BindingInstance
+	{
+		constructor(node, binding)
+		{
+			this.node = node;
+			this.binding = binding;
+		}
+	}
+
+	class DirectiveInstance
+	{
+		constructor(beginNode, endNode, directive)
+		{
+			this.begin = beginNode;
+			this.end = endNode;
+			this.directive = directive;
+			this.components = [];
+		}
+
+		populate(def, num)
+		{
+			if (!def)
+			{
+				console.error("Cannot populate components from directive: the component definition is invalid.");
+				return;
+			}
+
+			num = num || 1;
+
+			for (let i = this.components.length - 1; i >= 0; i--) 
+			{				
+				if (this.components[i].definition !== def)
+				{
+					this.components[i].detach();
+					this.components.splice(i, 1);
+				}
+			}
+
+			let oldNum = this.components.length;			
+			if (oldNum < num)
+			{
+				let parent = this.end.parentNode;
+				for (let i = oldNum; i < num; i++) 
+				{
+					let newComp = new Component(def);
+					newComp.attach(parent, this.end);
+					this.components.push(newComp);
+				}
+			}
+			else
+			{
+				for (let i = oldNum - 1; i >= num; i--)
+				{
+					this.components[i].detach();
+				}
+				this.components.length = num;
+			}
+		}
+	}
+
+	class ComponentDefinition
+	{
+		constructor(content)
+		{
+			if (!content)
+				throw ("Invalid content.");
+
+			this.content = content;
+
+			// TODO: trim root (remove text nodes that are only white spaces)
+
+			// TODO: handle <script>			
+			this.processNodes(content.firstChild);
+			
+		}
+
+		processNodes(firstNode)
+		{
+			let node = firstNode;
+			let parent = firstNode.parentNode;
+			while (node !== null)
+			{
+				// Element
+				if (node.nodeType === Node.ELEMENT_NODE)
+				{
+					// skip <style> and <script> 
+
+					// attribute bindings (including id, class? id may be bit dangerous, but class is ok, not sure)
+
+					// property bindings （must be custom element)
+
+					// event bindings
+
+					this.processNodes(node.firstChild);
+				}
+				// Text node
+				else if (node.nodeType === Node.TEXT_NODE)
+				{
+					let originalText = node.data;
+
+					// TODO: maybe we should tokenize and parse
+					// - parse plain text and text binding
+					// - until we reach a dirctive prefix #
+					// - then will handle directive parsing for the remainder
+
+					// search for directives # (not \#)
+					// TODO: should be regex
+					let reader = CreateTextLexer(originalText);
+					let result = parseTextContent(reader);
+
+
+					if (result)
+					{
+						let [modifiedText, textBinding] = result;
+						
+						node.data = modifiedText;
+						
+						if (textBinding)
+						{
+							// TODO: hook up text binding
+						}
+
+
+						// let directiveNode = null;
+						// let directiveStart = text.indexOf("##");
+						// if (directiveStart >= 0)
+						// {
+						// 	// cut off the parsed directives
+						// 	directiveNode = node.splitText(directiveStart);
+						// 	// should we delete this node if nothing left? (empty or all whitespaces) DONT DO THIS FOR NOW
+						// }
+
+						// to process the remaning text content:
+						// - find any data binding content enclosed in {} (note not \{})
+						// - process data binding the concatenate those with the plain text content
+						// - for plain text content replace all \# with # and \{ with {
+
+						// TODO: replace \## with ##
+
+						// content bindings {{}}
+
+						let nextToken = reader.peek();
+						if (nextToken && nextToken.type === TokenType.directive)
+						{
+							let directiveNode = document.createTextNode(originalText.substr(nextToken.start));
+							node.parent.insertBefore(node.nextSibling);
+
+							let directive = parseDirective(directiveNode);
+							if (directive)
+							{
+								// TODO: add to directive list
+								//parent.replaceChild(createPlaceholder(), directiveNode);
+								directiveNode.data = ""; // hidden directive begin node.
+
+								let directiveEndNode = directiveNode.nextSibling;
+								directiveEndNode.data = ""; // hidden directive end node.
+
+								// if directive parsed, a <placeholder> node will be added, skip that one.
+								node = directiveEndNode; // skip these two already processed nodes.
+							}
+							else
+							{
+								// Failed to parse the given directive, simply remove this node, but expect for more errors to follow.
+								parent.removeChild(directiveNode);
+								// should we find til the next ##end, then delete all.
+							}
+						}
+					}
+
+					
+				}
+				// Other types not handled.
+
+				// tentatively
+				node = node.nextSibling;
+			}
+		}
+	}
+
+	var TokenType =
+	{
+		invalid 				: -1,
+		directive				: 0,
+		openBinding				: 1,
+		closeBinding 			: 2,
+		escapedDirective		: 3,
+		escapedDataBinding		: 4,
+		escapedEscape			: 5,
+		identifier				: 6,
+		string 					: 7,
+		openParen				: 8,
+		closeParen				: 9,
+		memberOp				: 10,
+		number 					: 11,
+		operator				: 12,		
+	};
+
+	var Keyword =
+	{
+		end 					: "end",
+		directivePrefix			: "#",
+		dataBindingOpen			: "{",
+		dataBindingClose		: "}",
+		escape 					: "\\",
+	};
+
+	class Token
+	{
+		constructor()
+		{
+			this.type = TokenType.invalid;
+			this.str = "";
+			//this.index = -1;
+			this.start = -1;
+			this.length = 0;
+		}
+	}
+
+	class Lexer
+	{
+		constructor(str, regex, tokenMap)
+		{
+			this.str = str;
+			this.regex = new RegExp(regex, "g");
+			this.token = null;
+			this.cursor = 0;
+			this.next();
+		}
+
+		peek()
+		{
+			return this.token;
+		}
+
+		next()
+		{
+			let nextToken = this.token;
+
+			let result = this.regex.exec(this.str);
+			if (result)
+			{
+				let newToken = this.token = new Token();
+				newToken.str = result[0];
+				newToken.start = this.cursor = result.index;
+				newToken.length = newToken.str.length;
+
+				for (let i = 0; i < this.tokenMap.length; i++) 
+				{
+					if (result[i+1])
+					{
+						newToken.type = this.tokenMap[i];
+					}
+				}
+			}
+			else
+			{
+				this.cursor = this.regex.lastIndex = this.str.length;
+				this.token = null;
+			}
+
+			return nextToken;
+		}
+
+		find(type)
+		{
+			if (this.token === null)
+				return null;
+
+			let token = this.next();
+			if (token.type === type)
+				return token;
+		}
+
+		test(type)
+		{
+			if (this.token && this.token.type === type)
+				return this.next();
+			else
+				return null;
+		}
+
+		ended()
+		{
+			return (this.token === null);
+		}
+	}
+
+
+	//				."string"               .\\    .\#   .\{   .#directive           .{  .}       
+	var textRegex = /("(?:[^"\\\n\r]|\\.)*")|(\\\\)|(\\#)|(\\{)|(\s*#\s*[a-zA-Z]+\s*)|({)|(})|/g;
+	var textTokens = [TokenType.string, TokenType.escapedEscape, TokenType.escapedDirective, 
+		TokenType.escapedDataBinding, TokenType.directive, TokenType.openBinding, TokenType.closeBinding];
+
+	function CreateTextLexer(str)
+	{
+		return new Lexer(str, textRegex, textTokens);
+	}
+
+	//					 ."string"			     .#directive 		   .identifier	   .(   .)   .number 				 .operators
+	var directiveRegex = /("(?:[^"\\\n\r]|\\.)*")|(\s*#\s*[a-zA-Z]+\s*)|([$_a-zA-Z]\w*)|(\()|(\))|(-?(?:\d+\.?\d*|\.\d+))|([@#$%^&|+\-*/<>=\\[\]{}"':;,.?!])/g;
+	var directiveTokens = [TokenType.string, TokenType.directive, TokenType.identifier,
+		TokenType.openParen, TokenType.closeParen, TokenType.number, TokenType.operator];
+
+	function CreateDirectiveLexer(str)
+	{
+		return new Lexer(str, directiveRegex, directiveTokens);
+	}
+
+	//				   ."string"	 		   .identifier		  .number 				  .mem .operator
+	var bindingRegex = /("(?:[^"\\\n\r]|\\.)*")|(\$?[$_a-zA-Z]\w*)|(-?(?:\d+\.?\d*|\.\d+))|(\.)|([@#$%^&|+\-*/<>=\\[\]{}()"':;,?!])/g;
+	var bindingTokens = [TokenType.string, TokenType.identifier, TokenType.number, TokenType.memberOp, TokenType.operator];
+
+	function CreateDataBindingLexer(str)
+	{
+		return new Lexer(str, bindingRegex, bindingTokens);
+	}
+
+	var exprSyntaxRegex = /([a-zA-Z]+)|([@#$%^&|+\-*/<>=\\[\]{}()"':;,.?!])/g;
+	var exprSyntaxTokens = [TokenType.identifier, TokenType.operator];
+
+	function CreateDirectiveExpressionSyntaxLexer(str)
+	{
+		return new Lexer(str, exprSyntaxRegex, exprSyntaxTokens);
+	}
+
+	function parseTextContent(reader)
+	{
+		let plainTextStart = 0;
+		let plainText = "";
+		let compiledScript = "";
+
+		while (true)
+		{
+			let token = reader.peek();
+			if (!token)
+			{
+				break;
+			}
+
+			plainText += reader.str.substring(plainTextStart, token.start);
+			plainTextStart = token.start + token.length;
+
+			if (token.type === TokenType.directive)
+			{
+				// consume all remaining text (including plain text)
+				plainTextStart = reader.str.length;
+
+				// end parsing
+				break;
+			}
+			else if (token.type === TokenType.openBinding)
+			{
+				// put current plain text in a text binding list (maybe can just be a string of JS text)
+				if (compiledScript)
+				{
+					if (plainText)
+						compiledScript += " + " + JSON.stringify(plainText);
+				}
+				else
+				{
+					compiledScript = JSON.stringify(plainText);
+				}
+
+				plainText = "";
+
+				// Unmatching {}, fail
+				let closeToken = reader.find(TokenType.closeBinding);
+				if (!closeToken)
+					return null;
+
+				let dataBindingStr = reader.str.substring(token.start + token.length, closeToken.start);
+				plainTextStart = closeToken.start + closeToken.length;
+
+				// parse this data binding, then add to the binding list too
+				// TODO: we could also consider using the template literal
+				// slice() strips out {}
+				let dataBindingExpr = parseDataBindingToScript(dataBindingStr);
+				if (!dataBindingExpr) // error.
+					return null;
+
+				compiledScript += " + (" + dataBindingExpr + ")";
+			}
+			// TODO: let's generalize this, to merge these 3 checks and just do plainText += token.str.substr(1);
+			else if (token.type === TokenType.escapedDirective)
+			{
+				// unescape directive symbol (#) and add to the plain text
+				plainText += Keyword.directivePrefix;
+
+			}
+			else if (token.type === TokenType.escapedDataBinding)
+			{
+				// unescape databinding symbol ({) and add to the plain text
+				plainText += Keyword.dataBindingOpen;
+			}
+			else if (token.type === TokenType.escapedEscape)
+			{
+				plainText += Keyword.escape;
+			}
+			else
+			{
+				// kinda error, but handle it gracefully and just add that to plain text
+				console.error(`Unexpected token ${token.type} : ${token.str}`);
+				plainText += token.str;
+			}
+
+			reader.next();
+		}
+
+		// if plaintextstart is still 0, return null (no token encountered, and no modification to the string.)
+		if (plainTextStart === 0)
+			return null;
+
+		// add remainder to the plaintext
+		plainText += reader.str.substring(plainTextStart);
+
+		// if no token list, the plaintext will be the modified text and return null for binding
+		if (!compiledScript)
+			return [plainText, null];
+
+		// then add plaintext to the binding list (if there is any)
+		compiledScript += " + " + JSON.stringify(plainText);
+
+		// Create and return the binding function, all original text is consumed so return the empty string as the modified.
+		return ["", createDataBindingFunc(compiledScript, "\"\"")];
+	}
+
+	function parseDataBindingToScript(str)
+	{
+		// TODO: can this function return the required properties as well? so we can check which ones to check in binding function?
+		let lexer = CreateDataBindingLexer(str);
+		let expr = "";
+
+		if (!lexer.ended())
+		{
+			let token = lexer.next();
+			if (token.type === TokenType.identifier)
+			{
+				// Global var
+				if (token.str[0] === '$')
+				{
+					expr += token.str.substr(1);
+				}
+				else // Data member
+				{
+					expr += ("this." + token.str);
+				}
+			}
+			else if (token.type === TokenType.memberOp)
+			{
+				let identifier = lexer.test(TokenType.identifier);
+				if (!identifier) // expecting identifier after a member token (.)
+					return null;
+
+				// consume to skip testing global or not.
+				expr += token.str;
+				expr += identifier.str;
+			}
+			else // For all other tokens, just add to the expression.
+			{
+				expr += token.str; 
+			}
+		}
+
+		return expr;
+	}
+
+	function parseDataBindingToFunc(str, failure)
+	{
+		let expr = parseDataBindingToScript(str);
+		if (!expr)
+			return null;
+
+		return createDataBindingFunc(expr, failure);
+	}
+
+	function createDataBindingFunc(expr, failure)
+	{
+		if (!expr)
+			throw ("Empty expression cannot form data binding function.");
+
+		// TODO: should the binding function have a try catch block (which may be slower)?
+
+		let body = `if (data === null) return ${failure};
+		   return (${expr});`;
+
+		/*jshint -W054 */
+		try
+		{
+			return new Function("data", body);	
+		}
+		catch (e)
+		{
+			console.error(`Encountered error when creating data binding function based on expression (${expr}). The error was ${e.message}`);
+			return null;
+		}
+	}
+
+	function parseDirective(beginNode)
+	{
+		// let tokens = tokenize(beginNode.data);
+		// let reader = new TokenReader(tokens);
+
+		// if (reader.test(TokenType.directivePrefix) === null)
+		// 	return null;
+
+		// let directiveToken = reader.test(TokenType.identifier);
+		// if (directiveToken === null)
+		// 	return null;
+
+		// let directiveName = directiveToken.str;
+		// let directiveDef = findDirectiveDefinition(directiveName);
+		// if (directiveDef === null)
+		// 	return null;
+
+		let directiveDef = null;
+		let directive = null;//new directiveDef.cls();
+
+		let node = beginNode;
+		//let clauseName = directiveName;
+		while (node)
+		{
+			//let text = node.data;
+			let reader = CreateDirectiveLexer(node.data); // to save some allocation maybe reuse the same reader and just assign different string to it?
+			
+			let directiveToken = reader.test(TokenType.directive);
+			if (!directiveToken)
+				return null;
+
+			let directiveName = getDirectiveNameFromToken(directiveToken);
+
+			if (!directive)
+			{
+				directiveDef = findDirectiveDefinition(directiveName);
+				if (!directiveDef)
+					return null;
+
+				directive = new directiveDef.cls();
+			}
+
+			let clauseName = directiveName;
+			if (clauseName === Keyword.end)
+			{
+				if (!reader.ended())
+					node.splitText(reader.cursor);
+				break;
+			}
+
+			let clauseDef = directiveDef.findClause(clauseName);
+			if (!clauseDef)
+				return null;
+
+			let assignTo = directive;
+			if (clauseDef.group)
+			{
+				assignTo = {};
+				directive[clauseDef.group].push(assignTo);
+			}
+
+			// TODO: The assignTo may not be directive (look at group)
+			if (!clauseDef.parseExpr(reader, assignTo))
+				return null;
+
+			if (reader.ended())
+				node = node.nextSibling;
+			else
+				node = node.splitText(reader.cursor);				
+
+			// TODO: The assignTo may not be directive (look at group)
+			let nextNode = clauseDef.parseContent(node, assignTo);
+			if (!nextNode)
+				return null;
+
+			node = nextNode; 
+		}
+
+		let endNode = node;
+		if (endNode === null || endNode === beginNode || endNode.nodeType !== Node.TEXT_NODE)
+			throw ("Incorrect parsing, invalid end node, or end node is the same as begin node.");
+
+		let parent = beginNode.parentNode;
+		let removingNode = beginNode.nextSibling;
+		while (removingNode !== null && removingNode !== endNode)
+		{
+			parent.removeChild(removingNode);
+			removingNode = beginNode.nextSibling;
+		}
+
+		return directive;
+
+		// tokenize start node.
+		// skip ##
+		// next token: directive name
+		// parse (...)
+		// if there's token left, splitText()
+		// ...
+		// search for mid node (e.g. ##elif ##else)
+		// any node in between will belong to the sub component
+		// search for ##end, any token before splitText(), then splitText() for the rest.
+		// any nodes between beginNode and endNode, will be put into a component, (if there's none, that's an error)
+		// new directive is created with the enclosed component
+		// a <placeholder> node is created in place of all removed nodes, assign the placeholder to the directive.
+	}
+
+	function findDirectiveDefinition(name)
+	{
+		return directives[name] || null;
+	}
+
+	function getDirectiveNameFromToken(token)
+	{
+		return /[a-zA-Z]+/.exec(token.str)[0];
+	}
+
+	class DirectiveDefinition
+	{
+		constructor(name, config, cls)
+		{
+			this.name = name;
+			this.cls = cls;
+			this.clauses = {};
+
+			this.setup(config);
+		}
+
+		setup(config)
+		{
+			let clauseDefs = [];
+			for (let i = 0; i < config.clauses.length; i++) 
+			{
+				let clauseConfig = config.clauses[i];
+				let keywords = clauseConfig.keyword.split(/\s*,\s*/);
+				let clauseDef = new ClauseDefinition(clauseConfig.expression, clauseConfig.content);
+				clauseDefs.push(clauseDef);
+
+				for (var ki = 0; ki < keywords.length; ki++) 
+				{
+					let keyword = keywords[ki].trim();
+					if (!keyword)
+					{	
+						console.error(`Empty keyword found in directive clause config (${clauseConfig.keyword})`);
+						continue;
+					}
+
+					if (this.clauses[keyword])
+					{
+						console.error(`Duplicated keyword ${keyword} found in directive clause config (${clauseConfig.keyword})`);
+						continue;
+					}
+
+					this.clauses[keyword] = clauseDef;
+				}
+			}
+
+			let branches = Object.keys(this.clauses);
+			let mainBranchIdx = branches.indexOf(this.name);
+			if (mainBranchIdx >= 0)
+				branches.splice(mainBranchIdx, 1);
+			else
+				console.error(`No main clause found for directive ${this.name}, this directive will not be usable.`);
+
+			for (let i = 0; i < clauseDefs.length; i++) 
+			{
+				let clauseDef = clauseDefs[i];
+				let clauseConfig = config.clauses[i];
+				if (!clauseConfig.isFinal)
+					clauseDef.branches = branches;
+			}
+		}
+
+		findClause(name)
+		{
+			return this.clauses[name] || null;
+		}
+	}
+
+	var DirectiveExpressionElementType =
+	{
+		keyword			: 0,
+		symbol			: 1,
+		constant		: 2,
+		binding			: 3,
+	};
+
+	class DirectiveExpressionElement
+	{
+		constructor(type, str)
+		{
+			this.type = type;
+			this.str = str;
+		}
+	}
+
+	class ClauseDefinition
+	{
+		constructor(expr, content, group)
+		{
+			this.content = content || "";
+			this.group = group || "";
+			this.elements = compileDirectiveExprElements(expr);
+			this.branches = [];
+		}
+
+		parseExpr(lexer, assignTo)
+		{
+			for (let i = 0; i < this.elements.length; i++) 
+			{
+				// Unexpected ending
+				if (lexer.ended())
+					return false;
+
+				let element = this.elements[i];
+				if (element.type === DirectiveExpressionElementType.keyword)
+				{
+					let token = lexer.next();
+
+					// Wrong keyword
+					if (token.str !== element.str)
+						return false;
+
+					// Wrong type
+					if (token.type !== TokenType.identifier &&
+						token.type !== TokenType.operator &&
+						token.type !== TokenType.openParen &&
+						token.type !== TokenType.closeParen)
+						return false;
+				}
+				else if (element.type === DirectiveExpressionElementType.symbol)
+				{
+					let token = lexer.next();
+
+					if (token.type !== TokenType.identifier)
+						return false;
+
+					assignTo[element.str] = token.str;
+				}
+				else
+				{
+					let nextElement = this.elements[i+1];
+
+					// constants and data bindings must be terminated by the next keyword element.
+					if (!nextElement || nextElement.type !== DirectiveExpressionElementType.keyword) 
+						return false;
+
+					let script = parseUntilTerminate(lexer, nextElement.str);
+					if (!script) // empty or other invalid script causes failure.
+						return false;
+
+					if (element.type === DirectiveExpressionElementType.constant)
+					{						
+						try
+						{
+							/*jshint -W054 */
+							let evaluator = new Function(`return (${script});`); 
+
+							let constant = evaluator();
+							if (constant === undefined) // should we also check the expected type? (but how do we know?, maybe we have to check it at runtime?)
+								return false;
+
+							assignTo[element.str] = constant;	
+						}
+						catch (e)
+						{
+							console.error(`Encountered error when evaluating directive const expression (${script}). The error was ${e.message}`);
+							return false;
+						}
+					}
+					else if (element.type === DirectiveExpressionElementType.binding)
+					{
+						let bindingFunc = parseDataBindingToFunc(script, "null");
+						if (!bindingFunc)
+							return false;
+
+						assignTo[element.str] = bindingFunc;
+					}
+					else // unexpected element type.
+					{
+						return false;
+					}
+				}
+			}
+
+			return true;
+		}
+
+		parseContent(firstInnerNode, assignTo)
+		{
+			let node = firstInnerNode;
+			let depth = 0;
+			while (node)
+			{
+				if (node.nodeType === Node.TEXT_NODE)
+				{
+					//let tokens = tokenize(node.data);
+					let reader = CreateTextLexer(node.data);
+
+					while (!reader.ended())
+					{
+						let token = reader.next();
+						if (token.type === TokenType.directive)
+						{
+							// let directiveToken = reader.test(TokenType.identifier);
+							// if (directiveToken === null)
+							// 	return null;
+
+							let directiveName = getDirectiveNameFromToken(token); //directiveToken.str;
+							
+							let beginNestedDirective = !!findDirectiveDefinition(directiveName);
+							let endNestedDirective = (depth > 0 && directiveName === Keyword.end);
+
+							if (beginNestedDirective)
+							{
+								depth++;
+							}
+							else if (endNestedDirective)
+							{
+								depth--;
+							}
+							else if (depth === 0)
+							{
+								// ending the whole clause content.
+								if (directiveName === Keyword.end ||
+									this.branches.includes(directiveName))
+								{
+									let endNode = node;
+
+									// split out the part before
+									if (token.start > 0)
+										endNode = node.splitText(token.start);
+
+									if (endNode.parentNode !== firstInnerNode.parentNode)
+										return null;
+
+									// grab everything from first to last node (node before end node) and form a new component
+									let componentContent = document.createDocumentFragment();
+									let transferNode = firstInnerNode;
+									while (transferNode !== endNode)
+									{
+										// Unexpected end, technically shouldn't happen since we already checked first and end node have the same parent.
+										if (!transferNode)
+											return null;
+
+										let nextNode = transferNode.nextSibling;
+										componentContent.appendChild(transferNode); // no need to remove first?
+										transferNode = nextNode;
+									}
+
+									if (componentContent.hasChildNodes())
+									{
+										// Not supposed to have content.
+										if (!this.content || !assignTo)
+											return null;
+
+										let componentDef = new ComponentDefinition(componentContent);
+
+										// Relax this limitation.
+										// Does not support sub component with more than one root node at the moment.
+										//if (componentDef.content.childNodes.length > 1)
+										//	return null;
+
+										assignTo[this.content] = componentDef;
+									}
+									else if (this.content)
+									{
+										// Expecting content.
+										return null;
+									}
+
+									return endNode;
+								}
+							}
+							// else the directive is branches in other directives, skip forward.
+						}
+					}
+				}
+				
+				node = node.nextSibling;
+			}
+
+			// no ##end found, fail.
+			return null;
+		}
+	}
+
+	function compileDirectiveExprElements(expr)
+	{
+		let elements = [];
+		let lexer = CreateDirectiveExpressionSyntaxLexer(expr);
+		let token = null;
+		while ((token = lexer.next()) !== null)
+		{
+			let type = DirectiveExpressionElementType.keyword;
+			let str = token.str;
+
+			if (token.type === TokenType.identifier)
+			{
+				let intro = lexer.peek();
+				if (intro && intro.type === TokenType.operator && intro.str === "%")
+				{
+					lexer.next();
+					let typeSpecifier = lexer.test(TokenType.identifier);
+					if (!typeSpecifier)
+					{
+						console.error(`Missing type specifier for ${str}, in expression '${expr}'`);
+						return [];
+					}
+					else if (typeSpecifier.str === "s")
+					{
+						type = DirectiveExpressionElementType.symbol;
+					}
+					else if (typeSpecifier.str === "c")
+					{
+						type = DirectiveExpressionElementType.constant;
+					}
+					else if (typeSpecifier.str === "b")
+					{
+						type = DirectiveExpressionElementType.binding;
+					}
+					else
+					{
+						console.error(`Invalid type specifier '${typeSpecifier.str}' for ${str}, in expression '${expr}'`);
+						return [];
+					}
+				}
+			}
+			
+			elements.push(new DirectiveExpressionElement(type, str));
+		}
+
+		return elements;
+	}
+
+	function parseUntilTerminate(lexer, terminator)
+	{
+		let script = "";
+		let depth = 0;
+
+		while (true)
+		{
+			let token = lexer.peek();
+			if (!token) // unexpected end
+				return "";
+
+			if (depth === 0 && token.str === terminator) // any matching string is fine, type is not really needed.
+				return script;
+
+			if (token.type === TokenType.openParen)
+				depth++;
+			else if (token.type === TokenType.closeParen && depth > 0)
+				depth--;
+
+			script += token.str;
+			lexer.next();
+		}
+	}
+
 
 // ███████╗██╗     ███████╗███╗   ███╗███████╗███╗   ██╗████████╗
 // ██╔════╝██║     ██╔════╝████╗ ████║██╔════╝████╗  ██║╚══██╔══╝
@@ -446,7 +1540,6 @@ var UI = new (function(global)
 // ██╔══╝  ██║     ██╔══╝  ██║╚██╔╝██║██╔══╝  ██║╚██╗██║   ██║   
 // ███████╗███████╗███████╗██║ ╚═╝ ██║███████╗██║ ╚████║   ██║   
 // ╚══════╝╚══════╝╚══════╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝   ╚═╝   
-
 
 	function CustomElement() 
 	{
