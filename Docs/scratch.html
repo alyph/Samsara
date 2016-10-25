@@ -20,11 +20,18 @@
 	}
 	</style>
 	<script>
-		this.x = 0;
-		this.y = 1;
-		this.p = function()
+		return class
 		{
-			return this.x.bark();
+			constructor()
+			{
+				this.x = 0;
+				this.y = 1;
+			}
+
+			p()
+			{
+				return this.x.bark();
+			}
 		};
 	</script>
 	<div id="root">
@@ -41,7 +48,7 @@
 		
 		
 		##switch(foo)
-		##case 1: <one></one>
+		##case 1: <one $text="`good ${person}`"></one>
 		##case 2: <two></two>
 		##default: <void></void>
 		##end

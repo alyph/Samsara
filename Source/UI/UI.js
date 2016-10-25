@@ -362,15 +362,6 @@ var UI = new (function(global)
 		}
 	});
 
-	class EventBindingInfo
-	{
-		constructor()
-		{
-			this.type = "";
-			this.listener = null;
-		}
-	}
-
 	var pendingTemplates = {};
 
 	function registerTemplate(templateElement)
@@ -392,8 +383,8 @@ var UI = new (function(global)
 		{
 			finishRegisteringTemplate(template);
 		}
-	    
-	    return template;
+		
+		return template;
 	}
 
 	function finishRegisteringTemplate(template)
@@ -524,11 +515,48 @@ var UI = new (function(global)
 			// text bindings
 			// event bindings
 			// directives
+
+			this.bindings.length = 0;
+			let bindingsDef = this.definition.bindings;
+			for (let i = 0; i < bindingsDef.length; i++) 
+			{
+				let bindingDef = bindingsDef[i];
+				let node = traverseNodePath(parentNode, bindingDef.path);
+				bindingDef.init(node, this);
+				this.bindings.push(new BindingInstance(node, bindingDef));
+			}
+
+			this.directives.length = 0;
+			let directiveDefs = this.definition.directives;
+			for (let i = 0; i < directiveDefs.length; i++) 
+			{
+				let directiveDef = directiveDefs[i];
+				let node = traverseNodePath(parentNode, directiveDef.path);
+				this.directives.push(new DirectiveInstance(node, node.nextSibling, directiveDef.directive));
+			}
+			// TODO: if there's already data property set, we need make sure the refresh event is bound
 		}
 
 		detach()
 		{
-			// unbind 
+			if (!this.isAttached())
+				throw ("Trying to detach the component when it's not yet attached.");
+
+			let parent = this.firstNode.parent;
+			let removingNode = this.firstNode;
+			while (removingNode && removingNode !== this.lastNode)
+			{
+				let next = removingNode.nextSibling;
+				parent.removeChild(removingNode);
+				removingNode = next;
+			}
+			parent.removeChild(this.lastNode);
+
+			this.bindings.length = 0;
+			this.directives.length = 0;
+
+			// TODO: clear and unbind data		
+			
 		}
 
 		replace(replacedNode)
@@ -578,12 +606,119 @@ var UI = new (function(global)
 		}
 	}
 
+	function traverseNodePath(parent, path)
+	{
+		let node = parent;
+		for (let i = 0; i < path.length; i++) 
+		{
+			node = node.childNodes[path[i]];
+		}
+
+		if (!node)
+			throw ("Invalid path!");
+
+		return node;
+	}
+
 	class BindingInstance
 	{
 		constructor(node, binding)
 		{
 			this.node = node;
 			this.binding = binding;
+		}
+	}
+
+	class EventBindingInfo
+	{
+		constructor()
+		{
+			this.type = "";
+			this.listener = null;
+		}
+	}
+
+	class AttributeBindingInfo
+	{
+		constructor()
+		{
+			this.name = "";
+			this.func = null;
+		}
+	}
+
+	class ElementBinding
+	{
+		constructor(path)
+		{
+			this.path = path.concat();
+			this.eventBindings = [];
+			this.attributeBindings = [];
+			this.propertyBindings = [];
+		}
+
+		init(node, component)
+		{
+			for (let i = 0; i < this.eventBindings.length; i++) 
+			{
+				let eventBinding = this.eventBindings[i];
+
+				// TODO: if we reuse node, then we must remove the listener first otherwise the event will be bound twice.
+				// TODO: bind() is slow, avoid using or at least replace it with a simpler version.
+				node.addEventListener(eventBinding.type, eventBinding.listener.bind(component));
+			}
+		}
+
+		apply(node, data)
+		{
+			for (let i = 0; i < this.attributeBindings.length; i++) 
+			{
+				let attrBinding = this.attributeBindings[i];
+				// TODO: compare value before set? is there any perf implication when setting the same value?
+				node.setAttribute(attrBinding.name, attrBinding.func.call(node, data));
+			}
+
+			if (this.propertyBindings.length > 0)
+			{
+				// NOTE: the node must be a custom element that has a "component" property.
+				let component = node.component;
+				for (let i = 0; i < this.propertyBindings.length; i++) 
+				{
+					let propBinding = this.propertyBindings[i];
+					// TODO: compare value before set? is there any perf implication when setting the same value?
+					component.setDataProp(propBinding.name, propBinding.func.call(node, data));
+				}
+				component.refresh();
+			}
+		}
+	}
+
+	class TextBinding
+	{
+		constructor(path, bindingFunc)
+		{
+			this.path = path.concat();
+			this.func = bindingFunc;
+		}
+
+		init(node, component)
+		{
+
+		}
+
+		apply(node, data)
+		{
+			// TODO: compare value before set? is there any perf implication when setting the same value?
+			node.data = this.func.call(node, data);
+		}
+	}
+
+	class DirectiveBinding
+	{
+		constructor(path, directive)
+		{
+			this.path = path.concat();
+			this.directive = directive;
 		}
 	}
 
@@ -605,7 +740,7 @@ var UI = new (function(global)
 				return;
 			}
 
-			num = num || 1;
+			num = num || 0;
 
 			for (let i = this.components.length - 1; i >= 0; i--) 
 			{				
@@ -647,31 +782,123 @@ var UI = new (function(global)
 
 			this.content = content;
 
-			// TODO: trim root (remove text nodes that are only white spaces)
+			// TODO: style not allowed for non-shadow-rooted component
+			// TODO: handle and remove <script>			
 
-			// TODO: handle <script>			
-			this.processNodes(content.firstChild);
+			// TODO: trim head (skip style node) and tail white spaced text node (may or may not need)
+			// maybe call normalize();
+
+			this.bindings = [];
+			this.directives = [];
+
+			let path = [];
+			this.processNodes(content, path);
 			
 		}
 
-		processNodes(firstNode)
+		processNodes(parent, path) // TODO: maybe just ake a parent, and then loop through its childNodes
 		{
-			let node = firstNode;
-			let parent = firstNode.parentNode;
+			path.push(0);
+			let node = parent.firstChild;
+			//let parent = firstNode.parentNode;
 			while (node !== null)
 			{
 				// Element
 				if (node.nodeType === Node.ELEMENT_NODE)
 				{
 					// skip <style> and <script> 
+					let tagName = node.tagName.toUpperCase();
+					let isCustomElement = (tagName.includes('-'));
+					if (tagName !== "STYLE" && tagName !== "SCRIPT" && node.hasAttributes())
+					{
+						let elementBinding = new ElementBinding(path);
+						let attrs = node.attributes;
+						let attrsToRemove = [];
+						for (let i = 0; i < attrs.length; i++) 
+						{
+							let attr = attrs[i];
+							let attrName = attr.name;
+							if (attrName.startsWith("$on-"))
+							{
+								// event bindings
+								attrsToRemove.push(attrName);
+								let eventBinding = new EventBindingInfo();
+								eventBinding.type = attrName.substr(4);
+								eventBinding.listener = parseEventListener(attr.value);
 
-					// attribute bindings (including id, class? id may be bit dangerous, but class is ok, not sure)
+								// TODO: add to element binding
+								if (eventBinding.listener)
+								{
+									elementBinding.eventBindings.push(eventBinding);
+								}
 
-					// property bindings （must be custom element)
+							}
+							else if (attrName.startsWith('$'))
+							{
+								// property bindings （must be custom element)
+								attrsToRemove.push(attrName);
+								let propBinding = new AttributeBindingInfo();
+								propBinding.name = attrName.substr(1);
+								propBinding.func = parseDataBindingToFunc(attr.value, null);
 
-					// event bindings
+								if (propBinding.func)
+								{
+									if (isCustomElement)
+									{
+										// TODO: add to element binding
+										elementBinding.propertyBindings.push(propBinding);
+								
+									}
+									else
+									{
+										console.error(`Property binding ${attrName}=${attr.value} found on node ${tagName}, which is not a custom element and does not support property binding. full content: ${node.outerHTML}`);
+									}
+								}								
+							}
+							else
+							{
+								// attribute bindings (including id, class? id may be bit dangerous, but class is ok, not sure)
+								let lexer = CreateTextLexer(attr.value);
+								let result = parseTextContent(lexer);
+								if (result)
+								{
+									if (!lexer.ended())
+									{
+										console.error(`Attribute ${attrName} has text remainer after parsing, which will be ignored: ${attr.value.substr(lexer.peek().start)}, full content: ${node.outerHTML}`);
+									}
 
-					this.processNodes(node.firstChild);
+									let [modifiedAttrValue, bindingFunc] = result;
+									if (bindingFunc)
+									{
+										attrsToRemove.push(attrName);
+										// TODO: add to element binding
+										let attrBinding = new AttributeBindingInfo();
+										attrBinding.name = attrName;
+										attrBinding.func = bindingFunc;
+										elementBinding.attributeBindings.push(attrBinding);
+									}
+									else
+									{
+										attr.value = modifiedAttrValue;
+									}
+								}
+							}
+						}
+
+						if (elementBinding.eventBindings.length > 0 ||
+							elementBinding.propertyBindings.length > 0 ||
+							elementBinding.attributeBindings.length > 0)
+						{
+							this.bindings.push(elementBinding);
+						}
+
+						for (let i = 0; i < attrsToRemove.length; i++) 
+						{
+							node.removeAttribute(attrsToRemove[i]);
+						}
+						
+						this.processNodes(node, path);	
+					}
 				}
 				// Text node
 				else if (node.nodeType === Node.TEXT_NODE)
@@ -691,13 +918,15 @@ var UI = new (function(global)
 
 					if (result)
 					{
-						let [modifiedText, textBinding] = result;
+						let [modifiedText, bindingFunc] = result;
 						
 						node.data = modifiedText;
 						
-						if (textBinding)
+						if (bindingFunc)
 						{
 							// TODO: hook up text binding
+							let textBinding = new TextBinding(path, bindingFunc);
+							this.bindings.push(textBinding);
 						}
 
 
@@ -723,20 +952,28 @@ var UI = new (function(global)
 						if (nextToken && nextToken.type === TokenType.directive)
 						{
 							let directiveNode = document.createTextNode(originalText.substr(nextToken.start));
-							node.parent.insertBefore(node.nextSibling);
+							parent.insertBefore(node.nextSibling);
 
 							let directive = parseDirective(directiveNode);
 							if (directive)
 							{
+								path[path.length-1]++;
+								let directiveBinding = new DirectiveBinding(path, directive);
+								this.directives.push(directiveBinding);
+
 								// TODO: add to directive list
 								//parent.replaceChild(createPlaceholder(), directiveNode);
 								directiveNode.data = ""; // hidden directive begin node.
 
 								let directiveEndNode = directiveNode.nextSibling;
+								if (!directiveEndNode)
+									throw ("Found directive without end node.");
+
 								directiveEndNode.data = ""; // hidden directive end node.
 
 								// if directive parsed, a <placeholder> node will be added, skip that one.
 								node = directiveEndNode; // skip these two already processed nodes.
+								path[path.length-1]++;
 							}
 							else
 							{
@@ -753,7 +990,10 @@ var UI = new (function(global)
 
 				// tentatively
 				node = node.nextSibling;
+				path[path.length-1]++;
 			}
+
+			path.pop();
 		}
 	}
 
@@ -763,9 +1003,7 @@ var UI = new (function(global)
 		directive				: 0,
 		openBinding				: 1,
 		closeBinding 			: 2,
-		escapedDirective		: 3,
-		escapedDataBinding		: 4,
-		escapedEscape			: 5,
+		escapedSymbol			: 3,
 		identifier				: 6,
 		string 					: 7,
 		openParen				: 8,
@@ -778,9 +1016,6 @@ var UI = new (function(global)
 	var Keyword =
 	{
 		end 					: "end",
-		directivePrefix			: "#",
-		dataBindingOpen			: "{",
-		dataBindingClose		: "}",
 		escape 					: "\\",
 	};
 
@@ -866,10 +1101,10 @@ var UI = new (function(global)
 	}
 
 
-	//				."string"               .\\    .\#   .\{   .#directive           .{  .}       
-	var textRegex = /("(?:[^"\\\n\r]|\\.)*")|(\\\\)|(\\#)|(\\{)|(\s*#\s*[a-zA-Z]+\s*)|({)|(})|/g;
-	var textTokens = [TokenType.string, TokenType.escapedEscape, TokenType.escapedDirective, 
-		TokenType.escapedDataBinding, TokenType.directive, TokenType.openBinding, TokenType.closeBinding];
+	//				."string"               .\\#{      .#directive           .{  .}       
+	var textRegex = /("(?:[^"\\\n\r]|\\.)*")|(\\[\\#{])|(\s*#\s*[a-zA-Z]+\s*)|({)|(})|/g;
+	var textTokens = [TokenType.string, TokenType.escapedSymbol, TokenType.directive, 
+		TokenType.openBinding, TokenType.closeBinding];
 
 	function CreateTextLexer(str)
 	{
@@ -961,20 +1196,11 @@ var UI = new (function(global)
 				compiledScript += " + (" + dataBindingExpr + ")";
 			}
 			// TODO: let's generalize this, to merge these 3 checks and just do plainText += token.str.substr(1);
-			else if (token.type === TokenType.escapedDirective)
+			else if (token.type === TokenType.escapedSymbol)
 			{
-				// unescape directive symbol (#) and add to the plain text
-				plainText += Keyword.directivePrefix;
+				// unescape the escaped symbol (removing the \)
+				plainText += token.str.substr(1);
 
-			}
-			else if (token.type === TokenType.escapedDataBinding)
-			{
-				// unescape databinding symbol ({) and add to the plain text
-				plainText += Keyword.dataBindingOpen;
-			}
-			else if (token.type === TokenType.escapedEscape)
-			{
-				plainText += Keyword.escape;
 			}
 			else
 			{
@@ -1072,6 +1298,31 @@ var UI = new (function(global)
 		{
 			console.error(`Encountered error when creating data binding function based on expression (${expr}). The error was ${e.message}`);
 			return null;
+		}
+	}
+
+	function parseEventListener(str)
+	{
+		if (str.startsWith("->"))
+		{
+			return function(e)
+			{
+				e.stopImmediatePropagation();
+				e.currentTarget.dispatchEvent(
+					new CustomEvent(str.substr(2), { bubbles: true, detail: { data: this.data } }));
+			};
+		}
+		else
+		{
+			// TODO: if we can find all the used properties, maybe we can check to make sure all the properties exist
+			// or at least we should try catch the function call.
+			let script = parseDataBindingToScript(str);
+
+			let body = `let data = this.data;
+			${script};`;
+
+			/*jshint -W054 */
+			return new Function("e", body);
 		}
 	}
 
@@ -1563,67 +1814,67 @@ var UI = new (function(global)
 		var templateElem = template.element;
 
 		// TODO: do not create shadow root if the content is empty?
-        // Add the template content to the shadow root
+		// Add the template content to the shadow root
 		var clonedContent = document.importNode(templateElem.content, true);
-        var shadowRoot = this.createShadowRoot();
-        shadowRoot.appendChild(clonedContent);
+		var shadowRoot = this.createShadowRoot();
+		shadowRoot.appendChild(clonedContent);
 
-        // TODO: simplify
-        var numClasses = templateElem.classList.length;
-        for (var i = 0; i < numClasses; i++) 
-        {
-        	this.classList.add(templateElem.classList.item(i));
-        }
+		// TODO: simplify
+		var numClasses = templateElem.classList.length;
+		for (var i = 0; i < numClasses; i++) 
+		{
+			this.classList.add(templateElem.classList.item(i));
+		}
 
-        // TODO: may want to inline to improve perf.
-        //attachBehaviors(this);
-        //initBindings(this);
+		// TODO: may want to inline to improve perf.
+		//attachBehaviors(this);
+		//initBindings(this);
 
-        // TODO: maybe we should only do these when attached
-        // and only setup the binding observer after attached.
-        // we can still accept any dataContext when bind() is called.
-        // if we do that make sure we clear that everytime (or on detach),
-        // because the attached callback may occur multiple times.
+		// TODO: maybe we should only do these when attached
+		// and only setup the binding observer after attached.
+		// we can still accept any dataContext when bind() is called.
+		// if we do that make sure we clear that everytime (or on detach),
+		// because the attached callback may occur multiple times.
 
-        var infos = this.template.elementInfos;
-        var ni = infos.length;
-        for (i = 0; i < ni; i++) 
-        {
-        	var info = infos[i];
-        	var element = traverseSubElement(this, info.path);
+		var infos = this.template.elementInfos;
+		var ni = infos.length;
+		for (i = 0; i < ni; i++) 
+		{
+			var info = infos[i];
+			var element = traverseSubElement(this, info.path);
 
-        	if (info.bindingFunc !== null || info.propBindings.length > 0)
-        	{
-        		var binding = new Binding();
+			if (info.bindingFunc !== null || info.propBindings.length > 0)
+			{
+				var binding = new Binding();
 				binding.element = element;
 				binding.func = info.bindingFunc;
 				binding.propBindings = info.propBindings;
 				this.bindings.push(binding);
-        	}
+			}
 
-        	// TODO: need double check this is custom element?
-        	for (var p = 0; p < info.properties.length; p++) 
-        	{
-        		var prop = info.properties[p];
-        		prop.property.set(element, prop.value);   		
-        	}
+			// TODO: need double check this is custom element?
+			for (var p = 0; p < info.properties.length; p++) 
+			{
+				var prop = info.properties[p];
+				prop.property.set(element, prop.value);   		
+			}
 
-        	for (var ei = 0; ei < info.eventBindings.length; ei++) 
-        	{
-        		var eventBinding = info.eventBindings[ei];
-        		// TODO: bind() is slow, avoid using or at least replace it with a simpler version.
-        		element.addEventListener(eventBinding.type, eventBinding.listener.bind(this));
-        	}
+			for (var ei = 0; ei < info.eventBindings.length; ei++) 
+			{
+				var eventBinding = info.eventBindings[ei];
+				// TODO: bind() is slow, avoid using or at least replace it with a simpler version.
+				element.addEventListener(eventBinding.type, eventBinding.listener.bind(this));
+			}
 
-        	// Lastly attach the behaviors, so they won't accidently receive the property set event,
-        	// They are supposed to init using onSetup event, and then start listening to onCustomPropertyChanged
-        	for (var b = 0; b < info.behaviors.length; b++) 
-        	{
-        		info.behaviors[b].attached(element);
-        	}
-        }
+			// Lastly attach the behaviors, so they won't accidently receive the property set event,
+			// They are supposed to init using onSetup event, and then start listening to onCustomPropertyChanged
+			for (var b = 0; b < info.behaviors.length; b++) 
+			{
+				info.behaviors[b].attached(element);
+			}
+		}
 
-        //this.bind(null);
+		//this.bind(null);
 	};
 
 	customElemProto.bind = function(data)

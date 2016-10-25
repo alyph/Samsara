@@ -2,6 +2,8 @@
 
 TODO:
 
+UI REVAMP:
+
 	✔	directive parsing revamp (high level tokenizing) @done (16-10-11 21:52)
 	✔	able to replace \# \{ @done (16-10-11 21:52)
 	✔	parse directive expr @done (16-10-12 22:43)
@@ -10,29 +12,34 @@ TODO:
 	✔	fix data binding regex, likely will need split to open binding { and close } @done (16-10-15 15:56)
 	✔	new function throw exception, need try catch @done (16-10-15 15:56)
 	✔	directive config @done (16-10-15 22:04)
-	☐	clause group, content (what happens if they are "")
-	☐	escaped blah, doesn't need 3 different token types, just merge them all.
+	✔	clause group, content (what happens if they are "") @done (16-10-15 22:11)
+	✔	escaped blah, doesn't need 3 different token types, just merge them all. @done (16-10-15 22:28)
 
-	☐	element binding (property, attribute, event)
-	☐	runtime instance hookup (traverse path, binding, directive instances)
-
-	☐	observable object (passive style)
-	☐	component wise <script> (data object prototype)
+	✔	element binding (property, attribute, event) @done (16-10-19 22:12)
+	✔	runtime instance hookup (traverse path, binding, directive instances) @done (16-10-19 22:12)
+	✔	impl all the binding functions @done (16-10-19 22:12)
+	✔	impl all other component functions @done (16-10-19 22:32)
 
 	☐	clean up template and element to use component 
 
+	☐	observable object (passive style, maybe just a event regist)
+	☐	component wise <script> (data object prototype)
+
 	☐	any error logging needed.
+
+	☐	add other basic directives (if, switch)
+	☐	behaviors (redesign?)
 
 -----------------------------------------------------------------------
 
 	☐	route init() (should renamed to loaded()), add all objects to the map, then call loaded() on them.
-	☐	opportunity based combat actions
+	✔	opportunity based combat actions @done (16-10-15 22:43)
 
 	☐	convert world update to use the LatentUpdater
 		
 	☐	add sprites ref func $img()
-	☐	replace isatlocal with partylocal : local, since it s exclusive, or make isatlocal exclusive
-	☐	change locale to locale within relationship to a more generic relationship and fix the find potential travel origin to check single connection special case rather than within relation
+	✔	replace isatlocal with partylocal : local, since it s exclusive, or make isatlocal exclusive @done (16-10-15 22:43)
+	✔	change locale to locale within relationship to a more generic relationship and fix the find potential travel origin to check single connection special case rather than within relation @done (16-10-15 22:43)
 	☐	objects set by find references should have $ref set to true (?)
 	☐	image setting in template
 
@@ -55,12 +62,12 @@ TODO:
 	✔	activity merge @done (14-04-05 00:14)
 
 UI:
-	☐	may get rid of addchild concept so it doesn't matter where in the chain addchild is called...
+	✔	may get rid of addchild concept so it doesn't matter where in the chain addchild is called... @done (16-10-15 22:42)
 	☐	get rid of game query
 
 Future:
 	☐	better expression($e) imp
-	☐	hasExplored real imp
+	✔	hasExplored real imp @done (16-10-15 22:42)
 	☐	upgrade to latest head.js
 
 
