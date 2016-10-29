@@ -1,5 +1,5 @@
 
-<template id="player-view" $behaviors="player-view">
+<template id="player-view">
 	<style>
 	:host
 	{ 
@@ -50,13 +50,27 @@
 		width: 384px;
 	}*/	
 	</style>
-	<paragraph-list $on-action-selected="finishChooseAction(e.detail.data)">{{paragraphs}}</paragraph-list>
+	<div>
+		#foreach (paragraph in player.paragraphs)
+			#if (paragraph.constructor === $Narrative)
+			<narrative-view $text="paragraph.text"></narrative-view>
+			#elif (paragraph.constructor === $ActionChoice)
+			<div>
+				#foreach (action in paragraph.actions)
+				<action-view $action="action"></action-view>
+				#end
+			</div>
+			#end
+		#end
+	</div>
+
+	<!--paragraph-list $on-action-selected="finishChooseAction(e.detail.data)">{{paragraphs}}</paragraph-list-->
 	<!--sprite-img id="backdrop">{{backdrop}}</sprite-img>
 	<div id="foreground"></div>
 	<action-list id="actions" $on-action-selected="finishChooseAction(e.target.dataContext)">{{actions}}</action-list-->
 </template>
 
-<template id="paragraph-list" $behaviors="collection" 
+<!--template id="paragraph-list" $behaviors="collection" 
 	$item-templates="narrative-view actionchoice-view">
 	<style>
 	:host
@@ -65,15 +79,19 @@
 	}		
 	</style>
 	<content></content>
-</template>
+</template-->
 
-<template id="narrative-view" data-class="Narrative">
+<template id="narrative-view">
 	<style>
+	:host
+	{
+		display: block;
+	}
 	</style>
-	<p>{{text}}</p>
+	<p>{text}</p>
 </template>
 
-<template id="actionchoice-view" data-class="ActionChoice">
+<!--template id="actionchoice-view">
 	<action-list>{{actions}}</action-list>
 </template>
 
@@ -86,7 +104,7 @@
 	}		
 	</style>
 	<content></content>
-</template>
+</template-->
 
 <template id="action-view" $on-click="->action-selected">
 	<style>
@@ -110,7 +128,7 @@
 	}
 	</style>
 	<div id="root">
-		<div id="label">{{Label()}}</div>
+		<div id="label">{action.Label()}</div>
 	</div>
 </template>
 

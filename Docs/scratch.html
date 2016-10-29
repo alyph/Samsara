@@ -1,3 +1,19 @@
+<template id="sprite-img" style="background-image: url({sprite.image.url}); background-size: {-sprite.image.tilesx}00% {-sprite.image.tilesy}00%; background-position: {-sprite.x}00% {-sprite.y}00%;">
+	<style>
+	$img-url: url({sprite.image.url});
+	$img-size: {-sprite.image.tilesx}00% {-sprite.image.tilesy}00%;
+
+	:host
+	{ 
+		display: block; 
+		background-image: url(${sprite.image.url});
+		background-size: $img-size;
+		background-position: 
+	}
+	</style>
+</template>
+
+
 <template id="action-view" $on-click="->action-selected">
 	<style>
 	:host
@@ -20,18 +36,15 @@
 	}
 	</style>
 	<script>
-		return class
+		this.x = 0.1;
+		this.y = 0.2;
+		this.onDataChanged = function()
 		{
-			constructor()
-			{
-				this.x = 0;
-				this.y = 1;
-			}
 
-			p()
-			{
-				return this.x.bark();
-			}
+		};
+		this.p = function()
+		{
+			return this.x + this.y;
 		};
 	</script>
 	<div id="root">
@@ -58,6 +71,7 @@
 
 		##foreach(friend : $Math.min(friends[0])).			
 			<script>// bad example
+				return x;
 				this.x = 0;
 				this.y = 1;
 				this.p = function()

@@ -1,4 +1,13 @@
-<template id="sprite-img" $behaviors="sprite">
+<!--template id="sprite-img" $behaviors="sprite">
+	<style>
+	:host
+	{ 
+		display: block; 
+	}
+	</style>
+</template-->
+
+<template id="sprite-img" style="background-image: url({sprite.image.url}); background-size: {-sprite.image.tilesx}00% {-sprite.image.tilesy}00%; background-position: {-sprite.x}00% {-sprite.y}00%;">
 	<style>
 	:host
 	{ 

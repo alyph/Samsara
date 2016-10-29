@@ -15,7 +15,10 @@ class Player extends Entity
 		this.waiting = false;
 		this.paragraphs = [];
 
-		$("player-view")[0].bind(this);
+		this.playerView = document.querySelector("player-view");
+		this.playerView.bind("player", this);
+
+		//$("player-view")[0].bind("player", this);
 	}
 
 	chooseAction(pov, actions)
@@ -30,6 +33,7 @@ class Player extends Entity
 		this.paragraphs.push(new ActionChoice(actions));
 
 		this.waiting = true;
+		this.playerView.refresh();
 	}
 
 	beginTransitionFromAction(action, scene)

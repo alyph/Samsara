@@ -35,3 +35,47 @@ class ForeachDirective
 		}
 	}
 });
+
+UI.Directive("if",
+{
+	clauses:
+	[
+		{ keyword: "if, elif", expression: "(condition%b)", content: "component", group: "clauses" },
+		{ keyword: "else", content: "elseComp", isFinal: true }
+	]
+},
+class IfDirective
+{
+	constructor()
+	{
+		this.clauses = [];
+		this.elseComp = null;
+	}
+
+	apply(instance, data)
+	{
+		let compDef = this.elseComp;
+		for (let i = 0; i < this.clauses.length; i++) 
+		{
+			let clause = this.clauses[i];
+			if (clause.condition(data))
+			{
+				compDef = clause.component;
+				break;
+			}
+		}
+
+		if (compDef)
+		{
+			instance.populate(compDef, 1);
+			let comp = instance.components[0];
+			comp.transferData(data);
+			comp.refresh();
+		}
+		else
+		{
+			instance.populate(null, 0);
+		}
+	}
+});
+

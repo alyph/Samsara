@@ -15,7 +15,7 @@ var elseClause =
 var foreachClause =
 {
 	keyword: "foreach",
-	expression: "(item%s in list%b)",
+	expression: "(tem%s in list%b)",
 	content: "itemComp"
 };
 

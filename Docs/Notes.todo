@@ -20,15 +20,29 @@ UI REVAMP:
 	✔	impl all the binding functions @done (16-10-19 22:12)
 	✔	impl all other component functions @done (16-10-19 22:32)
 
-	☐	clean up template and element to use component 
+	✔	clean up template and element to use component  @done (16-10-24 22:50)
 
-	☐	observable object (passive style, maybe just a event regist)
-	☐	component wise <script> (data object prototype)
-
-	☐	any error logging needed.
+	✔	template header element parsing (treat it like a normal element node, not custom element), this should be able to handle <sprite-img> @done (16-10-26 20:23)
 
 	☐	add other basic directives (if, switch)
-	☐	behaviors (redesign?)
+
+	☐	review the number of placeholder text nodes
+need usecase:
+
+	☐	behaviors (redesign? need some solution for sprite element for sure)
+	☐	event dispatcher revamp
+	☐	observable object (passive style, maybe just a event regist)
+	☐	component wise <script> (data object prototype)
+	☐	what happens when detached (fully, or if the custom element detached, maybe just clear the binding?)
+	☐	any error logging needed.
+
+-----------------------------------------------------------------------
+
+backlog:
+
+	☐	should we allow certain component only refresh when property changed?
+
+
 
 -----------------------------------------------------------------------
 

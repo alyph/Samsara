@@ -67,7 +67,58 @@ class EventDispatcher
 	}
 }
 
-class EventListenerReceipt
+// multiple sources
+// multiple events
+// single handler per event
+class CollectiveEventReceipt
+{
+	constructor()
+	{
+		this.entries = [];
+	}
+
+	add(source, type, handler)
+	{
+		for (let i = 0; i < this.entries.length; i++) 
+		{
+			let entry = this.entries[i];
+			if (entry.source === source &&
+				entry.type === type)
+			{
+				if (entry.handler !== handler)
+				{
+					source.removeListener(type, entry.handler);
+					entry.handler = handler;
+				}
+
+				return;
+			}
+		}
+
+		this.entries.push(
+		{
+			source: source,
+			type: type,
+			handler: handler
+		});
+	}
+
+	clear()
+	{
+		for (var i = 0; i < this.entries.length; i++) 
+		{
+			var entry = this.entries[i];
+			entry.source.removeListener(entry.type, entry.handler);
+		}
+
+		this.entries.length = 0;
+	}
+}
+
+// Single source
+// multiple events
+// Single handler per event
+class ExclusiveEventReceipt
 {
 	constructor()
 	{
