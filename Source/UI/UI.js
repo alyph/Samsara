@@ -552,7 +552,7 @@ var UI = new (function(global)
 			if (!this.isAttached())
 				throw ("Trying to detach the component when it's not yet attached.");
 
-			let parent = this.firstNode.parent;
+			let parent = this.firstNode.parentNode;
 			let removingNode = this.firstNode;
 			while (removingNode && removingNode !== this.lastNode)
 			{
@@ -1371,7 +1371,7 @@ var UI = new (function(global)
 			{
 				e.stopImmediatePropagation();
 				e.currentTarget.dispatchEvent(
-					new CustomEvent(str.substr(2), { bubbles: true, detail: { data: this.data } }));
+					new CustomEvent(str.substr(2), { bubbles: true, detail: this.data }));
 			};
 		}
 		else

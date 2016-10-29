@@ -7,7 +7,7 @@
 		width: 100%;
 		height: 100%;
 	}
-	paragraph-list
+	#paragraphList
 	{
 		position: absolute;
 		left: 100px;
@@ -15,7 +15,7 @@
 		width: 640px;
 		font: 12px "Minecraftia", cursive;
 	}
-	paragraph-list > *
+	#paragraphList > *
 	{
 		display: block;
 		position: relative;
@@ -50,7 +50,7 @@
 		width: 384px;
 	}*/	
 	</style>
-	<div>
+	<div id="paragraphList" $on-action-selected="player.finishChooseAction($e.detail.action)">
 		#foreach (paragraph in player.paragraphs)
 			#if (paragraph.constructor === $Narrative)
 			<narrative-view $text="paragraph.text"></narrative-view>

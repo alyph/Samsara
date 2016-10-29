@@ -25,16 +25,19 @@ UI REVAMP:
 	✔	template header element parsing (treat it like a normal element node, not custom element), this should be able to handle <sprite-img> @done (16-10-26 20:23)
 
 	☐	add other basic directives (if, switch)
-
 	☐	review the number of placeholder text nodes
+
 need usecase:
 
+	☐	<style> binding
 	☐	behaviors (redesign? need some solution for sprite element for sure)
 	☐	event dispatcher revamp
 	☐	observable object (passive style, maybe just a event regist)
 	☐	component wise <script> (data object prototype)
 	☐	what happens when detached (fully, or if the custom element detached, maybe just clear the binding?)
 	☐	any error logging needed.
+	☐	would be nice if event binding syntax look nicer (get rid of $e, or $e.details.data, essentially it needs another syntactic sugar to ref data from event more easily)
+	☐	foreach should allow passing down more properties (or should it do that automatically? like copy all props from the parent?)
 
 -----------------------------------------------------------------------
 
