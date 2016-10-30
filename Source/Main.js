@@ -21,6 +21,8 @@ var Global = {};
 			window.setTimeout(update, 100);
 		})();
 
+		document.querySelector("#welcomeScreen").classList.add("hidden");
+
 		/*
 		window.requestAnimationFrame(update);
 		function update(timestamp)
@@ -29,8 +31,8 @@ var Global = {};
 			window.requestAnimationFrame(update);
 		};*/
 
-		$("#welcomeScreen").fadeTo(500,0,function(){$(this).remove();});
-		$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
+		//$("#welcomeScreen").fadeTo(500,0,function(){$(this).remove();});
+		//$("#loadingSet").fadeTo(100,0,function(){$(this).remove();});
 	}
 
 	var libs = "Source/Libs/";
@@ -45,7 +47,7 @@ var Global = {};
 	var ui = "Source/UI/";
 
 	head.load(
-		libs + "jquery-2.0.3.js",
+		//libs + "jquery-2.0.3.js",
 		//libs + "jquery-ui-1.8.23.custom.min.js",
 		//libs + "jquery.gamequery.js",
 		libs + "jsface.js",
@@ -134,14 +136,19 @@ var Global = {};
 
 	function onDataLoaded()
 	{
-		UI.registerTemplates("Source/UI/Templates/basic_templates.html");
-		UI.registerTemplates("Source/UI/Templates/game_templates.html");
-		//NewUI.registerTemplates("Source/UI/Templates/screens.html");
-
-		UI.ready(init);
+		let templatesLoaded =
+		[
+			UI.registerTemplates("Source/UI/Templates/basic_templates.html"),
+			UI.registerTemplates("Source/UI/Templates/game_templates.html")
+		];
+		
+		Promise.all(templatesLoaded).then(init, onFailed);
 	}
 
-
+	function onFailed(error)
+	{
+		console.error(`Game failed to initialize: ${error.message}`);
+	}
 
 	// head.js(
 	// 	libs + "jquery-2.0.3.js",

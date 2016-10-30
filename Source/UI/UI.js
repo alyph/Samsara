@@ -5,8 +5,6 @@ var UI = new (function(global)
 {
 	'use strict';
 
-	var numLoadingHtml = 0;
-	var readyCallback = null;
 	var templates = {};
 	var behaviors = {};
 	var directives = {};
@@ -17,38 +15,39 @@ var UI = new (function(global)
 
 	this.registerTemplates = function(htmlUrl)
 	{
-		numLoadingHtml++;
-		$.ajax(
-		{ 
-			url: htmlUrl,
-			cache: false,
-			success: function(data)
+		let promise = new Promise(function(resolve, reject)
+		{
+			// Instantiates the XMLHttpRequest
+			let request = new XMLHttpRequest();			
+			request.open("GET", htmlUrl, true);
+			request.onreadystatechange = function()
 			{
-				var tempRoot = document.createElement("div");
-				tempRoot.innerHTML = data;
-
-				var numTemplates = tempRoot.children.length;
-				for (var i = 0; i < numTemplates; i++) 
+				if (request.readyState === XMLHttpRequest.DONE)
 				{
-					var template = tempRoot.children[i];
-					registerTemplate(template);
-				}
+					if (request.status === 200)
+					{
+						var tempRoot = document.createElement("div");
+						tempRoot.innerHTML = request.responseText;
+						var numTemplates = tempRoot.children.length;
+						for (var i = 0; i < numTemplates; i++)
+						{
+							var template = tempRoot.children[i];
+							registerTemplate(template);
+						}
 
-				numLoadingHtml--;
-				checkReady();
-			} 
+						resolve(request.response);
+					}
+					else
+					{
+						reject(new Error(`Failed to GET ${htmlUrl}, error code: ${request.status}`));
+					}
+				}
+			};
+
+			request.send();
 		});
 
-		return this;
-	};
-
-	this.ready = function(callback)	
-	{
-		if (readyCallback !== null)
-			throw ("Already has ready callback!");
-
-		readyCallback = callback;
-		checkReady();
+		return promise;
 	};
 
 	this.Behavior = function(name, config)
@@ -425,20 +424,6 @@ var UI = new (function(global)
 			}
 
 			delete pendingTemplates[name];
-		}
-	}
-
-	function checkReady()
-	{
-		if (readyCallback !== null)
-		{
-			var isReady = numLoadingHtml <= 0;
-			if (isReady)
-			{
-				var callback = readyCallback;
-				readyCallback = null;
-				callback();
-			}
 		}
 	}
 
