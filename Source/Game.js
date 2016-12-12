@@ -9,7 +9,7 @@ class Game extends BaseObject
 		this.world = null;
 	}
 
-	start()
+	start(worldName)
 	{
 		// this.screen = UI.showScreen("gameScreen");
 
@@ -18,8 +18,15 @@ class Game extends BaseObject
 		// this.screen.sceneBack.setData(Sprites["loc_primal_forest"]);
 
 
-		this.world = Archive.get(Global.WorldName);
-		this.world.beginPlay(this);
+		this.world = Archive.get(worldName);
+		if (this.world)
+		{
+			this.world.beginPlay(this);	
+		}
+		else
+		{
+			console.error(`world "${worldName}" not found, game failed to start.`);
+		}		
 	}
 
 	update()

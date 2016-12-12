@@ -2,6 +2,26 @@
 
 TODO:
 
+Gameplay:
+	✔	archive create function should allow taking a single base object name. @done (16-12-11 20:18)
+	✔	place a hero card @done (16-12-11 20:18)
+	☐	draw a weapon card
+	☐	play the weapon card to attach to player
+	☐	place a monster card
+	☐	hero take the attack action against the monster
+	☐	damage calculation
+	☐	monster takes action
+
+	☐	after that move on to encounter, explore, draw location and encoutner etc.
+
+
+
+
+	☐	action - investigate location (draw encounter from location, you may have multiple locations available)
+	☐	action - leave manshion (exit the building and will be presented with new activities)
+	☐	interaction - search scripts, investigate strange painting etc.
+
+
 UI REVAMP:
 
 	✔	directive parsing revamp (high level tokenizing) @done (16-10-11 21:52)

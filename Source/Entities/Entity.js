@@ -21,7 +21,7 @@ class Entity extends BaseObject
 	{
 		if (this.isInstance())
 		{
-			this.world = Archive.get(Global.WorldName);
+			this.world = Archive.get("world");
 			this.world.onEntityEntered(this);
 		}
 	}
@@ -36,7 +36,7 @@ class Entity extends BaseObject
 	// 	this.world = null;
 	// },
 
-	beginPlay(game)
+	beginPlay()
 	{
 	}
 

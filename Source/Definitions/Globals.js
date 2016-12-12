@@ -1,5 +1,5 @@
 $def("global", 
 {
 	$base: GlobalDefinition,
-	actionsNamespace: "action"
+	//actionsNamespace: "action"
 });

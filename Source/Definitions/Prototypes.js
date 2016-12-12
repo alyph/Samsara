@@ -1,9 +1,9 @@
-$begin("proto");
+// $begin("proto");
 
-$def("pov_base", 
-{
-	$base: PointOfView,
-	scene: { $base: "scene.planning" }
-});
+// $def("pov_base", 
+// {
+// 	$base: PointOfView,
+// 	scene: { $base: "scene.planning" }
+// });
 
-$end();
+// $end();

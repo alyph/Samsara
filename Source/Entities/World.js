@@ -17,9 +17,13 @@ class World extends BaseObject
 	{
 		super();
 		this.game = null;
-		this.global = null;
 		this.entities = {};
-		this.keeper = null;
+		
+		this.global = null;
+		//this.keeper = null;
+		this.field = null;
+		
+
 		this.updateQueue = [];
 		this.isUpdating = false;
 		// this.isInstance = true;
@@ -33,7 +37,7 @@ class World extends BaseObject
 		this.game = game;
 		for (var name in this.entities)
 		{
-			this.entities[name].beginPlay(game);
+			this.entities[name].beginPlay();//(game);
 		}
 	}
 
@@ -139,18 +143,18 @@ class World extends BaseObject
 		this.entities[name] = entity;
 	}
 
-	spawn(name, props)
+	spawn(base, props, name)
 	{
 		if (this.game === null)
 			throw ("cannot spawn entities before game has begun play!");
 
 		//props.isInstance = true;
-		var entity = Archive.create(name, props);
+		var entity = Archive.create(base, props, name);
 		if (entity !== null)
 		{
 			//this.entities[name] = entity;
 			//entity.enterWorld(this);
-			entity.beginPlay(this.game);
+			entity.beginPlay();//(this.game);
 		}
 
 		return entity;

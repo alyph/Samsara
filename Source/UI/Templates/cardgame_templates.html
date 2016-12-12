@@ -1,0 +1,75 @@
+<template id="player-view">
+	<style>
+	:host
+	{ 
+		display: block; 
+		width: 100%;
+		height: 100%;
+		position: relative;
+	}
+	field-view
+	{
+		width: 100%;
+		height: 80%;
+	}
+	</style>
+	<field-view id="field" $field="player.world.field"></field-view>
+	<div id="hand"></div>
+</template>
+
+
+<template id="field-view">
+	<style>
+	:host
+	{
+		display: block;
+	}
+	#party_area
+	{
+		bottom: 0px;
+		height: 40%;
+	}	
+	</style>
+	<div id="party_area">
+		#foreach (card in field.getCardsInArea($FieldArea.Party))
+			<card-view $card="card"></card-view>
+		#end
+	</div>	
+</template>
+
+<template id="card-view">
+	<style>
+	:host
+	{
+		display: block;
+		width: 136px;
+		height: 192px;
+	}
+	#frame
+	{
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
+	#border
+	{
+		width: 100%;
+		height: 100%;
+		border: 2px white solid;
+		box-sizing: border-box;		
+	}
+	#portrait
+	{
+		position: absolute;
+		bottom: 0px;
+		width: 192px;
+		height: 228px;
+		left: -28px;
+	}
+	</style>
+	<div id="frame">
+		<div id="border"></div>
+		<sprite-img id="portrait" $sprite="card.smallPortrait"></sprite-img>	
+	</div>
+</template>
+

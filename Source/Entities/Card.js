@@ -1,3 +1,56 @@
+
+
+class Card extends BaseObject
+{
+	constructor()
+	{
+		super();
+		this.displayName = "NO NAME";
+		this.smallPortrait = null;
+		this.fieldState = null;
+	}
+
+	place(world, area)
+	{
+		if (this.fieldState || world.field.cards.indexOf(this) >= 0)
+			throw ("The card is already on field");
+
+		world.field.cards.push(this);
+		this.fieldState = new CardFieldState();
+		this.fieldState.area = area;
+	}
+}
+
+class CardFieldState
+{
+	constructor()
+	{
+		this.area = FieldArea.Undefined;
+	}
+}
+
+class CardTemplate
+{
+	constructor()
+	{
+		// any hand cards
+		this.playEffects = [];
+
+		// any attachment or minion cards
+		this.triggeredEffects = [];
+		this.modifiers = [];
+
+		// any attachment cards
+		this.activatableEffects = [];
+
+		// actor cards (heroes, minions)
+		this.traits = [];
+
+
+	}
+}
+
+/*
 var Card = Class(
 {
 	constructor : function(game, info, id, slot)
@@ -233,3 +286,4 @@ Component('Map', 'Card',
 {
 
 });
+*/

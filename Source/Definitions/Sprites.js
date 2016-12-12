@@ -36,6 +36,13 @@ var SpriteDefinitions =
 	},
 
 	{
+		image : "Content/Images/heroes.png",
+		w : 384,
+		h : 456,
+		hero_paladin:					[2, 0],
+	},
+
+	{
 		image : "Content/Images/scenes.png",
 		w : 384,
 		h : 256,

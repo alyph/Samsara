@@ -39,8 +39,41 @@ var Archive = new (function(global)
 		return list;
 	};
 
-	this.create = function(name, props)
+	this.create = function(base, props, name)
 	{
+		if (props === undefined)
+		{
+			props = {};
+		}
+
+		let baseName = "";
+		if (typeof base === 'string')
+		{
+			baseName = trimNamespace(base);
+		}
+		else if (typeof base === 'function')
+		{
+			baseName = base.name;
+		}
+		else if (typeof base === 'object')
+		{
+			base = this.getName(base);
+			baseName = trimNamespace(base);
+		}
+
+		if (!base || !baseName)
+		{
+			console.error(`Invalid base "${base}" or its name "${baseName}", failed to create new object.`);
+			return null;
+		}
+
+		props.$base = base;
+
+		if (name === undefined)
+		{
+			name = findUniqueObjectName(baseName);
+		}
+
 		load(name, props, true);
 		compileRecords();
 		return this.get(name);
@@ -66,6 +99,18 @@ var Archive = new (function(global)
 				found.push(obj);
 		}
 		return found;
+	};
+
+	this.getName = function(obj)
+	{
+		if (obj.$name)
+		{
+			return obj.$name.substr(1);
+		}
+		else
+		{
+			return "";
+		}
 	};
 
 	this.isInstance = function(obj)
@@ -654,6 +699,7 @@ var Archive = new (function(global)
 					throw ("wrong name");
 			}
 		}
+		// TODO: check if base is a function (constructor) or object
 		else if (base)
 		{
 			info.cls = base;
@@ -775,6 +821,52 @@ var Archive = new (function(global)
 		{
 			useNamespace(tokens[i]);
 		}
+	}
+
+	function trimNamespace(name)
+	{
+		let idx = name.lastIndexOf('.');
+		if (idx >= 0)
+		{
+			return name.substr(idx + 1);
+		}
+	}
+
+	function findUniqueObjectName(baseName)
+	{
+		let max = 0x1000000000000; // 2^48
+		let numBytes = 6;
+		let bytes = new Uint8Array(numBytes);
+		let lowerMask = 0x00FFFFFF;
+		let mask = 0xFF;
+		let uniqueName = "";
+
+		do
+		{
+			let rand = Math.floor(Math.random() * max);
+			let lower = rand & lowerMask;
+			let higher = Math.floor((rand - lower) / (lowerMask + 1));
+
+			// little endian, higher to lower bits.
+			for (let i = numBytes - 1; i >= numBytes/2; i--) 
+			{
+				bytes[i] = (lower & mask);
+				lower >>= 8; // Shift one byte
+			}
+
+			for (let i = numBytes/2 - 1; i >= 0; i--) 
+			{
+				bytes[i] = (higher & mask);
+				higher >>= 8; // Shift one byte
+			}
+
+			let byteStr = String.fromCharCode.apply(null, bytes);
+			let encoding = btoa(byteStr);
+			uniqueName = `${baseName}[${encoding}]`;
+
+		} while(records[uniqueName] || objects[uniqueName]);
+
+		return uniqueName;
 	}
 
 	function loadDefinition(name, props)

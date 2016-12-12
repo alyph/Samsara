@@ -1,9 +1,3 @@
-// Global constants:
-var PLAYGROUND_WIDTH	= 1024;
-var PLAYGROUND_HEIGHT	= 768;
-
-var Global = {};
-
 // --------------------------------------------------------------------------------------------------------------------
 // --                                      the main declaration:                                                     --
 // --------------------------------------------------------------------------------------------------------------------
@@ -13,7 +7,7 @@ var Global = {};
 	{
 		Archive.init();				
 		var game = new Game();
-		game.start();				
+		game.start("world");
 
 		(function update()
 		{
@@ -87,6 +81,7 @@ var Global = {};
 		entities + "Story.js",
 		entities + "Activity.js",
 		entities + "Environment.js",
+		entities + "Field.js",
 		entities + "Global.js",
 		entities + "Keeper.js",
 		entities + "Location.js",
@@ -119,17 +114,18 @@ var Global = {};
 	function onResourceLoaded()
 	{
 		head.load(
-			definitions + "Actions.js",
-			definitions + "Keywords.js",
-			definitions + "Activities.js",
-			definitions + "Characters.js",
+			//definitions + "Actions.js",
+			//definitions + "Keywords.js",
+			//definitions + "Activities.js",
+			//definitions + "Characters.js",
+			definitions + "Cards.js",
 			definitions + "Globals.js",
-			definitions + "Goals.js",
-			definitions + "Environments.js",
-			definitions + "Locations.js",
-			definitions + "Prototypes.js",
-			definitions + "Quests.js",
-			definitions + "Scenes.js",			
+			//definitions + "Goals.js",
+			//definitions + "Environments.js",
+			//definitions + "Locations.js",
+			//definitions + "Prototypes.js",
+			//definitions + "Quests.js",
+			//definitions + "Scenes.js",			
 			definitions + "WorldData.js",
 			onDataLoaded);
 	}
@@ -139,7 +135,7 @@ var Global = {};
 		let templatesLoaded =
 		[
 			UI.registerTemplates("Source/UI/Templates/basic_templates.html"),
-			UI.registerTemplates("Source/UI/Templates/game_templates.html")
+			UI.registerTemplates("Source/UI/Templates/cardgame_templates.html")
 		];
 		
 		Promise.all(templatesLoaded).then(init, onFailed);

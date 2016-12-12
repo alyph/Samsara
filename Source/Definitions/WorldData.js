@@ -1,128 +1,147 @@
  
-Global.WorldName = "world";
-
-$inst(Global.WorldName, 
+$insts(
 {
-	$base: World,
-	global: "@global",
-	keeper: "@keeper",
-});
+	"world" :
+	{
+		$base: World,
+		global: "@global",
+		field: "@field"
+	},
 
-$begin("locale");
-$use("keyword");
+	"player":
+	{
+		$base: Player
+	},
 
-$inst("plain_a",
-{
-	$base: Locale,	
-	displayName: "Redgrass March", portrait: "loc_barren",
-	desc:$v(
-	[
-		"bordering @forest_a north",
-		"bordering @plain_b south",
-		"bordering @hills_a west"
-	])
-});
-
-$inst("forest_a",
-{
-	$base: Locale,	
-	displayName: "Golden Grove", portrait: "loc_night_forest",
-	desc:$v(
-	[
-		"bordering @plain_a south"
-	])
-});
-
-$inst("plain_b",
-{
-	$base: Locale,
-	displayName: "Fen Of Serpents", portrait: "loc_desert_rock",
-	desc:$v(
-	[
-		"bordering @plain_a north",
-		"bordering @hills_a west",
-		"bordering @forest_b east"
-	])
-});
-
-$inst("forest_b",
-{
-	$base: Locale,	
-	displayName: "Crown Woods", portrait: "loc_forest",
-	desc:$v(
-	[
-		"bordering @plain_b west"
-	])
-});
-
-$inst("hills_a",
-{
-	$base: Locale,	
-	displayName: "Hills Of Krondor", portrait: "loc_rocky",
-	desc:$v(
-	[
-		"bordering @plain_b east",
-		"bordering @plain_a northeast"
-	])
-});
-
-$end();
-
-$begin("temp_locale");
-$use("keyword");
-$use("locale");
-
-$inst("starting_loc",
-{
-	$base: Locale,	
-	displayName: "",
-	desc:$v(
-	[
-		"part_of @plain_a"
-	])
-});
-
-$end();
-
-$begin("character");
-
-$inst("pc_melee",
-{
-	$base: Character,
-	displayName: "Ragnar",
-	sprite: "Cha_Warlord",
-	//position: "front"
-});
-
-$inst("pc_caster",
-{
-	$base: Character,
-	displayName: "Tiamat",
-	sprite: "Cha_Acolyte"
-	//position: "rear"
-});
-
-$inst("pc_agile",
-{
-	$base: Character,
-	displayName: "Yagnas",
-	sprite: "Cha_Deva"
-	//position: "front"
+	"field":
+	{
+		$base: Field
+	}
 });
 
 
-$end();
+// $inst(Global.WorldName, 
+// {
+// 	$base: World,
+// 	global: "@global",
+// 	keeper: "@keeper",
+// });
 
-$begin("party");
-$use("character");
+// $begin("locale");
+// $use("keyword");
 
-$inst("player_party", 
-{
-	$base: Party,
-	members: [ "@pc_melee", "@pc_caster", "@pc_agile" ]
-});
+// $inst("plain_a",
+// {
+// 	$base: Locale,	
+// 	displayName: "Redgrass March", portrait: "loc_barren",
+// 	desc:$v(
+// 	[
+// 		"bordering @forest_a north",
+// 		"bordering @plain_b south",
+// 		"bordering @hills_a west"
+// 	])
+// });
 
-$end();
+// $inst("forest_a",
+// {
+// 	$base: Locale,	
+// 	displayName: "Golden Grove", portrait: "loc_night_forest",
+// 	desc:$v(
+// 	[
+// 		"bordering @plain_a south"
+// 	])
+// });
+
+// $inst("plain_b",
+// {
+// 	$base: Locale,
+// 	displayName: "Fen Of Serpents", portrait: "loc_desert_rock",
+// 	desc:$v(
+// 	[
+// 		"bordering @plain_a north",
+// 		"bordering @hills_a west",
+// 		"bordering @forest_b east"
+// 	])
+// });
+
+// $inst("forest_b",
+// {
+// 	$base: Locale,	
+// 	displayName: "Crown Woods", portrait: "loc_forest",
+// 	desc:$v(
+// 	[
+// 		"bordering @plain_b west"
+// 	])
+// });
+
+// $inst("hills_a",
+// {
+// 	$base: Locale,	
+// 	displayName: "Hills Of Krondor", portrait: "loc_rocky",
+// 	desc:$v(
+// 	[
+// 		"bordering @plain_b east",
+// 		"bordering @plain_a northeast"
+// 	])
+// });
+
+// $end();
+
+// $begin("temp_locale");
+// $use("keyword");
+// $use("locale");
+
+// $inst("starting_loc",
+// {
+// 	$base: Locale,	
+// 	displayName: "",
+// 	desc:$v(
+// 	[
+// 		"part_of @plain_a"
+// 	])
+// });
+
+// $end();
+
+// $begin("character");
+
+// $inst("pc_melee",
+// {
+// 	$base: Character,
+// 	displayName: "Ragnar",
+// 	sprite: "Cha_Warlord",
+// 	//position: "front"
+// });
+
+// $inst("pc_caster",
+// {
+// 	$base: Character,
+// 	displayName: "Tiamat",
+// 	sprite: "Cha_Acolyte"
+// 	//position: "rear"
+// });
+
+// $inst("pc_agile",
+// {
+// 	$base: Character,
+// 	displayName: "Yagnas",
+// 	sprite: "Cha_Deva"
+// 	//position: "front"
+// });
+
+
+// $end();
+
+// $begin("party");
+// $use("character");
+
+// $inst("player_party", 
+// {
+// 	$base: Party,
+// 	members: [ "@pc_melee", "@pc_caster", "@pc_agile" ]
+// });
+
+// $end();
 
 // $begin("pov");
 // $use("character");
@@ -139,30 +158,30 @@ $end();
 
 // $end();
 
-$insts("pov", "character temp_locale scene", 
-{
-	"player_party_pov": 
-	{
-		$base: "proto.pov_base",
-		scene: "@gamescene.caravan_ambush",
-		locale: "@starting_loc",
-		controller: "@player",
-		characters: [ "@pc_melee", "@pc_caster", "@pc_agile" ]
-	}
-});
+// $insts("pov", "character temp_locale scene", 
+// {
+// 	"player_party_pov": 
+// 	{
+// 		$base: "proto.pov_base",
+// 		scene: "@gamescene.caravan_ambush",
+// 		locale: "@starting_loc",
+// 		controller: "@player",
+// 		characters: [ "@pc_melee", "@pc_caster", "@pc_agile" ]
+// 	}
+// });
 
-$insts(
-{
-	"player":
-	{
-		$base: Player
-	},
+// $insts(
+// {
+// 	"player":
+// 	{
+// 		$base: Player
+// 	},
 
-	"keeper":
-	{
-		$base: Keeper
-	}
-});
+// 	"keeper":
+// 	{
+// 		$base: Keeper
+// 	}
+// });
 
 	/*
 

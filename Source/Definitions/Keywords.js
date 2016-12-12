@@ -1,13 +1,13 @@
-$begin("keyword");
+// $begin("keyword");
 
-$def("bordering", 
-{
-	$base: Keyword
-});
+// $def("bordering", 
+// {
+// 	$base: Keyword
+// });
 
-$def("part_of", 
-{
-	$base: Keyword
-});
+// $def("part_of", 
+// {
+// 	$base: Keyword
+// });
 
-$end();
+// $end();
