@@ -5,7 +5,7 @@ TODO:
 Gameplay:
 	✔	archive create function should allow taking a single base object name. @done (16-12-11 20:18)
 	✔	place a hero card @done (16-12-11 20:18)
-	☐	draw a weapon card
+	✔	draw a weapon card @done (16-12-13 22:07)
 	☐	play the weapon card to attach to player
 	☐	place a monster card
 	☐	hero take the attack action against the monster
@@ -46,6 +46,10 @@ UI REVAMP:
 
 	☐	add other basic directives (if, switch)
 	☐	review the number of placeholder text nodes
+
+	☐	need a better way to control css via data properties (short of setting classes, or even css binding)
+	☐	property attribute case conversion? (e.g. $foo-bar to fooBar)
+	☐	some bindings should only set if the value changed (like attributes and maybe text)
 
 need usecase:
 

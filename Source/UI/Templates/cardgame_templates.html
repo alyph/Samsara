@@ -1,4 +1,5 @@
-<template id="player-view">
+<template id="player-view" 
+	$on-card-selected="player.selectCard($e.detail.card)">
 	<style>
 	:host
 	{ 
@@ -10,11 +11,16 @@
 	field-view
 	{
 		width: 100%;
-		height: 80%;
+		height: 75%;
+	}
+	hand-view
+	{
+		width: 100%;
+		height: 25%;
 	}
 	</style>
 	<field-view id="field" $field="player.world.field"></field-view>
-	<div id="hand"></div>
+	<hand-view id="hand" $hand="player.hand" $playing-card="player.playingCard"></div>
 </template>
 
 
@@ -24,12 +30,16 @@
 	{
 		display: block;
 	}
+	#encounter_area
+	{
+		height: 55%
+	}
 	#party_area
 	{
-		bottom: 0px;
-		height: 40%;
+		height: 45%;
 	}	
 	</style>
+	<div id="encounter_area"></div>
 	<div id="party_area">
 		#foreach (card in field.getCardsInArea($FieldArea.Party))
 			<card-view $card="card"></card-view>
@@ -37,7 +47,25 @@
 	</div>	
 </template>
 
-<template id="card-view">
+<template id="hand-view">
+	<style>
+	:host
+	{
+		display: block;
+	}
+	card-view
+	{
+		transform: scale(0.8);
+	}
+	</style>
+	<div>
+		#foreach (card in hand)
+			<card-view data-playing='{card==playingCard}' $card="card"></card-view>
+		#end
+	</div>	
+</template>
+
+<template id="card-view" $on-click="->card-selected">
 	<style>
 	:host
 	{
@@ -50,6 +78,14 @@
 		position: relative;
 		width: 100%;
 		height: 100%;
+	}
+	#frame:hover
+	{
+		transform: scale(1.1);
+	}
+	:host([data-playing='true']) #frame
+	{
+		transform: scale(1.25);
 	}
 	#border
 	{

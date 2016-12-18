@@ -30,6 +30,7 @@ class ForeachDirective
 		for (let i = 0; i < newLen; i++) 
 		{
 			let comp = instance.components[i];
+			comp.transferDataByCopy(data);
 			comp.setDataProp(this.itemProp, list[i]);
 			comp.refresh();
 		}

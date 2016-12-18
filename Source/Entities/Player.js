@@ -7,7 +7,13 @@ class Player extends Entity
 	{
 		super();
 
-		this.playerView = document.querySelector("player-view");		
+		this.deck = [];
+		this.hand = [];
+		this.playingCard = null;
+
+		this.playerView = document.querySelector("player-view");
+
+
 	}
 
 	beginPlay()
@@ -16,11 +22,53 @@ class Player extends Entity
 		
 		let hero = Archive.create("heroes.paladin");
 		hero.place(this.world, FieldArea.Party);
-		this.playerView.refresh();
+
+		let sword = Archive.create("equipment.longsword");
+		this.deck.push(sword);
+
+		this.draw(1);
+
+		this.refreshView();
+	}
+
+	draw(num)
+	{
+		for (let i = 0; i < num && this.deck.length > 0; i++) 
+		{
+			let idx = Math.floor(Math.random() * this.deck.length);
+			this.hand.push(this.deck[idx]);
+			this.deck.splice(idx, 1);
+		}
 	}
 
 
+	selectCard(card)
+	{
+		if (this.playingCard)
+		{
+			if (this.playingCard === card)
+			{
+				// unselect
+				this.playingCard = null;
+				this.refreshView();
+			}
+			else
+			{
+				// play on target	
+			}
+		}
+		else if (this.hand.indexOf(card) >= 0)
+		{
+			// TODO: can we actually play this card?
+			this.playingCard = card;
+			this.refreshView();
+		}
+	}
 
+	refreshView()
+	{
+		this.playerView.refresh();
+	}
 
 	// constructor()
 	// {

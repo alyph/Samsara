@@ -96,6 +96,18 @@
 // same for the traits
 // THOUGHT: do we need inheritance still, can we just put the in the contained skill list?
 
+var equip_action =
+{
+	timing: "InHand",
+	target: "hero, friendly",
+	effect: "attach $card to $target, discard hand cards (max: 2): $x, deal $x*2 damage"
+};
+
+var effect_attach =
+{
+	syntax: "discard at most $x cards",
+	impl: "discard hand cards (max: 2)"
+};
 
 var fireball =
 {

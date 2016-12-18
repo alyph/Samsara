@@ -579,6 +579,14 @@ var UI = new (function(global)
 			this.data = data;
 		}
 
+		transferDataByCopy(data)
+		{
+			for (let key in data)
+			{
+				this.data[key] = data[key];
+			}
+		}
+
 		setDataProp(key, value)
 		{
 			if (!this.data)
@@ -976,7 +984,8 @@ var UI = new (function(global)
 				// property bindings （must be custom element)
 				attrsToRemove.push(attrName);
 				let propBinding = new AttributeBindingInfo();
-				propBinding.name = attrName.substr(1);
+				propBinding.name = attrName.substr(1).replace(/(?!^)-[a-z]/ig,
+					function(match){ return match[1].toUpperCase(); });
 				propBinding.func = parseDataBindingToFunc(attr.value, null);
 
 				if (propBinding.func)

@@ -43,6 +43,13 @@ var SpriteDefinitions =
 	},
 
 	{
+		image : "Content/Images/equipment.png",
+		w : 384,
+		h : 456,
+		equip_longsword:				[3, 0],
+	},
+
+	{
 		image : "Content/Images/scenes.png",
 		w : 384,
 		h : 256,
