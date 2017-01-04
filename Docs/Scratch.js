@@ -96,6 +96,132 @@
 // same for the traits
 // THOUGHT: do we need inheritance still, can we just put the in the contained skill list?
 
+/* jshint ignore:start */
+
+
+base: $native
+{
+	a:{} // native.a defines the type here
+
+	bar1: bar
+	{
+
+	}
+	foos: 
+	[
+		foo
+		{
+
+		}
+	]
+}
+
+x: base
+{
+	bar1:
+	{
+
+	}
+
+	foos:
+	[
+		{},
+
+		foo{}
+	]
+}
+
+
+foo:
+{
+	bar1 : bar
+	{
+
+	}
+}
+
+bar:
+{
+	foo1 : foo
+	{
+
+	}
+}
+
+
+// parser state switch
+@import otherpkg
+@base CommonBase
+
+@namespace MyNamespace
+@use OtherNamespace
+
+MyData = //implicit base (CommonBase)
+{
+	a: 2, b: 3, c: 4
+	displayName = Paladin
+	smallPortrait : #d>sprite.hero.paladin // a string but pointing to a sprite which will be parsed at load time
+	value = 1.10 * 3 - 1
+	ref = &refme // reference
+	action : #equip.MyAction {// object, based off MyAction
+	
+	}
+	effect: @ =>
+	{ 
+		attach_card($card, $target) 
+	}
+
+	// a block, can be implicit object, but if not found key = token, then it's custom block (can be code)
+}
+
+
+package = { entry }
+entry = rules | object_entry | comment
+directive = @ identifier (custom parsing)
+comment = single_line_comment | multi_line_comment
+object_entry = key object
+object = class_head { (key_value_pair ,?)* }
+class_head = native_class_head | object_reference
+native_class_head = $ identifier
+object_reference_token = & object_reference
+object_reference = env_letter / (identifier .)* identifier
+key_value_pair = key value
+value = string | expression | object | null | list | object_reference | custom_value
+expression = term (operator term)*
+term = num | (operator)? term | ( expression )
+list = [ (value)* ,? ]
+custom_value = @ (custom parsing)
+
+single_line_comment = //.*[line break]
+multi_line_comment = /*.**/
+key = identifier, : // terminal
+identifier
+indicators = @&$
+operators = +-*/ -- ++ **
+punctuation = ()[]{},?.
+string 
+number
+
+
+
+
+
+
+// load the raw record, merge with the bases
+// apply the record to the constructed object (property by proerty based on the property type from the constructor)
+//	this applies to the sub objects and the sub of the sub objects (recursively...)
+
+var effect = 
+`
+	attach_card($card, $target)	
+	discard_hand_cards(max=2) -> $num_discarded
+	deal_damage($target, $num_discarded * 2)
+
+	if not $card.has_trait(hero) and $card.isAlive then
+
+	end
+`;
+
 var equip_action =
 {
 	timing: "InHand",
@@ -544,3 +670,5 @@ record:
 	key: value
 }
 copy over key values from base
+
+/* jshint ignore:end */

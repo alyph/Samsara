@@ -21,6 +21,28 @@ Gameplay:
 	☐	action - leave manshion (exit the building and will be presented with new activities)
 	☐	interaction - search scripts, investigate strange painting etc.
 
+-----------------------------------------------------------------------
+
+DATA REVAMP:
+	✔	handle list @done (16-12-23 23:10)
+	✔	reference resolving @done (16-12-23 23:10)
+	✔	full procecss finish up (processPackages, WorkingRecord) @done (16-12-24 12:00)
+	✔	dependency and sorting @done (16-12-24 21:25)
+	✔	basic data parsing (object, list, value, expression...) @done (16-12-30 19:41)
+	✔	compile package (taking output syntax tree from parsing) @done (17-01-01 17:37)
+	✔	namespace combining rule (what if the namespace already specified env?) @done (17-01-01 20:33)
+	✔	rule parsing (@import, base, namespace etc.) @done (17-01-01 19:13)
+	✔	lexer @done (17-01-03 22:28)
+	✔	GLP impl @done (17-01-03 22:28)
+	☐	misc functions for package loading (ajax, path etc.)
+	☐	convert the sprites to use archive system
+	☐	should we un-singleton Archive? make it an object owned by the game.
+
+GAMEPLAY SCRIPT:
+
+
+
+-----------------------------------------------------------------------
 
 UI REVAMP:
 
@@ -104,174 +126,10 @@ backlog:
 
 UI:
 	✔	may get rid of addchild concept so it doesn't matter where in the chain addchild is called... @done (16-10-15 22:42)
-	☐	get rid of game query
+	✔	get rid of game query @done (16-12-23 23:12)
 
 Future:
 	☐	better expression($e) imp
 	✔	hasExplored real imp @done (16-10-15 22:42)
 	☐	upgrade to latest head.js
 
-
-behavior
-task
-action
-command, operation, procedure
-
-intention/goal/task: melee, ranged, support, withdraw, flee
-behaviors: modifiers to the ongoing task, how to achieve the goal/intention: band, leader, lonewolf
-
-
-
-super - sub   UI element vs. the elements inside template
-outer - inner direct parent-child relationship between 2 elements
-parent - child two elements linked as parent child and also in same heiarchy
-
-
-this.handler("fooo");
-
-this.callback("bar", handler);
-this.callback("bar").call(params);
-
-{
-		div:
-		{
-				subdiv: {},
-				subdiv: {}
-		}
-}
-
-
-
-
-Other Nodes:
- 
-Rosvel March:
-{
-	Local:
-	{
-		Desc: "Wild of Rosvel"
-	},
-
-	Region:
-	{
-
-	}
-
-}
-
-
-exploration:
-{
-	params:
-	[
-		region : region
-	]
-
-	goals:
-	[
-		"explored region.areas"
-	]
-}
-
-explored
-{
-	params:
-	[
-		area : area
-	]
-}
-
-
-explore:
-{
-	params:
-	{
-		area : area
-	}
-
-	effects:
-	[
-		"explored"
-		area : "area"
-	]
-
-	preconditions
-	[
-		"at local"
-	]
-}
-
-visit:
-{
-	params:
-	{
-		person : person
-	}
-
-	preconditions:
-	[
-		"at person.area"
-	]
-}
-
-travel:
-{
-	params:
-	{
-		from : local
-		to : local
-	}
-
-	satisfies:
-	{
-		precondition: "at",
-		from : "local.adjacents"
-		to : "local"
-		cost : travelcost
-	}
-
-	effects
-	[
-		at(to) : true | from : local.adjacents, to : local
-	]
-
-	restrictions
-	{
-		from : to.adjacents
-	}
-	
-	preconditions:
-	[
-		at(from) : true
-	]
-}
-
-Plan(goal, actions, context)
-{
-	goal --> states ? statements?
-	open.push(goal)
-	visited.push(goal) 
-
-	while (open not empty)
-	{
-		states = open.pop()
-		states.eval(context) returns true --> finish
-
-		foreach state in states  find actions that satisfies the state (effects -> state) actions.findActions(state, context) --> potential actions that can solve the problem
-			accept action whose effects making at least one of the state true --> such states will be removed from the set
-			reject action if effects affects but does not satisfy one of the state
-				or preconditions contradict one of the state, related preconditions must be merged
-
-			* effect.satisfies(state) ->> state is necessary condition for effect,  effect is sufficient condition for state
-			** precondition.contradicts(state) -> reject
-			*** ?? what if state has conjuction --> merge? => no precondition will be merged with existing condition as long as not completely contradictory
-
-		new node excludes states achieved by the action 
-			contains states unchanged, 
-			and action's preconditions
-			record action and its cost
-
-		find new node in visited,
-			if found, compare cost, pop and re-push if cost is lower with action and previous node updated
-	}
-}

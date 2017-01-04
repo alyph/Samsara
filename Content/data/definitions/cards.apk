@@ -1,0 +1,17 @@
+@base Card
+
+@namespace heroes
+
+paladin:
+{
+	displayName: "Paladin"
+	smallPortrait: hero_paladin
+}
+
+@namespace equipment
+
+longsword:
+{
+	displayName: "Longsword"
+	smallPortrait: equip_longsword
+}

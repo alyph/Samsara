@@ -39,6 +39,7 @@
 		,"MathEx"				:false
 		,"Vector2"				:false
 		,"Queue"				:false
+		,"GLP"					:false
 		,"Archive"				:false
 		,"Gallery"				:false
 		,"EventDispatcher"		:false
