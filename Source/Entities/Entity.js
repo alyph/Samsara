@@ -17,14 +17,22 @@ class Entity extends BaseObject
 		this.portrait = null;
 	}
 
-	init()
+	// init()
+	// {
+	// 	if (this.isInstance())
+	// 	{
+	// 		this.world = Archive.get("world");
+	// 		this.world.onEntityEntered(this);
+	// 	}
+	// }
+
+	[World.Symbol.start](world)
 	{
-		if (this.isInstance())
-		{
-			this.world = Archive.get("world");
-			this.world.onEntityEntered(this);
-		}
+		this.world = world;
+		this.start();
 	}
+
+	start() {}
 
 	// enterWorld : function(world)
 	// {
@@ -36,13 +44,13 @@ class Entity extends BaseObject
 	// 	this.world = null;
 	// },
 
-	beginPlay()
-	{
-	}
+	// beginPlay()
+	// {
+	// }
 
-	endPlay()
-	{
-	}
+	// endPlay()
+	// {
+	// }
 
 	beginUpdate()
 	{

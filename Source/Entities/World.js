@@ -32,13 +32,23 @@ class World extends BaseObject
 		//this.turn = 0;
 	}
 
-	beginPlay(game)
+	start(game)
 	{
 		this.game = game;
-		for (var name in this.entities)
+
+		for (let inst of Archive.instances)
 		{
-			this.entities[name].beginPlay();//(game);
+			let start = inst[World.Symbol.start];
+			if (start)
+			{
+				start.call(inst, this);
+			}
 		}
+
+		// for (var name in this.entities)
+		// {
+		// 	this.entities[name].beginPlay();//(game);
+		// }
 	}
 
 	// create : function()
@@ -288,7 +298,10 @@ class World extends BaseObject
 	// }
 }
 
-
+World.Symbol =
+{
+	start: Symbol("worldStart"),
+};
 // World.UpdateEntry = function()
 // {
 // 	var STATE_Instant = 0;

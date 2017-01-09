@@ -1,3 +1,5 @@
+/* globals head, Game */
+
 // --------------------------------------------------------------------------------------------------------------------
 // --                                      the main declaration:                                                     --
 // --------------------------------------------------------------------------------------------------------------------
@@ -5,7 +7,7 @@
 {
 	function init()
 	{
-		Archive.init();				
+		//Archive.init();				
 		var game = new Game();
 		game.start("world");
 
@@ -31,8 +33,8 @@
 
 	var libs = "Source/Libs/";
 	var utils = "Source/Utils/";
-	var components = "Source/Components/";
-	var definitions = "Source/Definitions/";
+	// var components = "Source/Components/";
+	// var definitions = "Source/Definitions/";
 	var entities = "Source/Entities/";
 	var sequences = "Source/Sequences/";
 	var table = "Source/Table/";
@@ -48,11 +50,12 @@
 		utils + "MathEx.js",
 		utils + "Containers.js",
 		utils + "Utils.js",
+		utils + "GLP.js",
 		core + "BaseObject.js",
 		core + "Components.js",
 		core + "Descriptor.js",
 		core + "events.js",
-		core + "gallery.js",
+		//core + "gallery.js",
 		core + "Planner.js",
 		core + "System.js",
 		core + "Archive.js",
@@ -66,6 +69,7 @@
 		// ui + "Templates/BasicTemplates.js",
 		// ui + "Templates/GameTemplates.js",
 		// ui + "Templates/Screens.js",
+		entities + "World.js",
 		entities + "Entity.js",
 		entities + "Action.js",
 		entities + "Actor.js",
@@ -88,52 +92,54 @@
 		entities + "Goal.js",
 		entities + "POV.js",
 		entities + "POI.js",
+		entities + "sprite.js",
 		entities + "Quest.js",
-		entities + "World.js",
 		entities + "Scripting.js",
-		sequences + "Sequence.js",
-		sequences + "ActionSequences.js",
-		table + "Boards.js",
-		table + "CardArea.js",
-		table + "CardPiece.js",
-		table + "Dialog.js",
-		table + "Table.js",
+		// sequences + "Sequence.js",
+		// sequences + "ActionSequences.js",
+		// table + "Boards.js",
+		// table + "CardArea.js",
+		// table + "CardPiece.js",
+		// table + "Dialog.js",
+		// table + "Table.js",
 		source + "Game.js",
 		source + "Core.js",		
 		onCodeLoaded);
 
+	// function onCodeLoaded()
+	// {
+	// 	head.load(definitions + "Sprites.js", function()
+	// 	{
+	// 		Gallery.load(SpriteDefinitions);
+	// 		Gallery.ready(onResourceLoaded);
+	// 	});
+	// }
+
+	// function onResourceLoaded()
+	// {
+	// 	head.load(
+	// 		//definitions + "Actions.js",
+	// 		//definitions + "Keywords.js",
+	// 		//definitions + "Activities.js",
+	// 		//definitions + "Characters.js",
+	// 		definitions + "Cards.js",
+	// 		definitions + "Globals.js",
+	// 		//definitions + "Goals.js",
+	// 		//definitions + "Environments.js",
+	// 		//definitions + "Locations.js",
+	// 		//definitions + "Prototypes.js",
+	// 		//definitions + "Quests.js",
+	// 		//definitions + "Scenes.js",			
+	// 		definitions + "WorldData.js",
+	// 		onDataLoaded);
+	// }
+
 	function onCodeLoaded()
 	{
-		head.load(definitions + "Sprites.js", function()
-		{
-			Gallery.load(SpriteDefinitions);
-			Gallery.ready(onResourceLoaded);
-		});
-	}
-
-	function onResourceLoaded()
-	{
-		head.load(
-			//definitions + "Actions.js",
-			//definitions + "Keywords.js",
-			//definitions + "Activities.js",
-			//definitions + "Characters.js",
-			definitions + "Cards.js",
-			definitions + "Globals.js",
-			//definitions + "Goals.js",
-			//definitions + "Environments.js",
-			//definitions + "Locations.js",
-			//definitions + "Prototypes.js",
-			//definitions + "Quests.js",
-			//definitions + "Scenes.js",			
-			definitions + "WorldData.js",
-			onDataLoaded);
-	}
-
-	function onDataLoaded()
-	{
+		Archive.init({ baseUrl: "Content/data" });
 		let templatesLoaded =
 		[
+			Archive.loadInstances("world/world"),
 			UI.registerTemplates("Source/UI/Templates/basic_templates.html"),
 			UI.registerTemplates("Source/UI/Templates/cardgame_templates.html")
 		];
@@ -143,7 +149,7 @@
 
 	function onFailed(error)
 	{
-		console.error(`Game failed to initialize: ${error.message}`);
+		console.error(`Game failed to initialize: ${error.message}\n${error.stack}`);
 	}
 
 	// head.js(

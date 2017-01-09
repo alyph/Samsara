@@ -1,0 +1,18 @@
+@import sprites
+
+@base Card
+@namespace hero
+
+paladin:
+{
+	displayName: "Paladin"
+	smallPortrait: #sprite.hero.paladin
+}
+
+@namespace equipment
+
+longsword:
+{
+	displayName: "Longsword"
+	smallPortrait: #sprite.equip.longsword
+}

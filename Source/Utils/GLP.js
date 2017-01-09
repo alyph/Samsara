@@ -79,6 +79,7 @@ var GLP =  new (function(global)
 
 		expect(type, str)
 		{
+			// TODO: just call skip() and error if returned null?
 			let token = this.peek();
 			if (token.is(type, str))
 			{
@@ -86,7 +87,7 @@ var GLP =  new (function(global)
 			}
 			else
 			{
-				this.error(`Expected a token ${type}${str?`'${str}'`:""} and instead saw ${token}.`, token);
+				this.error(`Expected a token ${type}${str?` '${str}'`:""} and instead saw ${token}.`, token);
 				return null;
 			}
 		}
@@ -154,7 +155,7 @@ var GLP =  new (function(global)
 
 		toString()
 		{
-			return this.type + (this.str ? `'${this.str}'` : "");
+			return this.type.toString() + (this.str ? ` '${this.str}'` : "");
 		}
 	}
 
@@ -220,7 +221,7 @@ var GLP =  new (function(global)
 			}
 
 			// No valid match
-			return { tokenType: null, tokenStr: "", index: input.length };
+			return { tokenType: null, tokenStr: "", index: -1 };
 		}
 	};
 

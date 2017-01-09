@@ -34,9 +34,17 @@ DATA REVAMP:
 	✔	rule parsing (@import, base, namespace etc.) @done (17-01-01 19:13)
 	✔	lexer @done (17-01-03 22:28)
 	✔	GLP impl @done (17-01-03 22:28)
-	☐	misc functions for package loading (ajax, path etc.)
-	☐	convert the sprites to use archive system
+	✔	misc functions for package loading (ajax, path etc.) @done (17-01-04 21:32)
+	✔	convert the sprites to use archive system @done (17-01-05 23:02)
+	✔	package wide environment (instances vs definitions) defined by extension @done (17-01-07 13:53)
+	✔	import -i/inst/instances to import instances package instead of definitions @done (17-01-07 13:53)
+	✔	definition package cannot import instances (verify at processing level), definition objs cannot ref instances @done (17-01-07 13:53)
+	✔	game init mechanism (GameSymbol.init, reloaded? etc.) @done (17-01-08 16:35)
+	✔	fix game code to use the new Archive (entity init, get(), create() etc.) @done (17-01-08 16:35)
+	✔	string quotes not removed... @done (17-01-08 16:35)
 	☐	should we un-singleton Archive? make it an object owned by the game.
+	☐	syntax highlighting
+	
 
 GAMEPLAY SCRIPT:
 

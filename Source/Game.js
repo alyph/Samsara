@@ -1,5 +1,6 @@
 'use strict';
 
+/* exported Game */
 class Game extends BaseObject
 {
 	constructor()
@@ -18,10 +19,10 @@ class Game extends BaseObject
 		// this.screen.sceneBack.setData(Sprites["loc_primal_forest"]);
 
 
-		this.world = Archive.get(worldName);
+		this.world = Archive.getInst(worldName);
 		if (this.world)
 		{
-			this.world.beginPlay(this);	
+			this.world.start(this);	
 		}
 		else
 		{

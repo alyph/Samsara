@@ -1,0 +1,39 @@
+
+// Sprite Sheets
+
+@base SpriteSheet
+@namespace sprite_sheet
+
+heroes:
+{
+	url: "Content/Images/heroes.png"
+	w: 384
+	h: 456
+}
+
+equipment:
+{
+	url: "Content/Images/equipment.png"
+	w: 384
+	h: 456
+}
+
+
+// Sprites
+
+@base Sprite
+@using sprite_sheet
+
+@namespace sprite.hero
+
+paladin:       { x: 2, y: 0, sheet: #heroes }
+
+
+@namespace sprite.equip
+
+longsword:     { x: 3, y: 0, sheet: #equipment }
+
+
+
+
+

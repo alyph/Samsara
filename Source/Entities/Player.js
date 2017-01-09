@@ -12,15 +12,13 @@ class Player extends Entity
 		this.playingCard = null;
 
 		this.playerView = document.querySelector("player-view");
-
-
 	}
 
-	beginPlay()
+	start()
 	{
 		this.playerView.bind("player", this);
 		
-		let hero = Archive.create("heroes.paladin");
+		let hero = Archive.create("hero.paladin");
 		hero.place(this.world, FieldArea.Party);
 
 		let sword = Archive.create("equipment.longsword");

@@ -4,34 +4,166 @@
 var Archive = new (function(global) 
 {
 	var _loadedPackages = new Set();
-	var _records = {};
-	var _rules = {};
-	var _packageLexer = createPackageLexer();
+	var _records = new Map();
+	var _instances = [];
+	var _rules = new Map();
+	var _packageLexer = null;
+	var _baseUrl = "";
 
-	this.init = function(baseUrl)
+	var Environment =
 	{
+		definitions: "d",
+		instances: "i",
+	};
 
+	var PackageExtension = 
+	{
+		[Environment.definitions]: 'def',
+		[Environment.instances]: 'ins',
+	};
+
+	var ArchiveSymbol = 
+	{
+		loaded: Symbol("recordLoaded"),
+	};
+	this.Symbol = ArchiveSymbol;
+
+	this.instances = _instances;
+
+	this.init = function(config)
+	{
+		_baseUrl = config.baseUrl || "";
+		if (_baseUrl.endsWith('/'))
+			_baseUrl = _baseUrl.slice(0, -1);
 	};
 
 	this.Rule = function(name, parser)
 	{
+		if (_rules.has(name))
+			throw (`Rule named '${name}' already exists.`);
 
+		_rules.set(name, new Rule(parser));
 	};
 
-	this.loadPackage = function(path)
+	this.loadInstances = function(path)
 	{
-		let downloadAll = new Promise(function(resolve, reject)
-		{
-			let downloadSet = new PackageDownloadWorkSet();
-			downloadPackage(path, downloadSet, resolve, reject);
-		});
-
-		return downloadAll.then(function(packages)
-		{
-			processPackages(packages);
-			return true;
-		});
+		let pkgPath = normalizePath(path, Environment.instances);
+		return loadPackage(pkgPath);
 	};
+
+	this.create = function(base)
+	{
+		let instName = "";
+
+		let idx = base.lastIndexOf(Punctuation.nameDelim);
+		if (idx >= 0)
+		{
+			instName = base.substr(idx+1);
+		}
+		else if ((idx = base.lastIndexOf(Punctuation.envDelim)) >= 0)
+		{
+			instName = base.substr(idx+1);
+		}
+		else
+		{
+			instName = base;
+		}
+
+		if (!base || !instName)
+		{
+			console.error(`Invalid base "${base}" or instance name "${instName}", failed to create new object.`);
+			return null;
+		}
+
+		instName = findUniqueRecordName(Environment.instances + Punctuation.envDelim + instName);
+
+		let workingRec = new WorkingRecord();
+		workingRec.fullName = instName;
+		workingRec.scope.environment = Environment.instances;
+		workingRec.dependencies[base] = null;
+		workingRec.blueprint = new Blueprint();
+		workingRec.blueprint.baseName = base;
+
+		processRecords([workingRec]);
+
+		let rec = _records.get(instName);
+		return rec ? rec.object : null;
+	};
+
+	this.getInst = function(name)
+	{
+		name = `${Environment.instances}${Punctuation.envDelim}${name}`;
+
+		let rec = _records.get(name);
+		if (!rec)
+			throw (`Cannot find record: ${name}`);
+
+		return rec.object;
+	};
+
+
+
+
+
+	function addRecord(record)
+	{
+		if (_records.has(record.fullName))
+			throw (`Adding duplicated record: ${record.fullName}`);
+
+		_records.set(record.fullName, record);
+
+		if (record.environment === Environment.instances)
+			_instances.push(record.object);
+	}
+
+	function findUniqueRecordName(name)
+	{
+		let max = 0x1000000000000; // 2^48
+		let numBytes = 6;
+		let bytes = new Uint8Array(numBytes);
+		let lowerMask = 0x00FFFFFF;
+		let mask = 0xFF;
+		let uniqueName = "";
+
+		do
+		{
+			let rand = Math.floor(Math.random() * max);
+			let lower = rand & lowerMask;
+			let higher = Math.floor((rand - lower) / (lowerMask + 1));
+
+			// little endian, higher to lower bits.
+			for (let i = numBytes - 1; i >= numBytes/2; i--) 
+			{
+				bytes[i] = (lower & mask);
+				lower >>= 8; // Shift one byte
+			}
+
+			for (let i = numBytes/2 - 1; i >= 0; i--) 
+			{
+				bytes[i] = (higher & mask);
+				higher >>= 8; // Shift one byte
+			}
+
+			let byteStr = String.fromCharCode.apply(null, bytes);
+			let encoding = btoa(byteStr);
+			uniqueName = `${name}_${encoding}`;
+
+		} while(_records.has(uniqueName));
+
+		return uniqueName;
+	}
+
+
+
+
+// ██╗      ██████╗  █████╗ ██████╗ ██╗███╗   ██╗ ██████╗ 
+// ██║     ██╔═══██╗██╔══██╗██╔══██╗██║████╗  ██║██╔════╝ 
+// ██║     ██║   ██║███████║██║  ██║██║██╔██╗ ██║██║  ███╗
+// ██║     ██║   ██║██╔══██║██║  ██║██║██║╚██╗██║██║   ██║
+// ███████╗╚██████╔╝██║  ██║██████╔╝██║██║ ╚████║╚██████╔╝
+// ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝ 
+
+
 
 	class PackageDownloadWorkSet
 	{
@@ -42,15 +174,29 @@ var Archive = new (function(global)
 		}
 	}
 
+	function loadPackage(path)
+	{
+		let downloadAll = new Promise(function(resolve, reject)
+		{
+			let downloadSet = new PackageDownloadWorkSet();
+			downloadPackage(path, downloadSet, resolve, reject);
+		});
+
+		return downloadAll.then(function(packages)
+		{
+			return processPackages(packages);
+		});
+	}
+
 	function downloadPackage(path, workSet, resolve, reject)
 	{
-		path = normalizePath(path);
+		//path = normalizePath(path);
 		workSet.pendingPackages.add(path);
 		let url = convertPathToUrl(path);
 		ajax(url).then(function(data)
 		{
 			// parse package
-			let { recs, imports } = compilePackage(data, path);
+			let { records, imports } = compilePackage(data, path);
 
 			// any more to import?
 			for (let importPath of imports)
@@ -65,12 +211,12 @@ var Archive = new (function(global)
 
 			// all loaded (if so, resolve the workset)
 			workSet.pendingPackages.delete(path);
-			workSet.finishedPackages[path] = recs;
+			workSet.finishedPackages[path] = records;
 
 			if (workSet.pendingPackages.size === 0)
 			{
 				resolve(workSet.finishedPackages);
-			}	
+			}
 		},
 
 		function(reason)
@@ -80,29 +226,79 @@ var Archive = new (function(global)
 		});
 	}
 
-	function normalizePath(path)
+	function normalizePath(path, env)
 	{
+		if (!isAbsolutePath(path))
+			path = '/' + path;
 
+		let extIdx = path.lastIndexOf('.');
+		if (extIdx >= 0)
+			path = path.slice(0, extIdx);
+
+		path += `.${PackageExtension[env]}`;
+
+		return path;
 	}
 
 	function convertPathToUrl(path)
 	{
-
+		return _baseUrl + path; //+ ".apk";
 	}
 
 	function isAbsolutePath(path)
 	{
-
+		return path.startsWith('/');
 	}
 
 	function convertRelativePathToAbsolute(relativePath, relativeToPackage)
 	{
+		if (isAbsolutePath(relativePath))
+			throw (`The path is not relative: ${relativePath}`);
 
+		let idx = relativeToPackage.lastIndexOf('/');
+		if (idx < 0)
+			throw (`The other package path is also relative path, cannot be used to convert a relative path: ${relativeToPackage}`);
+
+		return relativeToPackage.slice(0, idx+1) + relativePath;
+	}
+
+	function getEnvFromPackagePath(path)
+	{
+		for (let env of Object.values(Environment))
+		{
+			if (path.endsWith(`.${PackageExtension[env]}`))
+				return env;
+		}
+
+		throw (`The package does not have valid extension: ${path}`);
 	}
 
 	function ajax(url)
 	{
+		let promise = new Promise(function(resolve, reject)
+		{
+			// Instantiates the XMLHttpRequest
+			let request = new XMLHttpRequest();			
+			request.open("GET", url, true);
+			request.onreadystatechange = function()
+			{
+				if (request.readyState === XMLHttpRequest.DONE)
+				{
+					if (request.status === 200)
+					{
+						resolve(request.response);
+					}
+					else
+					{
+						reject(new Error(`Failed to GET ${url}, error code: ${request.status}`));
+					}
+				}
+			};
 
+			request.send();
+		});
+
+		return promise;
 	}
 
 
@@ -156,7 +352,7 @@ var Archive = new (function(global)
 	class SyntaxNodeExpression 			{constructor() { this.value = ""; }}
 	class SyntaxNodeRule				{constructor() { this.executor = null; }}
 
-	function createPackageLexer()
+	_packageLexer = (() =>
 	{
 		let identifierRegex = String.raw`[a-zA-Z_]\w*`;
 
@@ -189,7 +385,7 @@ var Archive = new (function(global)
 		]; 
 
 		return new GLP.CommonRegexLexer(regexToTokens);
-	}
+	})();
 
 	function generateRegexFromSymbols(symbols)
 	{
@@ -306,7 +502,9 @@ var Archive = new (function(global)
 		{
 			input.next();
 			let strNode = new SyntaxNodeString();
-			strNode.value = token.str; // TODO: clean up escaped chars
+
+			// Trim quotes.
+			strNode.value = token.str.slice(1, -1); // TODO: clean up escaped chars
 			return strNode;
 		}
 		// potentially null or string? (allow single word string？)
@@ -492,6 +690,13 @@ var Archive = new (function(global)
 		}
 	}
 
+	class Rule
+	{
+		constructor(parser)
+		{
+			this.parse = parser;
+		}
+	}
 
 	function parseRule(input)
 	{
@@ -499,7 +704,7 @@ var Archive = new (function(global)
 		if (!token)
 			return null;
 
-		let rule = _rules[token.str];
+		let rule = _rules.get(token.str);
 		if (!rule)
 		{
 			input.error(`Unknown rule: "${token.str}"`, token);
@@ -522,7 +727,20 @@ var Archive = new (function(global)
 
 	this.Rule("import", function(input)
 	{
-		let token = input.match(/\s*[\/a-zA-Z\d]+/);
+		// Env switch
+		let importEnv = Environment.definitions;
+		if (input.peek().is(TokenTypes.operators, '-')) // TODO: don't like this harded like this much.
+		{
+			let token = input.expect(TokenTypes.identifier);
+			if (!token)
+				return null;
+
+			if ("instances".startsWith(token.str))
+				importEnv = Environment.instances;
+		}
+
+		// TODO: not a big deal but this doesn't work if there's comments in the middle.
+		let token = input.match(/\s*[\/a-zA-Z\d]+/g);
 		if (!token)
 		{
 			input.error(`Invalid import path.`);
@@ -541,35 +759,52 @@ var Archive = new (function(global)
 			let fullPath = isAbsolutePath(importPath) ? importPath :
 				convertRelativePathToAbsolute(importPath, context.packagePath);
 
+			fullPath = normalizePath(fullPath, importEnv); //`.${PackageExtension[importEnv]}`;
+
+			if (importEnv === Environment.instances &&
+				getEnvFromPackagePath(context.packagePath) !== Environment.instances)
+			{
+				console.error(`Definitions package '${context.packagePath}' cannot import instances package '${fullPath}'.`);
+				return;
+			}
+
 			context.imports.push(fullPath);
 		};
 	});
 
-	this.Rule("env", function(input)
-	{
-		let token = input.expect(TokenTypes.identifier);
-		if (!token)
-			return null;
+	// this.Rule("env", function(input)
+	// {
+	// 	let token = input.expect(TokenTypes.identifier);
+	// 	if (!token)
+	// 		return null;
 
-		let env = Environment[token.str];
-		if (!env)
-		{
-			input.error(`Unknown environment: ${token.str}.`);
-			return null;
-		}
+	// 	let env = Environment[token.str];
+	// 	if (!env)
+	// 	{
+	// 		input.error(`Unknown environment: ${token.str}.`);
+	// 		return null;
+	// 	}
 
-		return function(context)
-		{
-			context.scope = context.scope.clone();
-			context.scope.environment = env;
-		};
-	});
+	// 	return function(context)
+	// 	{
+	// 		context.scope = context.scope.clone();
+	// 		context.scope.environment = env;
+	// 	};
+	// });
 
 	this.Rule("namespace", function(input)
 	{
 		let namespace = parseRecordName(input);
 		if (!namespace)
 			return null;
+
+		// Do not allow env in namespace, env is determined by the package path.
+		if (isFullRecordName(namespace))
+		{
+			input.error(`Namespace shouldn't include environment tag: ${namespace}`);
+			let idx = namespace.indexOf(Punctuation.envDelim);
+			namespace = namespace.substr(idx + 1);
+		}
 
 		return function(context)
 		{
@@ -633,13 +868,6 @@ var Archive = new (function(global)
 //  ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝ 
 
 
-
-	var Environment =
-	{
-		definitions: "d",
-		instances: "i",
-	};
-
 	class Scope
 	{
 		constructor()
@@ -681,6 +909,7 @@ var Archive = new (function(global)
 		let pkgNode = GLP.parse(data, _packageLexer, parsePackage);
 
 		let context = new PackageCompilingContext();
+		context.scope.environment = getEnvFromPackagePath(path);
 		context.packagePath = path;		
 
 		for (let entry of pkgNode.entries)
@@ -689,8 +918,7 @@ var Archive = new (function(global)
 			{
 				let env = context.scope.environment;
 				let namespacedName = context.scope.namespace + entry.key;
-				let fullName = (isFullRecordName(namespacedName) ? 
-					namespacedName : `${env}${Punctuation.envDelim}${namespacedName}`);
+				let fullName = `${env}${Punctuation.envDelim}${namespacedName}`;
 
 				let {blueprint, dependencies} = compileBlueprint(entry.value, context.defaultBase);
 
@@ -699,6 +927,7 @@ var Archive = new (function(global)
 				record.scope = context.scope;
 				record.dependencies = dependencies;
 				record.blueprint = blueprint;
+				context.records.push(record);
 			}
 			else if (entry.constructor === SyntaxNodeRule)
 			{
@@ -764,7 +993,7 @@ var Archive = new (function(global)
 			}
 		}
 
-		return {blueprint: blueprint, dependencies: dependencies};
+		return { blueprint, dependencies };
 	}
 
 	function compileList(listNode)
@@ -861,8 +1090,17 @@ var Archive = new (function(global)
 		/*jshint -W054 */
 		try
 		{
-			let func = new Function(expr);
-			return func();
+			let func = new Function(`return (${expr});`);
+			let result = func();
+			if (!Number.isFinite(result))
+			{
+				console.error(`Expression does not evaluate to a finite number (${result}): ${expr}`);
+				return 0;
+			}
+			else
+			{
+				return result;
+			}
 		}
 		catch (e)
 		{
@@ -888,66 +1126,113 @@ var Archive = new (function(global)
 
 	function processPackages(packages)
 	{
-		let processingPackages = [];
+		//let processingPackages = [];
 		let processingRecords = [];
-		let processingRecordsMap = {};
 
 		for (let pkgPath in packages)
 		{
 			if (!_loadedPackages.has(pkgPath))
 			{
-				processingPackages.push(pkgPath);
+				_loadedPackages.add(pkgPath);
+				//processingPackages.push(pkgPath);
 
 				for (let record of packages[pkgPath])
 				{
-					if (_records[record.fullName])
+					if (_records.has(record.fullName))
 					{
 						console.error(`Records in different packages have duplicated name '${record.fullName}', the newly loaded one from ${pkgPath} is ignored.`);
 					}
 					else
 					{
-						processingRecordsMap[record.fullName] = record;
 						processingRecords.push(record);
 					}
 				}
 			}
 		}
 		
-		// setup dependencies
-		for (let record of processingRecords)
+		//_loadedPackages = _loadedPackages.concat(processingPackages);
+
+		return processRecords(processingRecords);
+	}
+
+	function processRecords(records)
+	{
+		let recordsMap = new Map();
+		for (let record of records)
 		{
-			record.establishDependencies(processingRecordsMap);
+			recordsMap.set(record.fullName, record);
+		}
+
+		// setup dependencies
+		for (let record of records)
+		{
+			record.establishDependencies(recordsMap);
 		}
 
 		// sort dependencies
-		let sortedRecords = sortRecordsByDependency(processingRecords);
+		let sortedRecords = sortRecordsByDependency(records);
+
+		// Find the base of all blueprints with a baseName,
+		// thus able to create a raw object to used in resolve ref phase.
+		for (let record of sortedRecords)
+		{
+			record.resolveBase();
+		}
+
+		for (let record of sortedRecords)
+		{
+			record.resolveReferences(recordsMap);
+		}
 
 		// merge with base (recursively, owner to sub object)
-		// and construct an empty object
 		for (let record of sortedRecords)
 		{
 			record.assembleBlueprint();
 		}
 
-		for (let record of sortedRecords)
-		{
-			record.resolveReferences(processingRecordsMap);
-		}
-
+		let finalRecords = [];
 		for (let record of sortedRecords)
 		{
 			let finalRecord = record.generateFinalRecord();
 			if (finalRecord)
 			{
-				_records[record.fullName] = finalRecord;	
+				finalRecords.push(finalRecord);
+				addRecord(finalRecord);
+				//_records[record.fullName] = finalRecord;
 			}
 			else
 			{
 				console.error(`Record '${record.fullName}' did not load correctly.`);
 			}
 		}
+		
+		// Notify the objects of the loaded event.
+		// And the object can add additional loading by returning a promise.
+		let loadingPromises = [];
+		for (let record of finalRecords)
+		{
+			let obj = record.object;
+			let loaded = obj[ArchiveSymbol.loaded];
+			if (loaded)
+			{
+				let result = loaded.call(obj, record);
+				if (result !== undefined)
+				{
+					loadingPromises.push(Promise.resolve(result));
+				}
+			}
+		}
 
-		_loadedPackages = _loadedPackages.concat(processingPackages);
+		// At this point all records and pakcages are in place.
+		// We are just waiting for the additional custom loading to finish,
+		// which shouldn't be a problem should any additional loading call
+		// occur or even dependant on the records loaded here, since they
+		// are complete from record point of view. (with complete record info
+		// and blueprint which can be used to extend child objects or used as
+		// reference. The only caution is the record's object may have missing
+		// content. That's why you need to wait for this promise to fullfill
+		// before actually using the object for game purpose.)
+		return Promise.all(loadingPromises);
 	}
 
 	class WorkingRecord
@@ -991,22 +1276,38 @@ var Archive = new (function(global)
 			}
 		}
 
-		assembleBlueprint()
+		resolveBase()
 		{
-			if (this.blueprint.assemble(null, this.dependencies))
+			if (this.blueprint.resolveBase(this.dependencies))
 			{
 				this.object = this.blueprint.createObject();
 			}
 			else
 			{
-				console.error(`Failed to assemble the blueprint for record: ${this.fullName}.`);
+				console.error(`Failed to resolve the base of the blueprint for record: ${this.fullName}.`);
 				this.blueprint = null; // remove the bad blueprint so it cannot contaminate the rest of the archive.
-			}				
+			}
 		}
 
 		resolveReferences(recordsMap)
 		{
-			this.blueprint.resolveReferences(this.scope, recordsMap);
+			if (this.blueprint)
+				this.blueprint.resolveReferences(this.scope, recordsMap);
+		}
+
+		assembleBlueprint()
+		{
+			if (this.blueprint)
+				this.blueprint.assemble(null);
+			// if (this.blueprint.assemble(null, this.dependencies))
+			// {
+			// 	this.object = this.blueprint.createObject();
+			// }
+			// else
+			// {
+			// 	console.error(`Failed to assemble the blueprint for record: ${this.fullName}.`);
+			// 	this.blueprint = null; // remove the bad blueprint so it cannot contaminate the rest of the archive.
+			// }				
 		}
 
 		generateFinalRecord()
@@ -1018,6 +1319,7 @@ var Archive = new (function(global)
 
 			let finalRecord = new Record();
 			finalRecord.fullName = this.fullName;
+			finalRecord.environment = this.scope.environment;
 			finalRecord.blueprint = this.blueprint;
 			finalRecord.object = this.object;
 			return finalRecord;
@@ -1029,6 +1331,7 @@ var Archive = new (function(global)
 		constructor()
 		{
 			this.fullName = "";
+			this.environment = null;
 			this.blueprint = null;
 			this.object = null;
 		}
@@ -1058,9 +1361,10 @@ var Archive = new (function(global)
 			this.items = [];
 		}
 
-		assemble(dependencies)
+		resolveBase(dependencies)
 		{
-			if (this.itemType === ListItemType.blueprint)
+			if (this.itemType === ListItemType.blueprint ||
+				this.itemType === ListItemType.list)
 			{
 				for (let i = 0; i < this.items.length; i++)
 				{
@@ -1068,22 +1372,15 @@ var Archive = new (function(global)
 					let item = this.items[i];
 					if (item)
 					{
-						if (!item.assemble(null, dependencies))
+						if (!item.resolveBase(dependencies))
 						{
 							this.items[i] = null;
-							console.error(`Blueprint item at ${i} failed to assemble.`);
+							console.error(`Blueprint item at ${i} failed to resolve base.`);
 						}	
 					}					
 				}
 			}
-			else if (this.itemType === ListItemType.list)
-			{
-				for (let item of this.items)
-				{
-					// can have nulls
-					if (item) item.assemble(dependencies);
-				}
-			}
+			return true;		
 		}
 
 		resolveReferences(scope, recordsMap)
@@ -1107,6 +1404,22 @@ var Archive = new (function(global)
 					newList[i] = item ? resolveReference(item, scope, recordsMap) : null;
 				}
 				this.items = newList;
+			}
+		}
+
+		assemble(base)
+		{
+			if (base)
+				throw ("list cannot have base.");
+
+			if (this.itemType === ListItemType.blueprint ||
+				this.itemType === ListItemType.list)
+			{
+				for (let item of this.items)
+				{
+					// can have nulls
+					if (item) item.assemble(null);
+				}
 			}
 		}
 
@@ -1137,6 +1450,7 @@ var Archive = new (function(global)
 		constructor()
 		{
 			this.baseName = "";
+			this.base = null;
 			//this.baseRecord = null;
 			this.cls = null;
 			
@@ -1152,78 +1466,48 @@ var Archive = new (function(global)
 
 		// }
 
-		assemble(base, dependencies)
+		resolveBase(dependencies)
 		{
-			if (!base)
+			if (this.baseName)
 			{
-				if (this.baseName)
+				// resolve
+				let baseDep = dependencies[this.baseName] || null;
+
+				if (!baseDep)
 				{
-					// resolve
-					let baseDep = dependencies[this.baseName] || null;
+					console.error(`Failed to resolve the base ${this.baseName}`);
+					return false;
+				}
 
-					if (!baseDep)
-					{
-						console.error(`Failed to resolve the base ${this.baseName}`);
-						return false;
-					}
-
-					// a native class
-					if (typeof baseDep === 'function')
-					{
-						this.cls = baseDep;
-					}
-					else
-					{
-						if (!baseDep.blueprint || !baseDep.blueprint.cls)
-						{
-							console.error(`Invalid base record ${this.baseName}: no blueprint, or blueprint has no cls: ${baseDep}`);
-							return false;
-						}
-
-						base = baseDep.blueprint;
-					}
-
-					// resolve
-					// if (this.baseName.startsWith('$'))
-					// {
-					// 	// error reported by resolveNativeClass.
-					// 	this.cls = resolveNativeClass(this.baseName.substr(1));
-					// 	if (!this.cls)
-					// 		return false;
-					// }
-					// else
-					// {
-					// 	let baseRec = dependencies[this.baseName] || null;
-
-					// 	if (!baseRec)
-					// 	{
-					// 		console.error(`Failed to resolve the base record ${this.baseName}`);
-					// 		return false;
-					// 	}
-
-					// 	if (!baseRec.blueprint || !baseRec.blueprint.cls)
-					// 	{
-					// 		console.error(`Invalid base record ${this.baseName}: no blueprint, or blueprint has no cls`);
-					// 		return false;
-					// 	}
-
-					// 	base = baseRec.blueprint;
-					// }
+				// a native class
+				if (typeof baseDep === 'function')
+				{
+					this.cls = baseDep;
 				}
 				else
 				{
-					console.error("The blueprint cannot be assembled because it has no base and not provided one by the caller either.");
-					return false;
+					if (!baseDep.blueprint || !baseDep.blueprint.cls)
+					{
+						console.error(`Invalid base record ${this.baseName}: no blueprint, or blueprint has no cls: ${baseDep}`);
+						return false;
+					}
+
+					this.base = baseDep.blueprint;
+					this.cls = this.base.cls;
 				}
 			}
+			else
+			{
+				console.error(`Cannot resolve base, since the blueprint does not specify a base name.`);
+				return false;
+			}
 
-			// Self components
 			for (let key in this.components)
 			{
 				let component = this.components[key];
 				if (component.baseName)
 				{
-					if (!component.assemble(null, dependencies))
+					if (!this.components[key].resolveBase(dependencies))
 					{
 						delete this.components[key]; // remove the bad component. error already reported.
 					}
@@ -1233,7 +1517,65 @@ var Archive = new (function(global)
 			// Self lists
 			for (let key in this.lists)
 			{
-				this.lists[key].assemble(dependencies);
+				if (!this.lists[key].resolveBase(dependencies))
+				{
+					delete this.lists[key];
+				}
+			}
+
+			return true;
+		}
+
+		resolveReferences(scope, recordsMap)
+		{
+			for (let component of Object.values(this.components))
+			{
+				component.resolveReferences(scope, recordsMap);
+			}
+
+			for (let list of Object.values(this.lists))
+			{
+				list.resolveReferences(scope, recordsMap);
+			}
+
+			for (let key in this.references)
+			{
+				// Can be null, but the error has been reported by resolveReference().
+				let referencedObject = resolveReference(this.references[key], scope, recordsMap);
+
+				if (this.values.hasOwnProperty(key))
+					console.error(`Duplicated property key '${key}'' between references and values: ${this.values[key]}.`);
+
+				this.values[key] = referencedObject;
+			}
+			// TODO: should we clear the references array?
+		}		
+
+		assemble(base)
+		{
+			if (this.cls && base)
+				throw ("The blueprint has its own base, should not receive a base from outside.");
+
+			this.base = base = (base || this.base);
+
+			// Self components
+			for (let key in this.components)
+			{
+				let component = this.components[key];
+				if (component.cls || !base || !base.components.hasOwnProperty(key))
+				{
+					component.assemble(null);
+					// if (!component.assemble(null, dependencies))
+					// {
+					// 	delete this.components[key]; // remove the bad component. error already reported.
+					// }
+				}
+			}
+
+			// Self lists
+			for (let key in this.lists)
+			{
+				this.lists[key].assemble(null);
 			}
 
 			// Merge in base
@@ -1247,13 +1589,9 @@ var Archive = new (function(global)
 					let myComponent = this.components[key];
 					if (myComponent)
 					{
-						if (!myComponent.baseName)
+						if (!myComponent.cls)
 						{
-							if (!myComponent.assemble(baseComponent, dependencies))
-							{
-								// not likely to happen, but if fail use the parent's component as if this component doesn't exist.
-								this.components[key] = baseComponent;			
-							}
+							myComponent.assemble(baseComponent);
 						}
 					}
 					else
@@ -1271,13 +1609,13 @@ var Archive = new (function(global)
 					}
 				}
 
-				for (let key in base.references)
-				{
-					if (!this.references.hasOwnProperty(key))
-					{
-						this.references[key] = base.references[key];
-					}
-				}
+				// for (let key in base.references)
+				// {
+				// 	if (!this.references.hasOwnProperty(key))
+				// 	{
+				// 		this.references[key] = base.references[key];
+				// 	}
+				// }
 
 				for (let key in base.values)
 				{
@@ -1293,26 +1631,7 @@ var Archive = new (function(global)
 			// 	this.placeholder = new this.cls();
 			// }
 
-			return true;
-		}
-
-		resolveReferences(scope, recordsMap)
-		{
-			for (let key in this.components)
-			{
-				this.components[key].resolveReferences(scope, recordsMap);
-			}
-
-			for (let key in this.references)
-			{
-				// Can be null, but the error has been reported by resolveReference().
-				let referencedObject = resolveReference(this.references[key], scope, recordsMap);
-
-				if (this.values.hasOwnProperty(key))
-					console.error(`Duplicated property key ${key} between references and values.`);
-
-				this.values[key] = referencedObject;
-			}
+			//return true;
 		}
 
 		reproduce()
@@ -1331,7 +1650,7 @@ var Archive = new (function(global)
 			{
 				let component = this.components[key];
 				let originalValue = obj[key];
-				if (component.baseName)
+				if (component.cls)
 				{
 					let newObject = component.reproduce(); //component.createObject();
 
@@ -1343,7 +1662,7 @@ var Archive = new (function(global)
 					}
 					else
 					{
-						console.error(`Type mismatch between original (${originalValue}) and assigning value (${newObject}).`);
+						console.error(`Failed to assign property '${key}' in object '${this.baseName?this.baseName:obj.constructor}': Type mismatch between original (${originalValue}) and assigning value (${newObject}).`);
 					}					
 				}
 				else
@@ -1354,7 +1673,7 @@ var Archive = new (function(global)
 					}
 					else
 					{
-						console.error(`The original value (${originalValue}) is not of object type when attempting to partially override.`);
+						console.error(`Failed to assign property '${key}' in object '${this.baseName?this.baseName:obj.constructor}': The original value (${originalValue}) is not of object type when attempting to partially override.`);
 					}
 				}
 			}
@@ -1368,7 +1687,7 @@ var Archive = new (function(global)
 				}
 				else
 				{
-					console.error(`The original value (${originalValue}) is not an array and cannot be assigned to array value.`);
+					console.error(`Failed to assign property '${key}' in object '${this.baseName?this.baseName:obj.constructor}': The original value (${originalValue}) is not an array and cannot be assigned to array value.`);
 				}
 			}
 
@@ -1404,7 +1723,7 @@ var Archive = new (function(global)
 				}
 				else
 				{
-					console.error(`Type mismatch between original (${originalValue}) and assigning value (${newValue}).`);
+					console.error(`Failed to assign property '${key}' in object '${this.baseName?this.baseName:obj.constructor}': Type mismatch between original (${originalValue}) and assigning value (${newValue}).`);
 				}
 			}
 
@@ -1433,7 +1752,7 @@ var Archive = new (function(global)
 			for (let name in record.dependencies)
 			{
 				let dependency = record.dependencies[name];
-				if (dependency.constructor === WorkingRecord)
+				if (dependency && dependency.constructor === WorkingRecord)
 				{
 					if (dependency.dependantCount <= 0)
 						throw ("incorrect dependant count.");
@@ -1489,7 +1808,9 @@ var Archive = new (function(global)
 
 	function resolveNativeClass(className)
 	{
-		let cls = global(className);
+		/*jshint -W054 */
+		let lookUpFunc = new Function(`try { return ${className}; } catch (e) { return null; }`);
+		let cls = lookUpFunc();
 
 		if (!cls)
 		{
@@ -1532,7 +1853,16 @@ var Archive = new (function(global)
 		{
 			if (isFullRecordName(name))
 			{
-				fullNames.push(name);
+				// Definitions cannot reference instances
+				if (scope.environment === Environment.definitions &&
+					name.startsWith(Environment.instances))
+				{
+					console.error(`Definition cannot reference instance: ${name}`);
+				}
+				else
+				{
+					fullNames.push(name);	
+				}
 			}
 			else
 			{
@@ -1546,7 +1876,7 @@ var Archive = new (function(global)
 		let foundRecs = [];
 		for (let fullName of fullNames)
 		{
-			let rec = _records[fullName] || recordsMap[fullName];
+			let rec = _records.get(fullName) || recordsMap.get(fullName);
 			if (rec) foundRecs.push(rec);
 		}
 
