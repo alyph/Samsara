@@ -9,11 +9,10 @@ var Descriptor = Class(
 	}
 });
 
-class Keyword extends BaseObject
+class Keyword
 {
 	constructor()
 	{
-		super();
 	}
 }
 

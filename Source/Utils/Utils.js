@@ -1,3 +1,16 @@
+
+/* exported Enum */
+class Enum
+{
+	constructor(...names)
+	{
+		for (let name of names)
+		{
+			this[name] = Symbol(name);
+		}
+	}
+}
+
 var UniqueId =
 {
 	_usedIds : {},

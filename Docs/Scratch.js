@@ -96,8 +96,95 @@
 // same for the traits
 // THOUGHT: do we need inheritance still, can we just put the in the contained skill list?
 
-/* jshint ignore:start */
+// Field areas:
+//	- party
+//	- encounter
+//	- environment
 
+// Plyaer areas:
+//	- deck
+//	- hand
+//	- discard piles
+
+
+/* eslint ignore:start */
+
+
+// ways to handle additional attach/equip requirements:
+//	- expose targetCondition as an array, and allow modifiers to add entries to the array, all conditions must be met
+//	- expose additional requirements as a sginle array parameter, and the modifiers can modify that parameter
+//	- [preferred] write any needed requirements in the target condition itself, and expose each requirements config in the parameters
+//	  for example, in target condition write expression to check required skill level, and required skill level 
+//	  is exposed to the parameters as a map parameter(?), and then the modifiers and insert or modify the values in the map
+//	  if the map is empty the condition is ignored.
+
+action = 
+{
+	// when to play
+	timing: in hand or when attached?
+	// expression, when set must select a target before executing 
+	// (target will be a usable param in effect script)
+	// some effect may select target itself (for exmple discarding card),
+	// which doesn't require target set here.
+	targetConditions: => { hero && friendly }
+
+	// list of effects to be executed (to be replaced by script)
+	effects: []
+
+	// all modifiable parameters (usable in effects script: params.foo)
+	params: []
+}
+
+card = 
+{
+	// the root trait
+	definition:
+	{
+
+	}
+}
+
+trait =
+{
+	// all usable actions
+	// this is what's available to modifiers (means enable these actions)
+	actions: []
+
+	// all modifiable params (accessible from action effects: card.params.foo)
+	params: []
+
+	// parameter values (modifier)
+	values: []
+
+	// all inhereited traits
+	traits: []
+}
+
+
+globals: world, player
+locals: target, card, action // get parms from card or action card.params.foo, action.params.bar
+scope: (target, card)
+
+target = .Func.And
+{
+	conditions:[ .script.is_hero{}, .script.is_friendly{}, 
+	.Func.All{ conditions = action.params.requirements } ] // how to handle Reqs.
+}
+// another way to do additional requirements is to allow
+// a trait to modify the actions' target conditions. (e.g. add more conditions)
+
+effect = .Proc.AttachCard
+{
+	card: "card",
+	target: "target"
+}
+
+target => { hero && friendly }
+ // expand to: (target, self).{ hero && friendly }
+ // = (target, self).hero() && (target, self).friendly()
+
+hero => (self) => { self.has_trait("hero") }
+friendly => (this, other) => { check_relationship(this, other) == friendly }
 
 base: $native
 {
@@ -218,6 +305,21 @@ var effect =
 	deal_damage($target, $num_discarded * 2)
 
 	if not $card.has_trait(hero) and $card.isAlive then
+
+	if card.(
+		has_trait(hero) and 
+		isAlive and
+		cost >= 0
+		)
+	{
+		card.
+		{
+			play 2 >= 0
+
+			discard 4, 5
+
+		}
+	}
 
 	end
 `;

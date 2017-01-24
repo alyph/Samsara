@@ -11,11 +11,11 @@
 		var game = new Game();
 		game.start("world");
 
-		(function update()
-		{
-			game.update();
-			window.setTimeout(update, 100);
-		})();
+		// (function update()
+		// {
+		// 	game.update();
+		// 	setTimeout(update, 100);
+		// })();
 
 		document.querySelector("#welcomeScreen").classList.add("hidden");
 
@@ -35,7 +35,7 @@
 	var utils = "Source/Utils/";
 	// var components = "Source/Components/";
 	// var definitions = "Source/Definitions/";
-	var entities = "Source/Entities/";
+	var gameplay = "Source/gameplay/";
 	var sequences = "Source/Sequences/";
 	var table = "Source/Table/";
 	var source = "Source/";
@@ -69,32 +69,17 @@
 		// ui + "Templates/BasicTemplates.js",
 		// ui + "Templates/GameTemplates.js",
 		// ui + "Templates/Screens.js",
-		entities + "World.js",
-		entities + "Entity.js",
-		entities + "Action.js",
-		entities + "Actor.js",
-		entities + "Message.js",
-		entities + "Narrator.js",
-		entities + "Card.js",
-		entities + "Deck.js",
-		entities + "Player.js",
-		entities + "Party.js",
-		entities + "Character.js",
-		entities + "Scene.js",
-		entities + "Stage.js",
-		entities + "Story.js",
-		entities + "Activity.js",
-		entities + "Environment.js",
-		entities + "Field.js",
-		entities + "Global.js",
-		entities + "Keeper.js",
-		entities + "Location.js",
-		entities + "Goal.js",
-		entities + "POV.js",
-		entities + "POI.js",
-		entities + "sprite.js",
-		entities + "Quest.js",
-		entities + "Scripting.js",
+		gameplay + "World.js",
+		gameplay + "entity.js",
+		gameplay + "action.js",
+		gameplay + "area.js",
+		gameplay + "card.js",
+		gameplay + "Field.js",
+		gameplay + "global.js",
+		gameplay + "player.js",
+		gameplay + "Scripting.js",
+		gameplay + "sprite.js",
+		gameplay + "trait.js",
 		// sequences + "Sequence.js",
 		// sequences + "ActionSequences.js",
 		// table + "Boards.js",

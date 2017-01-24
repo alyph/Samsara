@@ -1,4 +1,6 @@
-/* globals -Archive */
+'use strict';
+
+/* globals GLP */
 /* exported Archive */
 
 var Archive = new (function(global) 
@@ -314,7 +316,7 @@ var Archive = new (function(global)
 
 	var TokenTypes = GLP.TokenTypes(
 	[	
-		"key", 
+		"key",
 		"identifier",
 		"string",
 		"number",
@@ -772,26 +774,6 @@ var Archive = new (function(global)
 		};
 	});
 
-	// this.Rule("env", function(input)
-	// {
-	// 	let token = input.expect(TokenTypes.identifier);
-	// 	if (!token)
-	// 		return null;
-
-	// 	let env = Environment[token.str];
-	// 	if (!env)
-	// 	{
-	// 		input.error(`Unknown environment: ${token.str}.`);
-	// 		return null;
-	// 	}
-
-	// 	return function(context)
-	// 	{
-	// 		context.scope = context.scope.clone();
-	// 		context.scope.environment = env;
-	// 	};
-	// });
-
 	this.Rule("namespace", function(input)
 	{
 		let namespace = parseRecordName(input);
@@ -1126,7 +1108,6 @@ var Archive = new (function(global)
 
 	function processPackages(packages)
 	{
-		//let processingPackages = [];
 		let processingRecords = [];
 
 		for (let pkgPath in packages)
@@ -1134,7 +1115,6 @@ var Archive = new (function(global)
 			if (!_loadedPackages.has(pkgPath))
 			{
 				_loadedPackages.add(pkgPath);
-				//processingPackages.push(pkgPath);
 
 				for (let record of packages[pkgPath])
 				{
@@ -1149,8 +1129,6 @@ var Archive = new (function(global)
 				}
 			}
 		}
-		
-		//_loadedPackages = _loadedPackages.concat(processingPackages);
 
 		return processRecords(processingRecords);
 	}
@@ -1241,7 +1219,6 @@ var Archive = new (function(global)
 		{
 			this.fullName = "";
 			this.scope = new Scope();
-			//this.dependencyNames = [];
 			this.dependencies = {};
 			this.dependantCount = 0;
 			this.blueprint = null;
@@ -1298,16 +1275,7 @@ var Archive = new (function(global)
 		assembleBlueprint()
 		{
 			if (this.blueprint)
-				this.blueprint.assemble(null);
-			// if (this.blueprint.assemble(null, this.dependencies))
-			// {
-			// 	this.object = this.blueprint.createObject();
-			// }
-			// else
-			// {
-			// 	console.error(`Failed to assemble the blueprint for record: ${this.fullName}.`);
-			// 	this.blueprint = null; // remove the bad blueprint so it cannot contaminate the rest of the archive.
-			// }				
+				this.blueprint.assemble(null);		
 		}
 
 		generateFinalRecord()
@@ -1336,14 +1304,6 @@ var Archive = new (function(global)
 			this.object = null;
 		}
 	}
-
-	// class Reference
-	// {
-	// 	constructor()
-	// 	{
-	// 		this.resolvedObject = null;
-	// 	}
-	// }
 
 	var ListItemType =
 	{
@@ -1451,20 +1411,13 @@ var Archive = new (function(global)
 		{
 			this.baseName = "";
 			this.base = null;
-			//this.baseRecord = null;
 			this.cls = null;
 			
 			this.components = {};
 			this.lists = {};
 			this.references = {};
 			this.values = {};
-			// this.placeholder = null;
 		}
-
-		// resolveBase(dependencies)
-		// {
-
-		// }
 
 		resolveBase(dependencies)
 		{
@@ -1565,10 +1518,6 @@ var Archive = new (function(global)
 				if (component.cls || !base || !base.components.hasOwnProperty(key))
 				{
 					component.assemble(null);
-					// if (!component.assemble(null, dependencies))
-					// {
-					// 	delete this.components[key]; // remove the bad component. error already reported.
-					// }
 				}
 			}
 
@@ -1609,14 +1558,6 @@ var Archive = new (function(global)
 					}
 				}
 
-				// for (let key in base.references)
-				// {
-				// 	if (!this.references.hasOwnProperty(key))
-				// 	{
-				// 		this.references[key] = base.references[key];
-				// 	}
-				// }
-
 				for (let key in base.values)
 				{
 					if (!this.values.hasOwnProperty(key))
@@ -1625,13 +1566,6 @@ var Archive = new (function(global)
 					}
 				}
 			}
-
-			// if (this.cls)
-			// {	
-			// 	this.placeholder = new this.cls();
-			// }
-
-			//return true;
 		}
 
 		reproduce()
@@ -1652,13 +1586,13 @@ var Archive = new (function(global)
 				let originalValue = obj[key];
 				if (component.cls)
 				{
-					let newObject = component.reproduce(); //component.createObject();
+					let newObject = component.reproduce();
 
 					if (originalValue === null || 
 						(typeof originalValue === 'object' &&
-						 newObject instanceof originalValue.constructor))
+						newObject instanceof originalValue.constructor))
 					{
-						obj[key] = newObject;//component.fillObject(newObject);
+						obj[key] = newObject;
 					}
 					else
 					{
@@ -1690,23 +1624,6 @@ var Archive = new (function(global)
 					console.error(`Failed to assign property '${key}' in object '${this.baseName?this.baseName:obj.constructor}': The original value (${originalValue}) is not an array and cannot be assigned to array value.`);
 				}
 			}
-
-			// for (let key in this.references)
-			// {
-			// 	let originalValue = obj[key];
-			// 	let referencedObject = this.references[key].resolvedObject;
-			// 	let isOriginalObject = (typeof originalValue === 'object' && !Array.isArray(originalValue));
-			// 	let isTypeMatch = (!originalValue || !referencedObject || referencedObject instanceof originalValue.constructor);
-				
-			// 	if (isOriginalObject && isTypeMatch)
-			// 	{
-			// 		obj[key] = referencedObject;
-			// 	}
-			// 	else
-			// 	{
-			// 		console.error(`Type mismatch between original (${originalValue}) and assigning value (${referencedObject}).`);
-			// 	}
-			// }
 
 			for (let key in this.values)
 			{

@@ -1,11 +1,10 @@
 'use strict';
 
-class GlobalDefinition extends BaseObject
+/* exported GlobalDefinition */
+class GlobalDefinition
 {
 	constructor()
 	{
-		super();
-
 		this.actionsNamespace = "";
 	}
 }

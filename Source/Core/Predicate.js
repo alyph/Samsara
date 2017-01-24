@@ -38,12 +38,10 @@ new (function(global)
 		}
 	}
 
-	class GlobalPredicate extends BaseObject
+	class GlobalPredicate
 	{
 		constructor()
 		{
-			super();
-
 			this.params = null;
 			this.expression = "";
 			this.funcName = "";

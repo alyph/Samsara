@@ -1,12 +1,10 @@
 'use strict';
 
 /* exported Game */
-class Game extends BaseObject
+class Game
 {
 	constructor()
 	{
-		super();
-
 		this.world = null;
 	}
 
@@ -22,17 +20,33 @@ class Game extends BaseObject
 		this.world = Archive.getInst(worldName);
 		if (this.world)
 		{
-			this.world.start(this);	
+			this.world.start(this);
+			this.run();
 		}
 		else
 		{
 			console.error(`world "${worldName}" not found, game failed to start.`);
-		}		
+		}
 	}
 
-	update()
+	async run()
 	{
-		this.world.update();
+		while (true)
+		{
+			// 1 Turn
+
+			// environment action (based on action queue) (enemy, encounter etc.)
+
+			// player choose an action
+			await this.world.player.playTurn();
+
+			// post turn action (usually hidden, for drawing environment or world update in the future)
+		}
 	}
+
+	// update()
+	// {
+	// 	this.world.update();
+	// }
 }
 

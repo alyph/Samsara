@@ -18,7 +18,11 @@ class ForeachDirective
 	{
 		let list = this.list(data);
 		if (!Array.isArray(list))
+		{
+			if (list !== null)
+				console.error(`foreach over ${list.constructor.name}, which is not an array.`);
 			list = [];
+		}
 
 		let oldLen = instance.components.length;
 		let newLen = list.length;

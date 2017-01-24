@@ -1,40 +1,40 @@
-'use strict';
+// 'use strict';
 
-class BaseObject
-{
-	constructor()
-	{
-		this.$name = "";
-		this.$baseObj = null;
-	}
+// class BaseObject
+// {
+// 	constructor()
+// 	{
+// 		this.$name = "";
+// 		this.$baseObj = null;
+// 	}
 
-	//$canBeSubObject: true,
+// 	//$canBeSubObject: true,
 
-	init()
-	{
-	}
+// 	init()
+// 	{
+// 	}
 
-	// isA(cls)
-	// {
-	// 	var current = this.$class;
-	// 	while (current)
-	// 	{
-	// 		if (current === cls)
-	// 			return true;
+// 	// isA(cls)
+// 	// {
+// 	// 	var current = this.$class;
+// 	// 	while (current)
+// 	// 	{
+// 	// 		if (current === cls)
+// 	// 			return true;
 
-	// 		current = current.$super;
-	// 	}
-	// }
+// 	// 		current = current.$super;
+// 	// 	}
+// 	// }
 
-	name()
-	{
-		return this.$name.substr(1);
-	}
+// 	name()
+// 	{
+// 		return this.$name.substr(1);
+// 	}
 
-	isInstance()
-	{
-		return Archive.isInstance(this);
-	}
-}
+// 	isInstance()
+// 	{
+// 		return Archive.isInstance(this);
+// 	}
+// }
 
-BaseObject.prototype.$canBeSubObject = true;
+// BaseObject.prototype.$canBeSubObject = true;

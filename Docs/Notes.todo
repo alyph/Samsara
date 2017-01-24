@@ -21,6 +21,18 @@ Gameplay:
 	☐	action - leave manshion (exit the building and will be presented with new activities)
 	☐	interaction - search scripts, investigate strange painting etc.
 
+System:
+	☐	play card sequence: select a hand card -> if not targeted play on field, otherwise select another card to validate, if valid, play the card -> execute card effects -> done
+	☐	action
+		☐	timing (renamed to context)
+		☐	target criteria? (may not need, different action may have different need for this)
+		☐	effects
+	☐	traits enable actions
+	☐	card hosts actions and then populate when played (or drawn)
+	☐	attach card effect
+	☐	scripting system (plain data, no script language yet)
+
+
 -----------------------------------------------------------------------
 
 DATA REVAMP:
