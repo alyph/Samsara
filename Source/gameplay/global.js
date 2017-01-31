@@ -8,3 +8,4 @@ class GlobalDefinition
 		this.actionsNamespace = "";
 	}
 }
+

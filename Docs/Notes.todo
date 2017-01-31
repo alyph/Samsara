@@ -85,7 +85,7 @@ UI REVAMP:
 	✔	clean up template and element to use component  @done (16-10-24 22:50)
 
 	✔	template header element parsing (treat it like a normal element node, not custom element), this should be able to handle <sprite-img> @done (16-10-26 20:23)
-
+	☐	template dependencies fix (should ignore directive dependencies? what is actually dependent on?)
 	☐	add other basic directives (if, switch)
 	☐	review the number of placeholder text nodes
 

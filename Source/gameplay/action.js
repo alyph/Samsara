@@ -73,7 +73,7 @@ class ActionInstance
 	isValidTarget(target)
 	{
 		// Make sure the target is on field.
-		if (!target.state.isOnField())
+		if (!target.isOnField())
 			return false;
 
 		// If no condition then any target is fine.

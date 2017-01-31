@@ -22,7 +22,8 @@ class World
 	{
 		this.game = game;
 
-		for (let inst of Archive.instances)
+		let instances = [...Archive.instances];
+		for (let inst of instances)
 		{
 			this.startInstance(inst);
 		}

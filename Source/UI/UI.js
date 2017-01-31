@@ -77,6 +77,20 @@ var UI = new (function(global)
 		return templates[name] || null;
 	};
 
+	this.reportUnfinishedTemplates = function()
+	{
+		let pendingsNames = Object.keys(pendingTemplates);
+		if (pendingsNames.length > 0)
+		{
+			let errorMsg = "The following templates are still pending:\n";
+			for (let name of pendingsNames)
+			{
+				errorMsg += `  - ${pendingTemplates[name].map(t => t.name).join()}, dependent on ${name}.\n`;
+			}
+			console.error(errorMsg);			
+		}
+	};
+
 
 // ████████╗███████╗███╗   ███╗██████╗ ██╗      █████╗ ████████╗███████╗
 // ╚══██╔══╝██╔════╝████╗ ████║██╔══██╗██║     ██╔══██╗╚══██╔══╝██╔════╝
@@ -371,12 +385,19 @@ var UI = new (function(global)
 	function registerTemplate(templateElement)
 	{
 		var template = new Template(templateElement);
-		var dependencies = Object.keys(template.dependencies);			
+
+		// TODO: Verify if this is valid.
+		// Ignore dependency on itself.				
+		if (template.dependencies.hasOwnProperty(template.name))
+			delete template.dependencies[template.name];
+
+		var dependencies = Object.keys(template.dependencies);
 		if (dependencies.length > 0)
 		{
 			for (var i = 0; i < dependencies.length; i++) 
 			{
 				var dependency = dependencies[i];
+
 				if (pendingTemplates[dependency] === undefined)
 					pendingTemplates[dependency] = [];
 

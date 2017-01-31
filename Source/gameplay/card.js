@@ -41,11 +41,44 @@ class Card
 					prevArea.cards.splice(idx, 1);
 			}
 
-			this.area = area;
+			this.state.area = area;
 			if (area)
 			{
 				area.cards.push(this);
 			}
+		}
+	}
+
+	isOnField()
+	{
+		let state = this.state;
+		let field = state.world.field;
+		return state.area === field.partyArea ||
+			state.area === field.encounterArea;
+	}
+
+	attachTo(card)
+	{
+		if (!this.state)
+			throw ("Cannot attach non-intanced cards.");
+
+		if (!card.state)
+			throw ("Cannot attach to non-intanced cards.");
+
+		this.placeIn(null);
+
+		let prevHost = this.state.host;
+		if (prevHost)
+		{
+			let idx = prevHost.state.attachments.indexOf(this);
+			if (idx >= 0)
+				prevHost.state.attachments.splice(idx, 1);
+		}
+
+		this.state.host = card;
+		if (card)
+		{
+			card.state.attachments.push(this);
 		}
 	}
 }
@@ -57,18 +90,8 @@ class CardState
 		this.world = null;
 		this.area = null;
 		this.actions = [];
-	}
-
-	isOnField()
-	{
-		let field = this.world;
-		return this.area === field.partyArea ||
-			this.area === field.encounterArea;
-	}
-
-	attachTo(card)
-	{
-
+		this.host = null;
+		this.attachments = [];
 	}
 }
 

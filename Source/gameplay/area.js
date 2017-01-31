@@ -13,3 +13,4 @@ class Area
 		return this.cards.length === 0;
 	}
 }
+

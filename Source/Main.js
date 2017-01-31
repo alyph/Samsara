@@ -129,7 +129,9 @@
 			UI.registerTemplates("Source/UI/Templates/cardgame_templates.html")
 		];
 		
-		Promise.all(templatesLoaded).then(init, onFailed);
+		Promise.all(templatesLoaded)
+			.then(v => { UI.reportUnfinishedTemplates(); })
+			.then(init, onFailed);
 	}
 
 	function onFailed(error)

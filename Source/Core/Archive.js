@@ -339,6 +339,7 @@ var Archive = new (function(global)
 		customValue		: '@',
 		reference		: '#',
 		object			: '.',
+		member			: '.',
 	};
 
 	var BinaryOperators = ['+', '-', '*', '/', '%', '**'];
@@ -514,6 +515,10 @@ var Archive = new (function(global)
 		{
 			return new SyntaxNodeNull();
 		}
+		else if (token.type === TokenTypes.identifier)
+		{
+			return parseExpression(input);
+		}
 		else
 		{
 			input.error(`Unexpected token ${token}, the property value cannot be parsed.`, token);
@@ -578,8 +583,7 @@ var Archive = new (function(global)
 		if (!input.expect(TokenTypes.punctuation, Punctuation.objectOpen))
 			return null;
 
-		let token;
-		while (!(token = input.peek()).is(TokenTypes.punctuation, Punctuation.objectClose))
+		while (!input.peek().is(TokenTypes.punctuation, Punctuation.objectClose))
 		{
 			let prop = parseProperty(input);
 			if (!prop)
@@ -603,8 +607,7 @@ var Archive = new (function(global)
 		if (!input.expect(TokenTypes.punctuation, Punctuation.listOpen))
 			return null;
 
-		let token;
-		while (!(token = input.peek()).is(TokenTypes.punctuation, Punctuation.listClose))
+		while (!input.peek().is(TokenTypes.punctuation, Punctuation.listClose))
 		{
 			let entry = parseValue(input);
 			if (!entry)
@@ -665,6 +668,19 @@ var Archive = new (function(global)
 		if (token.type === TokenTypes.number)
 		{
 			return input.next().str;
+		}
+		else if (token.type === TokenTypes.identifier)
+		{
+			let refStr = input.next().str;
+			while (input.peek().is(TokenTypes.punctuation, Punctuation.member))
+			{
+				refStr += input.next().str;
+				let memberToken = input.expect(TokenTypes.identifier);
+				if (!memberToken)
+					return null;
+				refStr += memberToken.str;
+			}
+			return refStr;
 		}
 		else if (token.type === TokenTypes.operators &&
 			UnaryOperators.includes(token.str))
@@ -1588,7 +1604,7 @@ var Archive = new (function(global)
 				{
 					let newObject = component.reproduce();
 
-					if (originalValue === null || 
+					if (originalValue === null || originalValue === undefined ||
 						(typeof originalValue === 'object' &&
 						newObject instanceof originalValue.constructor))
 					{
@@ -1615,7 +1631,8 @@ var Archive = new (function(global)
 			for (let key in this.lists)
 			{
 				let originalValue = obj[key];
-				if (originalValue === null || Array.isArray(originalValue))
+				if (originalValue === null || originalValue === undefined ||
+					Array.isArray(originalValue))
 				{
 					obj[key] = this.lists[key].reproduce();	
 				}
@@ -1631,10 +1648,11 @@ var Archive = new (function(global)
 				let newValue = this.values[key];
 				let originalType = typeof originalValue;
 				let newType = typeof newValue;
+				let isTypeMatch = (originalType === newType || originalValue === undefined);
 				let isObjTypeMatch = (originalType !== 'object' || !originalValue || !newValue ||
 					newValue instanceof originalValue.constructor);
 
-				if (originalType === newType && isObjTypeMatch)
+				if (isTypeMatch && isObjTypeMatch)
 				{
 					obj[key] = newValue;
 				}

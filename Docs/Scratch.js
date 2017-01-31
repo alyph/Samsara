@@ -186,55 +186,6 @@ target => { hero && friendly }
 hero => (self) => { self.has_trait("hero") }
 friendly => (this, other) => { check_relationship(this, other) == friendly }
 
-base: $native
-{
-	a:{} // native.a defines the type here
-
-	bar1: bar
-	{
-
-	}
-	foos: 
-	[
-		foo
-		{
-
-		}
-	]
-}
-
-x: base
-{
-	bar1:
-	{
-
-	}
-
-	foos:
-	[
-		{},
-
-		foo{}
-	]
-}
-
-
-foo:
-{
-	bar1 : bar
-	{
-
-	}
-}
-
-bar:
-{
-	foo1 : foo
-	{
-
-	}
-}
-
 
 // parser state switch
 @import otherpkg

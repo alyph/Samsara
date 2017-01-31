@@ -94,11 +94,11 @@ class Player extends Entity
 					break;
 				}
 				// If not played back to choose next card.
-
-				this.playingCard = null;
-				this.refreshView();
 			}
 		}
+
+		this.playingCard = null;
+		this.refreshView();
 	}
 
 	async playCard(card) 
@@ -137,7 +137,7 @@ class Player extends Entity
 
 	async pickTarget(card, action)
 	{
-		if (action.target !== ActionTarget.single)
+		if (action.definition.target !== ActionTarget.single)
 			return null;
 
 		while (true)

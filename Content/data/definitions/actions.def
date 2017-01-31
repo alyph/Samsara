@@ -1,0 +1,11 @@
+@base Action
+@namespace action
+
+equip:
+{
+	effect:	.Proc.AttachTo
+	{
+		card: .VarRef{name:"card"}
+		target: .VarRef{name:"target"}
+	}
+}

@@ -27,6 +27,7 @@ var Script = new (function(global)
 		}
 
 		context.scope.push(...scope);
+		return context;
 	};
 
 	class ScriptFunction
@@ -140,7 +141,7 @@ var Script = new (function(global)
 				return false;
 
 			// TODO play anim
-			card.state.attachTo(target);
+			card.attachTo(target);
 
 			return true;
 		}
