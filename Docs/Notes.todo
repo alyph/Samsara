@@ -6,7 +6,7 @@ Gameplay:
 	✔	archive create function should allow taking a single base object name. @done (16-12-11 20:18)
 	✔	place a hero card @done (16-12-11 20:18)
 	✔	draw a weapon card @done (16-12-13 22:07)
-	☐	play the weapon card to attach to player
+	✔	play the weapon card to attach to player @done (17-01-30 23:22)
 	☐	place a monster card
 	☐	hero take the attack action against the monster
 	☐	damage calculation
@@ -22,14 +22,13 @@ Gameplay:
 	☐	interaction - search scripts, investigate strange painting etc.
 
 System:
-	☐	play card sequence: select a hand card -> if not targeted play on field, otherwise select another card to validate, if valid, play the card -> execute card effects -> done
+	✔	play card sequence: select a hand card -> if not targeted play on field, otherwise select another card to validate, if valid, play the card -> execute card effects -> done @done (17-01-30 23:22)
 	☐	action
-		☐	timing (renamed to context)
+		✔	timing (renamed to context) @done (17-01-30 23:22)
 		☐	target criteria? (may not need, different action may have different need for this)
-		☐	effects
+		✔	effects @done (17-01-30 23:22)
 	☐	traits enable actions
-	☐	card hosts actions and then populate when played (or drawn)
-	☐	attach card effect
+	✔	attach card effect @done (17-01-30 23:22)
 	☐	scripting system (plain data, no script language yet)
 
 
