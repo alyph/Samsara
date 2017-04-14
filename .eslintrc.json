@@ -33,7 +33,8 @@
         "Archive": false,
         "Entity": false,
         "Enum": false,
-        "MathEx": false
+        "MathEx": false,
+        "UI": false
     }
 }
 

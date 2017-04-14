@@ -10,8 +10,9 @@ var UI = new (function(global)
 	var directives = {};
 	var properties = {};
 	var customEvents = {};
+	var proxies = new WeakMap();
 
-	var ATTR_BEHAVIORS = "$behaviors";
+	//var ATTR_BEHAVIORS = "$behaviors";
 
 	this.registerTemplates = function(htmlUrl)
 	{
@@ -70,6 +71,7 @@ var UI = new (function(global)
 		return directive;
 	};
 
+	this.findOrCreateProxy = findOrCreateProxy;
 	this.calcElementOffset = calcElementOffset;
 
 	this.findTemplate = function(name)
@@ -143,243 +145,9 @@ var UI = new (function(global)
 			//this.collectElementInfo(this.element, []);
 			//this.collectChildrenInfos(this.element.content.children, []);
 		}
-
-/*
-		collectElementInfo : function(element, path)
-		{
-			var i;
-			var isRoot = (path.length === 0);
-			var isCustomElement = isRoot || (element.tagName.indexOf('-') >= 0);
-
-			var info = new ElementInfo();
-
-			if (element.children.length === 0 && !isRoot)
-			{
-				var func = this.compileBinding(element.textContent);
-				if (func !== null)
-				{
-					info.bindingFunc = func;
-					element.textContent = "";
-				}
-			}
-
-			if (element.hasAttribute(ATTR_BEHAVIORS))
-			{
-				var behaviorNames = element.getAttribute(ATTR_BEHAVIORS).trim().split(/\s+/);
-				element.removeAttribute(ATTR_BEHAVIORS);
-				for (i = 0; i < behaviorNames.length; i++) 
-				{
-					var behavior = findBehavior(behaviorNames[i]);
-					if (behavior)
-					{
-						info.behaviors.push(behavior);
-					}
-					else
-					{
-						console.error("Cannot find behavior: " + behaviorNames[i]);
-					}
-				}
-			}
-
-			// TODO: do not allow non-custom element to have custom attributes
-			// Although here you can't check element.template to know if it's
-			// custom or not, must check if it has - in the tag
-			var attrs = element.attributes;
-			for (i = 0; i < attrs.length; i++) 
-			{
-				var attr = attrs[i];
-				if (attr.name.length > 0 && attr.name[0] === '$')
-				{					
-					if (attr.name.startsWith("$on-"))
-					{
-						var eventBinding = new EventBindingInfo();
-						eventBinding.type = attr.name.substr(4);
-						eventBinding.listener = this.compileEventListener(attr.value);
-						info.eventBindings.push(eventBinding);
-					}
-					else
-					{
-						var key = attrToPropName(attr.name.substr(1));
-						var prop = findProperty(key);
-						if (prop)
-						{
-							var propFunc = this.compileBinding(attr.value);
-							if (propFunc !== null)
-							{
-								var propBinding = new ElementPropertyBinding();
-								propBinding.property = prop;
-								propBinding.func = propFunc;
-								info.propBindings.push(propBinding);
-							}
-							else if (prop.readonly || !isCustomElement)
-							{
-								element.dataset[key] = attr.value;
-							}
-							else
-							{
-								var propInfo = new ElementPropertyInfo();
-								propInfo.property = prop;
-								propInfo.value = prop.parse(attr.value);
-								info.properties.push(propInfo);
-							}
-						}
-						else
-						{
-							console.error("Cannot find property: " + key);
-						}						
-					}
-
-					element.removeAttribute(attr.name);
-					i--;
-				}
-			}
-
-			// if (info.properties.length > 0 && !isCustomElement)
-			// {
-			// 	console.error("Cannot apply custom properties to non-custom element: " + element.tagName);
-			// 	info.properties.length = 0; 
-			// }
-
-			if (!info.isEmpty())
-			{
-				info.path = path.concat();
-				this.elementInfos.push(info);
-
-				var elementName = element.tagName.toLowerCase();
-				if (isCustomElement && !isRoot && templates[elementName] === undefined)
-				{
-					if (this.dependencies === null)
-						this.dependencies = {};
-
-					this.dependencies[elementName] = true;
-				}
-			}
-		},
-
-		collectChildrenInfos : function(children, path)
-		{
-			var l = children.length;
-			for (var i = 0; i < l; i++) 
-			{
-				path.push(i);
-
-				var element = children[i];
-
-				this.collectElementInfo(element, path);
-
-				if (element.children.length > 0)
-				{
-					this.collectChildrenInfos(element.children, path);	
-				}
-
-				path.pop();
-			}
-		},
-
-		compileBinding : function(expression)
-		{
-			var input = expression.trim();
-			var reg = /\{\{(.*)\}\}/g;
-			var last = 0;
-			var tokens = [];
-			var numBindings = 0;
-			var result;
-			while ((result = reg.exec(input)) !== null) 
-			{
-				if (reg.index > last)
-				{
-					tokens.push(JSON.stringify(input.substring(last, result.index)));
-				}
-
-				last = reg.lastIndex;
-
-				var bindingExpr = result[1].trim();
-				if (bindingExpr === ".") bindingExpr = "arguments[0]"; // TODO: potential optimization.
-				tokens.push("(" + bindingExpr + ")");
-				numBindings++;
-			}
-
-			if (numBindings === 0)
-			{
-				return null;
-			}
-
-			if (last < input.length)
-			{
-				tokens.push(JSON.stringify(input.substring(last)));
-			}
-
-			var body = "if (data === null) return null; " +
-					   "with (data) { return " + tokens.join(" + ") + "; };";
-
-			return new Function("data", body);
-		},
-
-		compileEventListener : function(expression)
-		{
-			if (expression.startsWith("->"))
-			{
-				return this.buildRelayListener(expression.substr(2));
-			}
-			else
-			{
-				var body = "var data = this.dataContext;" +
-						   "if (data !== null) { data." + expression + "; }";
-
-				return new Function("e", body);
-			}
-		},
-
-		buildRelayListener: function(nextEventType)
-		{
-			return function(e)
-			{
-				e.stopImmediatePropagation();
-				e.currentTarget.dispatchEvent(
-					new CustomEvent(nextEventType, { bubbles: true, detail: { data: this.dataContext } }));
-			};
-		}*/
 	}	
 
-/*
-	var ElementInfo = Class(
-	{
-		constructor : function ElementInfo()
-		{
-			this.path = null;
-			this.bindingFunc = null;
-			this.behaviors = [];
-			this.properties = [];
-			this.propBindings = []; 
-			this.eventBindings = [];
-		},
 
-		isEmpty: function()
-		{
-			return (this.bindingFunc === null && 
-				this.behaviors.length === 0 && this.properties.length === 0 && 
-				this.propBindings.length === 0 && this.eventBindings.length === 0);
-		}
-	});
-
-	var ElementPropertyInfo = Class(
-	{
-		constructor : function ElementPropertyInfo()
-		{
-			this.property = null;
-			this.value = null;
-		}
-	});
-
-	var ElementPropertyBinding = Class(
-	{
-		constructor : function ElementPropertyBinding()
-		{
-			this.property = null;
-			this.func = null;
-		}
-	});
-*/
 	var pendingTemplates = {};
 
 	function registerTemplate(templateElement)
@@ -454,6 +222,60 @@ var UI = new (function(global)
 	}
 
 
+
+
+// ██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗
+// ██╔══██╗██╔══██╗██╔═══██╗╚██╗██╔╝╚██╗ ██╔╝
+// ██████╔╝██████╔╝██║   ██║ ╚███╔╝  ╚████╔╝ 
+// ██╔═══╝ ██╔══██╗██║   ██║ ██╔██╗   ╚██╔╝  
+// ██║     ██║  ██║╚██████╔╝██╔╝ ██╗   ██║   
+// ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   
+                                          
+	class UIProxy
+	{
+		constructor()
+		{
+			this.data = null;
+			this.component = null;
+		}
+
+		refreshUI()
+		{
+			if (this.component)
+				this.component.refresh();
+		}
+
+		onInit() {}
+		onUpdate() {}
+	}
+	this.Proxy = UIProxy;
+
+
+	function findOrCreateProxy(proxyClass, data)
+	{
+		if (!data)
+			return null;
+
+		let proxy = proxies.get(data);
+		if (proxy)
+		{
+			if (proxy.constructor === proxyClass)
+			{
+				return proxy;
+			}
+			else
+			{
+				console.error(`Found existing proxy but with unmatched class (${proxy.constructor.name} vs ${proxyClass.name}), current proxy will be deleted and a new one will be created.`);
+			}
+		}
+
+		proxy = new proxyClass(data);
+		proxy.data = data;
+		proxies.set(data, proxy);
+		return proxy;
+	}
+
+
 //  ██████╗ ██████╗ ███╗   ███╗██████╗  ██████╗ ███╗   ██╗███████╗███╗   ██╗████████╗
 // ██╔════╝██╔═══██╗████╗ ████║██╔══██╗██╔═══██╗████╗  ██║██╔════╝████╗  ██║╚══██╔══╝
 // ██║     ██║   ██║██╔████╔██║██████╔╝██║   ██║██╔██╗ ██║█████╗  ██╔██╗ ██║   ██║   
@@ -512,6 +334,7 @@ var UI = new (function(global)
 			if (!clonedContent || !clonedContent.firstChild)
 				throw ("Invalid component content");
 
+			this.host = host;
 			this.firstNode = clonedContent.firstChild;
 			this.lastNode = clonedContent.lastChild;
 
@@ -549,7 +372,8 @@ var UI = new (function(global)
 				this.directives.push(new DirectiveInstance(node, node.nextSibling, directiveDef.directive));
 			}
 
-			this.data = {}; // TODO: user defined data class (with helper functions etc.)
+			this.setPlainProxy();
+			//this.data = {}; // TODO: user defined data class (with helper functions etc.)
 			// TODO: if there's already data property set, we need make sure the refresh event is bound
 		}
 
@@ -573,7 +397,8 @@ var UI = new (function(global)
 
 			// TODO: clear and unbind data
 
-			this.data = null;			
+			this.clearProxy();
+			//this.data = null;			
 		}
 
 		replace(replacedNode)
@@ -621,6 +446,8 @@ var UI = new (function(global)
 		refresh()
 		{
 			let data = this.data;
+			if (data)
+				data.onUpdate();
 
 			// apply each data binding
 			let bindings = this.bindings;
@@ -637,6 +464,76 @@ var UI = new (function(global)
 				let directiveInst = directives[i];
 				directiveInst.directive.apply(directiveInst, data);
 			}
+		}
+
+		setPlainProxy()
+		{
+			this.setProxy(new UIProxy());
+		}
+
+		setProxy(proxy)
+		{
+			let prev = this.data;
+			this.data = proxy;
+			proxy.component = this;
+
+			if (prev !== proxy)
+			{
+				proxy.onInit();
+			}
+		}
+
+		clearProxy()
+		{
+			if (this.proxy)
+			{
+				this.proxy.component = null;
+				this.proxy = null;
+			}
+		}
+
+		getHostSize()
+		{
+			if (this.host)
+			{
+				return [this.host.offsetWidth, this.host.offsetHeight];
+			}
+			else
+			{
+				return [0, 0];
+			}
+		}
+
+		getHostOffsetToRoot()
+		{
+			let current = this.host;
+			let left = 0;
+			let top = 0;
+			if (current)
+			{
+				let rootHost = null;
+				let rootNode = current.getRootNode();
+				if (rootNode)
+				{	
+					if (rootNode.nodeType === Node.DOCUMENT_FRAGMENT_NODE)
+					{
+						rootHost = rootNode.host;
+					}
+					else if (rootNode.nodeType === Node.DOCUMENT_NODE)
+					{
+						rootHost = rootNode.body;
+					}
+				}
+
+				while (current && (current !== rootHost))
+				{
+					left += current.offsetLeft;
+					top += current.offsetTop;
+					current = current.offsetParent;
+				}				
+			}
+
+			return [left, top];
 		}
 	}
 
@@ -695,6 +592,15 @@ var UI = new (function(global)
 		}
 	}
 
+	class DataProxyBindingInfo
+	{
+		constructor()
+		{
+			this.proxyClass = null;
+			this.func = null;
+		}
+	}
+
 	class ElementBinding
 	{
 		constructor(path)
@@ -703,6 +609,7 @@ var UI = new (function(global)
 			this.eventBindings = [];
 			this.attributeBindings = [];
 			this.propertyBindings = [];
+			this.dataProxyBinding = null;
 		}
 
 		init(node, component)
@@ -726,16 +633,44 @@ var UI = new (function(global)
 				node.setAttribute(attrBinding.name, attrBinding.func.call(node, data));
 			}
 
+			let component = node.component;
+			let needsRefresh = false;
+				
+			if (this.dataProxyBinding)
+			{
+				// NOTE: the node must be a custom element.
+				let dataModel = this.dataProxyBinding.func.call(node, data);
+
+				// Create the proxy object, and assign that to the component.data
+				if (dataModel)
+				{
+					let subProxy = findOrCreateProxy(this.dataProxyBinding.proxyClass, dataModel);
+					component.setProxy(subProxy);
+				}
+				else if (!component.data || component.data.constructor !== UIProxy)
+				{
+					// Encountered null data model, reset it to an empty plain object.
+					component.setPlainProxy();
+				}
+
+				needsRefresh = true;
+			}
+
 			if (this.propertyBindings.length > 0)
 			{
 				// NOTE: the node must be a custom element that has a "component" property.
-				let component = node.component;
 				for (let i = 0; i < this.propertyBindings.length; i++) 
 				{
 					let propBinding = this.propertyBindings[i];
 					// TODO: compare value before set? is there any perf implication when setting the same value?
 					component.setDataProp(propBinding.name, propBinding.func.call(node, data));
 				}
+
+				needsRefresh = true;
+			}
+
+			if (needsRefresh)
+			{
 				component.refresh();
 			}
 		}
@@ -817,6 +752,24 @@ var UI = new (function(global)
 					this.components[i].detach();
 				}
 				this.components.length = num;
+			}
+		}
+
+		append(def)
+		{
+			let newComp = new Component(def);
+			newComp.attach(this.end.parentNode, this.end, null);
+			this.components.push(newComp);
+			return newComp;
+		}
+
+		remove(component)
+		{
+			let idx = this.components.indexOf(component);
+			if (idx >= 0)
+			{
+				this.components.splice(idx, 1);
+				component.detach();
 			}
 		}
 	}
@@ -985,7 +938,7 @@ var UI = new (function(global)
 		{
 			let attr = attrs[i];
 			let attrName = attr.name;
-			if (attrName.startsWith("$on-"))
+			if (attrName.startsWith(".on-"))
 			{
 				// event bindings
 				attrsToRemove.push(attrName);
@@ -1000,7 +953,42 @@ var UI = new (function(global)
 				}
 
 			}
-			else if (attrName.startsWith('$'))
+			else if (attrName === "-proxy")
+			{
+				// Data proxy setup
+				attrsToRemove.push(attrName);
+				let [proxyClassName, dataModelBinding] = attr.value.split(":");
+				if (proxyClassName && dataModelBinding)
+				{
+					/*jshint -W054 */
+					let lookUpFunc = new Function(`try { return ${proxyClassName}; } catch (e) { return null; }`);
+					let proxyClass = lookUpFunc();
+					if (proxyClass)
+					{
+						let dataModelBindingFunc = parseDataBindingToFunc(dataModelBinding, null);
+						if (dataModelBindingFunc)
+						{
+							let dataProxyBinding = new DataProxyBindingInfo();
+							dataProxyBinding.proxyClass = proxyClass;
+							dataProxyBinding.func = dataModelBindingFunc;
+							elementBinding.dataProxyBinding = dataProxyBinding;
+						}
+						else
+						{
+							console.error(`Failed to parse data model binding "${dataModelBinding}" specified in "${attr.value}"`);
+						}
+					}
+					else
+					{
+						console.error(`Failed to find the proxy class "${proxyClassName}" specified in "${attr.value}", or the class is invalid (lacking setModel function).`);
+					}
+				}
+				else
+				{
+					console.error(`Incorrect data proxy format: ${attr.value}, must be "ProxyClass:DataModelBinding"`);
+				}				
+			}
+			else if (attrName.startsWith('.'))
 			{
 				// property bindings （must be custom element)
 				attrsToRemove.push(attrName);
@@ -1013,7 +1001,8 @@ var UI = new (function(global)
 				{
 					if (isCustomElement)
 					{
-						// TODO: add to element binding
+						// TODO: consider treating constant expression differently, 
+						// those only need to be applied once
 						elementBinding.propertyBindings.push(propBinding);
 				
 					}
@@ -1055,7 +1044,8 @@ var UI = new (function(global)
 
 		if (elementBinding.eventBindings.length > 0 ||
 			elementBinding.propertyBindings.length > 0 ||
-			elementBinding.attributeBindings.length > 0)
+			elementBinding.attributeBindings.length > 0 ||
+			elementBinding.dataProxyBinding)
 		{
 			componentDef.bindings.push(elementBinding);
 		}
@@ -1906,76 +1896,12 @@ var UI = new (function(global)
 		{
 			this.classList.add(templateElem.classList.item(i));
 		}
-
-		// TODO: may want to inline to improve perf.
-		//attachBehaviors(this);
-		//initBindings(this);
-
-		// TODO: maybe we should only do these when attached
-		// and only setup the binding observer after attached.
-		// we can still accept any dataContext when bind() is called.
-		// if we do that make sure we clear that everytime (or on detach),
-		// because the attached callback may occur multiple times.
-
-		// var infos = this.template.elementInfos;
-		// var ni = infos.length;
-		// for (i = 0; i < ni; i++) 
-		// {
-		// 	var info = infos[i];
-		// 	var element = traverseSubElement(this, info.path);
-
-		// 	if (info.bindingFunc !== null || info.propBindings.length > 0)
-		// 	{
-		// 		var binding = new Binding();
-		// 		binding.element = element;
-		// 		binding.func = info.bindingFunc;
-		// 		binding.propBindings = info.propBindings;
-		// 		this.bindings.push(binding);
-		// 	}
-
-		// 	// TODO: need double check this is custom element?
-		// 	for (var p = 0; p < info.properties.length; p++) 
-		// 	{
-		// 		var prop = info.properties[p];
-		// 		prop.property.set(element, prop.value);   		
-		// 	}
-
-		// 	for (var ei = 0; ei < info.eventBindings.length; ei++) 
-		// 	{
-		// 		var eventBinding = info.eventBindings[ei];
-		// 		// TODO: bind() is slow, avoid using or at least replace it with a simpler version.
-		// 		element.addEventListener(eventBinding.type, eventBinding.listener.bind(this));
-		// 	}
-
-		// 	// Lastly attach the behaviors, so they won't accidently receive the property set event,
-		// 	// They are supposed to init using onSetup event, and then start listening to onCustomPropertyChanged
-		// 	for (var b = 0; b < info.behaviors.length; b++) 
-		// 	{
-		// 		info.behaviors[b].attached(element);
-		// 	}
-		// }
-
-		//this.bind(null);
 	};
 
 	customElemProto.bind = function(key, value)
 	{
 		this.component.setDataProp(key, value);
 		this.component.refresh();
-
-		// var oldData = this.dataContext;
-
-		// if (oldData === data)
-		// 	return;
-
-		// observeData(this, data);
-		// refreshBindings(this);
-
-		//this.dispatchEvent(new CustomEvent("bindingchanged", { detail: { previous: oldData, current: data } }));
-
-		// if (this.customEvents.bindingchanged)
-		// 	this.customEvents.bindingchanged({ currentTarget:this, detail: { previous: oldData, current: data } });
-		//this.dispatchCustomEvent(new BindingChanged(oldData, data));
 	};
 
 	customElemProto.refresh = function()
@@ -1999,167 +1925,6 @@ var UI = new (function(global)
 			this.customDispatcher.dispatch(e);
 		}
 	};
-
-	// customElemProto.property = function(name, value)
-	// {
-	// 	if (arguments.length >= 2)
-	// 	{
-	// 		if (value === undefined)
-	// 			throw ("cannot set property to undefined.");
-
-	// 		if (this.properties === null)
-	// 			this.properties = {};
-
-	// 		this.properties[name] = value;
-	// 	}
-	// 	else
-	// 	{
-	// 		if (this.properties !== null)
-	// 		{
-	// 			value = this.properties[name];
-	// 		}
-	// 	}
-	// 	return value;
-	// };
-
-	// function attachBehaviors(element)
-	// {
-	// 	var behaviors = element.template.behaviors;
-	// 	var numBehaviors = behaviors.length;
-	// 	for (var i = 0; i < numBehaviors; i++) 
-	// 	{
-	// 		behaviors[i].attached(element);
-	// 	};
-	// };
-
-	// function initBindings(element)
-	// {
-	// 	var infos = element.template.bindingInfos;
-	// 	var numBindings = infos.length;
-	// 	for (var i = 0; i < numBindings; i++) 
-	// 	{
-	// 		var info = infos[i];
-	// 		var binding = new Binding();
-	// 		binding.element = traverseSubElement(element, info.path);
-	// 		binding.func = info.func;
-	// 		element.bindings.push(binding);
-	// 	};
-
-	// 	// bind to null initially;
-	// 	element.bind(null);
-	// };
-
-	/*function refreshBindings(element)
-	{
-		var data = element.dataContext;
-		var numBindings = element.bindings.length;
-		for (var i = 0; i < numBindings; i++) 
-		{
-			element.bindings[i].apply(data);
-		}
-
-		// pass to behavior
-		//element.dispatchEvent(new CustomEvent("datachanged", { detail: { data: data } }));	
-		// if (element.customEvents.datachanged)
-		// 	element.customEvents.datachanged({ currentTarget: element, detail: { data: data } });
-
-		element.dispatchCustomEvent(new DataChanged(data));
-
-		// if no bindings and no behavior hanlded, set to content (must be string, must have container)
-	}
-
-	function observeData(element, data)
-	{
-		if (element.dataContext !== null && element.dataObserver !== null)
-			Object.unobserve(element.dataContext, element.dataObserver);
-
-		element.dataContext = data;
-		element.dataObserver = null;
-
-		if (data !== null && typeof data === 'object')
-		{
-			element.dataObserver = function()
-			{
-				refreshBindings(element);
-			};
-
-			Object.observe(data, element.dataObserver);
-		}
-	}
-
-	function traverseSubElement(element, path)
-	{
-		// 0 path pointing to the element itself.
-		if (path.length === 0)
-			return element;
-
-		var cursor = element.shadowRoot;
-		var l = path.length;
-		for (var i = 0; i < l; i++) 
-		{
-			cursor = cursor.children[path[i]];
-		}
-		return cursor;
-	}
-
-	// var BindingInfo = Class(
-	// {
-	// 	constructor : function(path, func)
-	// 	{
-	// 		this.path = path.concat();
-	// 		this.func = func;
-	// 	}
-	// });
-
-	var Binding = Class(
-	{
-		constructor : function()
-		{
-			this.element = null;
-			this.func = null;
-			this.propBindings = null;
-		},
-
-		apply : function(data)
-		{
-			var value;
-
-			var l = this.propBindings.length;
-			for (var i = 0; i < l; i++) 
-			{
-				var binding = this.propBindings[i];
-				value = binding.func(data); // TODO: should try catch
-				binding.property.set(this.element, value);
-			}
-
-			if (this.func !== null)
-			{
-				// TODO: how to make this more visible??
-				//try
-				{
-					value = this.func(data);
-				}
-				// catch (e)
-				// {
-				// 	value = null;
-				// 	console.error("Failed to evaluate binding expression in element '" + this.element.outerHTML + "', error was: " + e.message);
-				// }
-
-				// If custom element
-				if (isCustomElement(this.element))
-				{
-					this.element.bind(value);
-				}
-				// Otherwise set content to string
-				else
-				{
-					var html = value !== null ? value.toString() : "";
-					this.element.textContent = html; // TODO: maybe check === first? setting html content normally fairly expensive.
-				}				
-			}
-		}
-	});*/
-
 
 
 // 	███████╗██╗   ██╗███████╗███╗   ██╗████████╗███████╗

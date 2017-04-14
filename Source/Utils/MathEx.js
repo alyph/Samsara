@@ -4,8 +4,11 @@
 /*exported MathEx*/
 var MathEx =
 {
-	randomElementOfArray: function (array)
+	randomItem: function (array)
 	{
+		if (!array.length)
+			return null;
+
 		return array[Math.floor(array.length * Math.random())];
 	},
 
@@ -17,6 +20,11 @@ var MathEx =
 	randomNumber: function (start, end)
 	{
 		return start + (end - start) * Math.random();
+	},
+
+	clamp: function(num, min, max)
+	{
+		return Math.min(Math.max(num, min), max);
 	}
 };
 
@@ -27,6 +35,12 @@ class Vector2
 	{
 		this.x = x || 0;
 		this.y = y || 0;
+	}
+
+	copy(other)
+	{
+		this.x = other.x;
+		this.y = other.y;
 	}
 
 	add(other)

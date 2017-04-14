@@ -20,7 +20,7 @@ class ForeachDirective
 		if (!Array.isArray(list))
 		{
 			if (list !== null)
-				console.error(`foreach over ${list.constructor.name}, which is not an array.`);
+				console.error(`foreach over ${list?list.constructor.name:null}, which is not an array.`);
 			list = [];
 		}
 
@@ -34,8 +34,68 @@ class ForeachDirective
 		for (let i = 0; i < newLen; i++) 
 		{
 			let comp = instance.components[i];
-			comp.transferDataByCopy(data);
+			comp.transferDataByCopy(data); // TODO: instead of transfering all the data, should just pick the ones used in this item
 			comp.setDataProp(this.itemProp, list[i]);
+			comp.refresh();
+		}
+	}
+});
+
+UI.Directive("map",
+{
+	clauses:
+	[
+		{ keyword: "map", expression: "(itemProp%s in list%b)", content: "itemComp" }
+	]
+},
+class MapDirective
+{
+	constructor()
+	{
+		this.list = null;
+		this.itemProp = "";
+		this.itemComp = null;
+	}
+
+	apply(instance, data)
+	{
+		let list = this.list(data);
+		if (!Array.isArray(list))
+		{
+			if (list !== null)
+				console.error(`map over ${list?list.constructor.name:null}, which is not an array.`);
+			list = [];
+		}
+
+		let existingItemsMap = new Map();
+		for (let comp of instance.components)
+		{
+			if (comp.data)
+			{
+				existingItemsMap.set(comp.data[this.itemProp], comp);
+			}
+		}
+
+		// Add new components and at the same time remove existing component from the to-delete map.
+		for (let item of list)
+		{
+			if (!existingItemsMap.delete(item))
+			{
+				let newComp = instance.append(this.itemComp);
+				newComp.setDataProp(this.itemProp, item);
+			}
+		}
+
+		// Remaining components no longer maps to any item, so remove them.
+		for (let comp of existingItemsMap.values())
+		{
+			instance.remove(comp);
+		}
+
+		// Refresh all the components in the instance now.
+		for (let comp of instance.components) 
+		{
+			//comp.transferDataByCopy(data); // TODO: instead of transfering all the data, should just pick the ones used in this item
 			comp.refresh();
 		}
 	}

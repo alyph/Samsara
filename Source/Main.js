@@ -62,6 +62,7 @@
 		core + "Predicate.js",
 		ui + "UI.js",
 		ui + "directives/basic_directives.js",
+		ui + "proxies/game_proxies.js",
 		//ui + "behaviors/basic_behaviors.js",
 		//ui + "behaviors/game_behaviors.js",
 		// ui + "Elements/BasicElements.js",
@@ -74,8 +75,10 @@
 		gameplay + "action.js",
 		gameplay + "area.js",
 		gameplay + "card.js",
+		gameplay + "encounter.js",
 		gameplay + "Field.js",
 		gameplay + "global.js",
+		gameplay + "mechanics.js",
 		gameplay + "player.js",
 		gameplay + "Scripting.js",
 		gameplay + "sprite.js",
@@ -126,7 +129,8 @@
 		[
 			Archive.loadInstances("world/world"),
 			UI.registerTemplates("Source/UI/Templates/basic_templates.html"),
-			UI.registerTemplates("Source/UI/Templates/cardgame_templates.html")
+			UI.registerTemplates("Source/UI/views/player_view.html"),
+			UI.registerTemplates("Source/UI/views/card_view.html")
 		];
 		
 		Promise.all(templatesLoaded)

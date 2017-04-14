@@ -1,6 +1,6 @@
 'use strict';
 
-/* globals Archive Area ActionTarget */
+/* globals Archive Area ActionTarget Encounter */
 /*exported Player*/
 class Player extends Entity
 {
@@ -10,9 +10,13 @@ class Player extends Entity
 
 		this.deck = new Area();
 		this.hand = new Area();
+		this.partyArea = new Area();
+		this.encounterArea = new Area();
 
 		this.playingCard = null;
 		this.cardSelectedCallback = null;
+
+		this.encounter = null;
 
 		this.playerView = document.querySelector("player-view");
 	}
@@ -22,13 +26,16 @@ class Player extends Entity
 		this.playerView.bind("player", this);
 		
 		let hero = this.world.spawn("hero.paladin");
-		hero.placeIn(this.world.field.partyArea);
+		hero.placeIn(this.partyArea);
 		//hero.place(this.world, FieldArea.Party);
 
 		let sword = this.world.spawn("equipment.longsword");
 		sword.placeIn(this.deck);
 
 		this.draw(1);
+
+		// Create a enoucnter for testing
+		this.encounter = this.createEncounter();
 
 		this.refreshView();
 	}
@@ -37,7 +44,7 @@ class Player extends Entity
 	{
 		for (let i = 0; i < num && !this.deck.isEmpty(); i++) 
 		{
-			let card = MathEx.randomElementOfArray(this.deck.cards);
+			let card = MathEx.randomItem(this.deck.cards);
 			card.placeIn(this.hand);
 		}
 	}
@@ -71,6 +78,14 @@ class Player extends Entity
 		// 	this.playCard(card).then(() => { player.playingCard = null; this.refreshView(); });
 		// 	this.refreshView();
 		// }
+	}
+
+	get allCards()
+	{
+		return [
+			...this.hand.cards, 
+			...this.partyArea.cards, 
+			...this.encounterArea.cards];
 	}
 
 	refreshView()
@@ -149,6 +164,13 @@ class Player extends Entity
 			if (action.isValidTarget(target))
 				return target;
 		}
+	}
+
+	createEncounter()
+	{
+		let encounter = this.world.spawn("Encounter");
+		encounter.setup();
+		return encounter;
 	}
 }
 

@@ -5,7 +5,9 @@ class GlobalDefinition
 {
 	constructor()
 	{
-		this.actionsNamespace = "";
+		//this.actionsNamespace = "";
+		this.locations = [];
+		this.groups = [];
 	}
 }
 

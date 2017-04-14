@@ -7,6 +7,24 @@ Gameplay:
 	✔	place a hero card @done (16-12-11 20:18)
 	✔	draw a weapon card @done (16-12-13 22:07)
 	✔	play the weapon card to attach to player @done (17-01-30 23:22)
+
+	☐	area proxy, card proxy etc.
+	☐	new UI layout (focus on where each area goes.)
+	☐	show party and encounter etc. (get the basic data setup)
+	
+	☐	cards moving between areas
+	☐	the encounter area needs to be split into groups (per affliation?), this can come late, for now, put everything in one group in one area
+
+	☐	draw encounter location -> event -> features and NPCs
+	☐	location (may come with some features)
+	☐	events (may check valid location), events then summons required NPCs and features
+	☐	additional features may be drawn
+	
+	☐	spawn a group of npcs (enemies mostly)
+	☐	placement of party and npcs
+	
+
+
 	☐	place a monster card
 	☐	hero take the attack action against the monster
 	☐	damage calculation
@@ -30,6 +48,15 @@ System:
 	☐	traits enable actions
 	✔	attach card effect @done (17-01-30 23:22)
 	☐	scripting system (plain data, no script language yet)
+
+UI request:
+	☐	replace data with proxy, so even without proxy binding, the default proxy will be used.
+
+	✔	proxy (syntax, parsing, registeration etc.) @done (17-04-06 20:27)
+
+	✔	map directive (unordered, one-to-one, may not be able to reuse the existing elements, must detach and reattach new ones.) @done (17-04-06 21:43)
+	
+	☐	smarter data binding in scope, maybe form a scope chain of proxies, so inner scoped components will be able to access outer proxy as well. (perf is a concern)
 
 
 -----------------------------------------------------------------------
@@ -55,6 +82,7 @@ DATA REVAMP:
 	✔	string quotes not removed... @done (17-01-08 16:35)
 	☐	should we un-singleton Archive? make it an object owned by the game.
 	☐	syntax highlighting
+	☐	group references (e.g. ref all the objects in a namespace/package with a given type)
 	
 
 GAMEPLAY SCRIPT:
@@ -62,6 +90,7 @@ GAMEPLAY SCRIPT:
 
 
 -----------------------------------------------------------------------
+
 
 UI REVAMP:
 
@@ -85,15 +114,17 @@ UI REVAMP:
 
 	✔	template header element parsing (treat it like a normal element node, not custom element), this should be able to handle <sprite-img> @done (16-10-26 20:23)
 	☐	template dependencies fix (should ignore directive dependencies? what is actually dependent on?)
-	☐	add other basic directives (if, switch)
+	☐	add other basic directives (switch)
 	☐	review the number of placeholder text nodes
 
 	☐	need a better way to control css via data properties (short of setting classes, or even css binding)
 	☐	property attribute case conversion? (e.g. $foo-bar to fooBar)
 	☐	some bindings should only set if the value changed (like attributes and maybe text)
+	☐	constant attribute binding, for example $index="2", or data-text="{1 + 2 * 4}"
 
 need usecase:
 
+	☐	directive attributes/options. for example: [strictmapping, foo(123)]#foreach (item in list)
 	☐	<style> binding
 	☐	behaviors (redesign? need some solution for sprite element for sure)
 	☐	event dispatcher revamp
@@ -102,7 +133,7 @@ need usecase:
 	☐	what happens when detached (fully, or if the custom element detached, maybe just clear the binding?)
 	☐	any error logging needed.
 	☐	would be nice if event binding syntax look nicer (get rid of $e, or $e.details.data, essentially it needs another syntactic sugar to ref data from event more easily)
-	☐	foreach should allow passing down more properties (or should it do that automatically? like copy all props from the parent?)
+	✔	foreach should allow passing down more properties (or should it do that automatically? like copy all props from the parent?) @done (17-03-25 22:24)
 
 -----------------------------------------------------------------------
 
