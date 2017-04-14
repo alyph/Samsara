@@ -70,7 +70,7 @@
 		// ui + "Templates/BasicTemplates.js",
 		// ui + "Templates/GameTemplates.js",
 		// ui + "Templates/Screens.js",
-		gameplay + "World.js",
+		gameplay + "world.js",
 		gameplay + "entity.js",
 		gameplay + "action.js",
 		gameplay + "area.js",
