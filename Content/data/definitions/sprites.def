@@ -4,19 +4,27 @@
 @base SpriteSheet
 @namespace sprite_sheet
 
-heroes:
+characters:
 {
-	url: "Content/Images/heroes.png"
-	w: 384
-	h: 456
+	url: "Content/Images/characters.png"
+	w: 272
+	h: 384
 }
 
-equipment:
+items:
 {
-	url: "Content/Images/equipment.png"
-	w: 384
-	h: 456
+	url: "Content/Images/items.png"
+	w: 272
+	h: 384
 }
+
+spells:
+{
+	url: "Content/Images/spells.png"
+	w: 272
+	h: 384
+}
+
 
 
 // Sprites
@@ -24,14 +32,46 @@ equipment:
 @base Sprite
 @using sprite_sheet
 
-@namespace sprite.hero
+@namespace sprite.character
 
-paladin:       { x: 2, y: 0, sheet: #heroes }
+male_elf_swordmaster:		{ x: 1, y: 0, sheet: #characters }
+male_dwarf_guardian:		{ x: 2, y: 0, sheet: #characters }
+male_elf_mage:				{ x: 3, y: 0, sheet: #characters }
+female_human_cleric:		{ x: 4, y: 0, sheet: #characters }
+female_human_assassin:		{ x: 6, y: 0, sheet: #characters }
+male_human_ranger:			{ x: 0, y: 1, sheet: #characters }
+male_human_explorer:		{ x: 2, y: 1, sheet: #characters }
+female_human_fighter:		{ x: 3, y: 1, sheet: #characters }
+female_human_bard:			{ x: 6, y: 1, sheet: #characters }
+male_human_old_knight:		{ x: 7, y: 1, sheet: #characters }
+male_human_rogue:			{ x: 0, y: 2, sheet: #characters }
+male_human_ringleader:		{ x: 2, y: 2, sheet: #characters }
+male_human_doctor:			{ x: 3, y: 2, sheet: #characters }
+male_human_norse_hunter:	{ x: 5, y: 2, sheet: #characters }
+female_human_knight:		{ x: 6, y: 2, sheet: #characters }
+female_human_mage:			{ x: 7, y: 2, sheet: #characters }
+male_human_mercenary:		{ x: 0, y: 3, sheet: #characters }
+male_tiger_fighter:			{ x: 1, y: 3, sheet: #characters }
+female_human_paladin:		{ x: 2, y: 3, sheet: #characters }
+female_elf_druid:			{ x: 3, y: 3, sheet: #characters }
 
 
-@namespace sprite.equip
+@namespace sprite.item
 
-longsword:     { x: 3, y: 0, sheet: #equipment }
+dagger:					{ x: 0, y: 0, sheet: #items }
+bow:					{ x: 1, y: 0, sheet: #items }
+sword:					{ x: 2, y: 0, sheet: #items }
+axe:					{ x: 3, y: 0, sheet: #items }
+tome:					{ x: 4, y: 0, sheet: #items }
+steel_armor:			{ x: 5, y: 0, sheet: #items }
+wooden_shield:			{ x: 6, y: 0, sheet: #items }
+purple_potion:			{ x: 7, y: 0, sheet: #items }
+
+
+@namespace sprite.spell
+
+magic_missile:			{ x: 0, y: 0, sheet: #spells }
+fire_bolt:				{ x: 1, y: 0, sheet: #spells }
 
 
 

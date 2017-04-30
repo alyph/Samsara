@@ -8,7 +8,19 @@ Gameplay:
 	✔	draw a weapon card @done (16-12-13 22:07)
 	✔	play the weapon card to attach to player @done (17-01-30 23:22)
 
-	☐	area proxy, card proxy etc.
+	✔	area proxy, card proxy etc. @done (17-04-22 21:44)
+
+
+
+	☐	figure out how to show the cards assigned to heroes
+	✔	have a function to randomly generate bunch of heroes, their cards @done (17-04-30 14:48)
+	☐	have a function to generate random monster encounter
+	☐	let the hero take action (probably just an attack)
+
+
+
+
+
 	☐	new UI layout (focus on where each area goes.)
 	☐	show party and encounter etc. (get the basic data setup)
 	
@@ -49,7 +61,10 @@ System:
 	✔	attach card effect @done (17-01-30 23:22)
 	☐	scripting system (plain data, no script language yet)
 
-UI request:
+Archive:
+	☐	 allow lists to set a default base, so each individual items don't have to.
+
+UI:
 	☐	replace data with proxy, so even without proxy binding, the default proxy will be used.
 
 	✔	proxy (syntax, parsing, registeration etc.) @done (17-04-06 20:27)
@@ -57,6 +72,7 @@ UI request:
 	✔	map directive (unordered, one-to-one, may not be able to reuse the existing elements, must detach and reattach new ones.) @done (17-04-06 21:43)
 	
 	☐	smarter data binding in scope, maybe form a scope chain of proxies, so inner scoped components will be able to access outer proxy as well. (perf is a concern)
+	☐	consider to use css custom properties for some of the style configs used in AreaProxy
 
 
 -----------------------------------------------------------------------

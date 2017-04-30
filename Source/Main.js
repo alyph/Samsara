@@ -80,6 +80,7 @@
 		gameplay + "global.js",
 		gameplay + "mechanics.js",
 		gameplay + "player.js",
+		gameplay + "rule.js",
 		gameplay + "scripting.js",
 		gameplay + "sprite.js",
 		gameplay + "trait.js",

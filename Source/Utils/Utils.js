@@ -4,12 +4,25 @@ class Enum
 {
 	constructor(...names)
 	{
+		let values = this[Enum.Symbol.values] = [];
 		for (let name of names)
 		{
-			this[name] = Symbol(name);
+			let value = Symbol(name);
+			values.push(value);
+			this[name] = value;			
 		}
 	}
 }
+
+Enum.Symbol = 
+{
+	values: Symbol("values")
+};
+
+Enum.randomValue = function(enumDef)
+{
+	return MathEx.randomItem(enumDef[Enum.Symbol.values]);
+};
 
 var UniqueId =
 {

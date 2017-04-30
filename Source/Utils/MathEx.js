@@ -37,6 +37,11 @@ class Vector2
 		this.y = y || 0;
 	}
 
+	equals(other)
+	{
+		return this.x === other.x && this.y === other.y;
+	}
+
 	copy(other)
 	{
 		this.x = other.x;

@@ -4,14 +4,81 @@
 @base Card
 @namespace hero
 
+/*
 paladin:
 {
 	displayName: "Paladin"
 	smallPortrait: #sprite.hero.paladin
 }
+*/
 
-@namespace equipment
+@namespace item
 
+dagger:
+{
+	displayName: "Dagger"
+	smallPortrait: #sprite.item.dagger
+}
+
+bow:
+{
+	displayName: "Bow"
+	smallPortrait: #sprite.item.bow
+}
+
+sword:
+{
+	displayName: "Sword"
+	smallPortrait: #sprite.item.sword
+}
+
+axe:
+{
+	displayName: "Axe"
+	smallPortrait: #sprite.item.axe
+}
+
+tome:
+{
+	displayName: "Tome"
+	smallPortrait: #sprite.item.tome
+}
+
+plate_armor:
+{
+	displayName: "Plate Armor"
+	smallPortrait: #sprite.item.steel_armor
+}
+
+wooden_shield:
+{
+	displayName: "Wooden Shield"
+	smallPortrait: #sprite.item.wooden_shield
+}
+
+potion_restoration:
+{
+	displayName: "Potion of Restoration"
+	smallPortrait: #sprite.item.purple_potion
+}
+
+@namespace spell
+
+magic_missile:
+{
+	displayName: "Magic Missile"
+	smallPortrait: #sprite.spell.magic_missile
+}
+
+fire_bolt:
+{
+	displayName: "Fire Bolt"
+	smallPortrait: #sprite.spell.fire_bolt
+}
+
+
+
+/*
 longsword:
 {
 	displayName: "Longsword"
@@ -21,3 +88,4 @@ longsword:
 		actions: [ #action.equip ]
 	}
 }
+*/

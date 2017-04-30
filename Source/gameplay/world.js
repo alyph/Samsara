@@ -8,6 +8,7 @@ class World
 		this.game = null;
 		this.entities = {};
 		
+		this.rule = null;
 		this.global = null;
 		//this.keeper = null;
 

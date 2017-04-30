@@ -25,14 +25,24 @@ class Player extends Entity
 	{
 		this.playerView.bind("player", this);
 		
-		let hero = this.world.spawn("hero.paladin");
-		hero.placeIn(this.partyArea);
-		//hero.place(this.world, FieldArea.Party);
+		let starterDeck = this.rule.generateStarterDeck(this.world);
+		for (let card of starterDeck)
+		{
+			card.placeIn(this.deck);
+		}
 
-		let sword = this.world.spawn("equipment.longsword");
-		sword.placeIn(this.deck);
+		let heroes = this.rule.generateCharacters(this.world, 3);
+		for (let hero of heroes)
+		{
+			hero.placeIn(this.partyArea);
+		}
 
-		this.draw(1);
+		let initialCards = this.draw(5);
+		for (let card of initialCards)
+		{
+			let hero = MathEx.randomItem(heroes);
+			card.attachTo(hero);
+		}
 
 		// Create a enoucnter for testing
 		this.encounter = this.createEncounter();
@@ -42,11 +52,14 @@ class Player extends Entity
 
 	draw(num)
 	{
+		let drawnCards = [];
 		for (let i = 0; i < num && !this.deck.isEmpty(); i++) 
 		{
 			let card = MathEx.randomItem(this.deck.cards);
 			card.placeIn(this.hand);
+			drawnCards.push(card);
 		}
+		return drawnCards;
 	}
 
 	selectCard()
@@ -82,10 +95,17 @@ class Player extends Entity
 
 	get allCards()
 	{
-		return [
+		let allCards = [
 			...this.hand.cards, 
 			...this.partyArea.cards, 
 			...this.encounterArea.cards];
+
+		for (let hero of this.partyArea.cards)
+		{
+			allCards = allCards.concat(hero.state.attachments);
+		}
+
+		return allCards;
 	}
 
 	refreshView()
@@ -168,7 +188,7 @@ class Player extends Entity
 
 	createEncounter()
 	{
-		let encounter = this.world.spawn("Encounter");
+		let encounter = this.world.spawn(Encounter);
 		encounter.setup();
 		return encounter;
 	}

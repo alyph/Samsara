@@ -7,6 +7,7 @@ var Archive = new (function(global)
 {
 	var _loadedPackages = new Set();
 	var _records = new Map();
+	var _objectToRecords = new Map();
 	var _instances = [];
 	var _rules = new Map();
 	var _packageLexer = null;
@@ -53,27 +54,54 @@ var Archive = new (function(global)
 		return loadPackage(pkgPath);
 	};
 
-	this.create = function(base)
+	this.create = function(base, name = "")
 	{
-		let instName = "";
+		let baseName = "";
 
-		let idx = base.lastIndexOf(Punctuation.nameDelim);
-		if (idx >= 0)
+		if (typeof base === 'function')
 		{
-			instName = base.substr(idx+1);
+			baseName = base.name;
 		}
-		else if ((idx = base.lastIndexOf(Punctuation.envDelim)) >= 0)
+		else if (typeof base === 'object')
 		{
-			instName = base.substr(idx+1);
+			let record = _objectToRecords.get(base);
+			if (record)
+			{
+				baseName = record.fullName;
+			}
 		}
-		else
+		else if (typeof base === 'string')
 		{
-			instName = base;
+			baseName = base;
+		}
+		
+		if (!baseName)
+		{
+			console.error(`Invalid base "${base}", failed to create new object.`);
+			return null;
 		}
 
-		if (!base || !instName)
+		let instName = name;
+		if (!instName)
 		{
-			console.error(`Invalid base "${base}" or instance name "${instName}", failed to create new object.`);
+			let idx = baseName.lastIndexOf(Punctuation.nameDelim);
+			if (idx >= 0)
+			{
+				instName = baseName.substr(idx+1);
+			}
+			else if ((idx = baseName.lastIndexOf(Punctuation.envDelim)) >= 0)
+			{
+				instName = baseName.substr(idx+1);
+			}
+			else
+			{
+				instName = baseName;
+			}
+		}
+
+		if (!instName)
+		{
+			console.error(`Invalid instance name "${instName}", failed to create new object.`);
 			return null;
 		}
 
@@ -82,9 +110,9 @@ var Archive = new (function(global)
 		let workingRec = new WorkingRecord();
 		workingRec.fullName = instName;
 		workingRec.scope.environment = Environment.instances;
-		workingRec.dependencies[base] = null;
+		workingRec.dependencies[baseName] = null;
 		workingRec.blueprint = new Blueprint();
-		workingRec.blueprint.baseName = base;
+		workingRec.blueprint.baseName = baseName;
 
 		processRecords([workingRec]);
 
@@ -113,6 +141,7 @@ var Archive = new (function(global)
 			throw (`Adding duplicated record: ${record.fullName}`);
 
 		_records.set(record.fullName, record);
+		_objectToRecords.set(record.object, record);
 
 		if (record.environment === Environment.instances)
 			_instances.push(record.object);
@@ -338,7 +367,7 @@ var Archive = new (function(global)
 		rule			: '@',
 		customValue		: '@',
 		reference		: '#',
-		object			: '.',
+		object			: '.', // TODO: should rename this to type
 		member			: '.',
 	};
 
@@ -1090,7 +1119,7 @@ var Archive = new (function(global)
 		{
 			let func = new Function(`return (${expr});`);
 			let result = func();
-			if (!Number.isFinite(result))
+			if (typeof result === 'number' && !Number.isFinite(result))
 			{
 				console.error(`Expression does not evaluate to a finite number (${result}): ${expr}`);
 				return 0;
