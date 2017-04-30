@@ -12,10 +12,14 @@ p
 
 #viewport
 {
-	width: 1920px; 
-	height: 1080px; 
-	background: black; 
-	margin: 80px auto; 
+	--base-screen-width: 1920;
+	--base-screen-height: 1080;
+	--screen-width: var(--base-screen-width);
+	--screen-height: var(--base-screen-height);
+	width: calc(var(--screen-width) * 1px);
+	height: calc(var(--screen-height) * 1px);
+	background: black;
+	margin: 80px auto;
 	position: relative;
 	overflow: hidden;
 }
@@ -23,31 +27,22 @@ p
 #screenRoot
 {
 	position: relative;
-	width: 1920px; 
-	height: 1080px;
+	width: calc(var(--base-screen-width) * 1px);
+	height: calc(var(--base-screen-height) * 1px);
 	transform-origin: left top;
+	transform: scale(calc(var(--screen-height) / var(--base-screen-height)));
 }
 
 #viewport.res720p
 {
-	width: 1280px;
-	height: 720px;
-}
-
-#viewport.res720p > #screenRoot
-{
-	transform: scale(0.666666666666667);
+	--screen-width: 1280;
+	--screen-height: 720;
 }
 
 #viewport.res900p
 {
-	width: 1600px;
-	height: 900px;
-}
-
-#viewport.res900p > #screenRoot
-{
-	transform: scale(0.8333333333333333);
+	--screen-width: 1600;
+	--screen-height: 900;
 }
 
 #welcomeScreen
