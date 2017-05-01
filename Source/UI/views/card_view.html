@@ -17,16 +17,25 @@
 		height: 192px;
 		transform: translate(-50%, -50%);
 		pointer-events: auto;
+		border-radius: 16px;
+		overflow: hidden;
+		border: 2px solid transparent;
+		background-color: black;
+		box-shadow: 
+			0 2px 2px 0 rgba(0,0,0,0.14), 
+			0 1px 5px 0 rgba(0,0,0,0.12), 
+			0 3px 1px -2px rgba(0,0,0,0.2);
 	}
+	/*
 	#border
 	{
 		position: absolute;
 		width: 100%;
 		height: 100%;
 		border: 1px gray solid;
-		/*box-sizing: border-box;*/
+		box-sizing: border-box;
 		background-color: gray;
-	}
+	}*/
 	#portrait
 	{
 		position: absolute;
@@ -36,7 +45,7 @@
 	</style>
 	<div id="root">
 		<div id="frame">
-			<div id="border"></div>
+			<!--div id="border"></div-->
 			<sprite-img id="portrait" .sprite="card.smallPortrait"></sprite-img>
 		</div>
 	</div>
