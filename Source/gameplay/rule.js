@@ -1,4 +1,4 @@
-/* globals Card */
+/* globals Card Encounter */
 
 var Sex = new Enum
 (
@@ -14,6 +14,7 @@ class Rule
 		this.characterNames = [];
 		this.characterPortraits = [];
 		this.starterCards = [];
+		this.creatureGroups = [];
 	}
 
 	generateCharacters(world, num)
@@ -96,6 +97,30 @@ class Rule
 		}
 		return deckCards;
 	}
+
+	generateEncounter(world)
+	{
+		let encounter = world.spawn(Encounter);	
+
+		let group = MathEx.randomItem(this.creatureGroups);
+		if (group)
+		{
+			let num = MathEx.randomInt(2, 4);
+			for (let i = 0; i < num; i++)
+			{
+				let template = MathEx.randomItem(group.creatureTemplates);
+				let creature = world.spawn(template);
+				encounter.entities.push(creature);
+			}
+		}
+
+		return encounter;
+	}
+
+	populateDefaultActions(instigator, target)
+	{
+		throw ("not implemented!");
+	}
 }
 
 /* exported CharacterNameDefinition */
@@ -115,6 +140,15 @@ class CharacterPortraitDefinition
 	{
 		this.sex = Sex.male;
 		this.portraits = [];
+	}
+}
+
+/* exported CreatureGroupDefinition */
+class CreatureGroupDefinition
+{
+	constructor()
+	{
+		this.creatureTemplates = [];
 	}
 }
 

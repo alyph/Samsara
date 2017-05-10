@@ -26,7 +26,12 @@ class Card
 		this.state = state;
 	}
 
-	placeIn(area)
+	getArea()
+	{
+		return this.state ? this.state.area : null;
+	}
+
+	placeIn(area, temporarily = false)
 	{
 		if (!this.state)
 			throw ("Cannot place non-intanced cards.");
@@ -47,6 +52,11 @@ class Card
 				area.cards.push(this);
 			}
 		}
+	}
+
+	returnToArea()
+	{
+		throw ("not implemented!");
 	}
 
 	isOnField()
@@ -81,6 +91,11 @@ class Card
 			card.state.attachments.push(this);
 		}
 	}
+
+	isUsableOnAction(action)
+	{
+		return false;
+	}
 }
 
 class CardState
@@ -92,6 +107,8 @@ class CardState
 		this.actions = [];
 		this.host = null;
 		this.attachments = [];
+		this.activated = false;
+		this.targeted = false;
 	}
 }
 

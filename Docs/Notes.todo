@@ -10,12 +10,13 @@ Gameplay:
 
 	✔	area proxy, card proxy etc. @done (17-04-22 21:44)
 
+	☐	descriptor+stats system (used by the card for now, may expand to other system)
+	☐	let the hero take action (probably just an attack)
 
 
 	☐	figure out how to show the cards assigned to heroes
 	✔	have a function to randomly generate bunch of heroes, their cards @done (17-04-30 14:48)
-	☐	have a function to generate random monster encounter
-	☐	let the hero take action (probably just an attack)
+	✔	have a function to generate random monster encounter @done (17-05-08 20:25)
 
 
 
@@ -61,11 +62,16 @@ System:
 	✔	attach card effect @done (17-01-30 23:22)
 	☐	scripting system (plain data, no script language yet)
 
+Optimization:
+	☐	resolveNativeClass() pretty expensive, we should avoid creating dynamic function outside of the load time.
+
 Archive:
 	☐	 allow lists to set a default base, so each individual items don't have to.
 
 UI:
 	☐	replace data with proxy, so even without proxy binding, the default proxy will be used.
+	☐	allow a true/false attribute binding, if false, remove the attribute, otherwise assign the attribute with empty string (useful for css selector)
+	☐	catch data binding errors (like missing properties)
 
 	✔	proxy (syntax, parsing, registeration etc.) @done (17-04-06 20:27)
 

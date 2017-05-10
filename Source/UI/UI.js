@@ -1,4 +1,4 @@
-/* global UI: true */
+/* globals EventDispatcher */
 /* exported UI */
 
 var UI = new (function(global)
@@ -72,6 +72,7 @@ var UI = new (function(global)
 	};
 
 	this.findOrCreateProxy = findOrCreateProxy;
+	this.findProxy = findProxy;
 	this.calcElementOffset = calcElementOffset;
 
 	this.findTemplate = function(name)
@@ -109,33 +110,40 @@ var UI = new (function(global)
 		{
 			this.name = templateElement.id.toLowerCase(); // tag is case-insensitive, but keep lower case for lookup.
 			this.element = templateElement;
-			this.proto = Object.create(CustomElement.prototype);			
+			//this.proto = Object.create(CustomElement.prototype);			
 			//this.elementInfos = [];
 			this.dependencies = {};
 			//this.dataClass = templateElement.dataset["class"] || "";
 			//this.bindingInfos = [];
 			//this.behaviors = [];
 			
-			var template = this;
-			this.proto.createdCallback = function()
+			this.customConstructor = class extends CustomElement 
 			{
-				CustomElement.apply(this);
-				this.setup(template); // TODO: should we do this in attachedCallback
+				constructor() { super(); } 
 			};
+			//this.customConstructor.name = this.name;
+			this.customConstructor.prototype.template = this;
 
-			this.proto.attachedCallback = function()
-			{
-				// if (this.customEvents.elementattached)
-				// 	this.customEvents.elementattached({currentTarget:this});
-				//this.dispatchEvent(new CustomEvent("elementattached"));
-				this.dispatchCustomEvent(new ElementAttached());
-			};
+			// var template = this;
+			// this.proto.createdCallback = function()
+			// {
+			// 	CustomElement.apply(this);
+			// 	this.setup(template); // TODO: should we do this in attachedCallback
+			// };
 
-			this.proto.detachedCallback = function()
-			{
-				// TODO: data clean up, and detach events
-				//this.bind(null);
-			};
+			// this.proto.attachedCallback = function()
+			// {
+			// 	// if (this.customEvents.elementattached)
+			// 	// 	this.customEvents.elementattached({currentTarget:this});
+			// 	//this.dispatchEvent(new CustomEvent("elementattached"));
+			// 	//this.dispatchCustomEvent(new ElementAttached());
+			// };
+
+			// this.proto.detachedCallback = function()
+			// {
+			// 	// TODO: data clean up, and detach events
+			// 	//this.bind(null);
+			// };
 
 
 			this.componentDef = parseComponent(templateElement.content, this.dependencies);
@@ -190,7 +198,8 @@ var UI = new (function(global)
 			return;
 		}
 
-		document.registerElement(name, { prototype: template.proto });
+		//document.registerElement(name, { prototype: template.proto });
+		customElements.define(name, template.customConstructor);
 		templates[name] = template;
 
 		var pendings = pendingTemplates[name];
@@ -216,12 +225,67 @@ var UI = new (function(global)
 		}
 	}
 
+
+// ███████╗██╗     ███████╗███╗   ███╗███████╗███╗   ██╗████████╗
+// ██╔════╝██║     ██╔════╝████╗ ████║██╔════╝████╗  ██║╚══██╔══╝
+// █████╗  ██║     █████╗  ██╔████╔██║█████╗  ██╔██╗ ██║   ██║   
+// ██╔══╝  ██║     ██╔══╝  ██║╚██╔╝██║██╔══╝  ██║╚██╗██║   ██║   
+// ███████╗███████╗███████╗██║ ╚═╝ ██║███████╗██║ ╚████║   ██║   
+// ╚══════╝╚══════╝╚══════╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝   ╚═╝   	
+
 	function isCustomElement(element)
 	{
 		return !!element.template; //&& true;
 	}
 
 
+	class CustomElement extends HTMLElement
+	{
+		constructor()
+		{
+			super();
+
+			this.customDispatcher = null;
+
+			// this.template is stored in the prototype.
+			this.component = new Component(this.template.componentDef);
+
+			// TODO: do not create shadow root if the content is empty?
+			// Add the template content to the shadow root
+			let shadowRoot = this.attachShadow({mode: 'open'});
+			this.component.attach(shadowRoot, null, this);
+
+			//console.log(`CustomElement constructor finished for ${this.localName}, component: ${this.component}`);
+		}
+
+		bind(key, value)
+		{
+			this.component.setDataProp(key, value);
+			this.component.refresh();
+		}
+
+		refresh()
+		{
+			this.component.refresh();
+		}
+
+		addCustomEventListener(type, handler)
+		{
+			if (this.customDispatcher === null)
+				this.customDispatcher = new EventDispatcher();
+
+			this.customDispatcher.addListener(type, handler, null);
+		}
+
+		dispatchCustomEvent(e)
+		{
+			if (this.customDispatcher !== null)
+			{
+				e.currentTarget = this;
+				this.customDispatcher.dispatch(e);
+			}
+		}
+	}
 
 
 // ██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗
@@ -273,6 +337,15 @@ var UI = new (function(global)
 		proxy.data = data;
 		proxies.set(data, proxy);
 		return proxy;
+	}
+
+	function findProxy(data)
+	{
+		if (!data)
+			return null;
+
+		let proxy = proxies.get(data);
+		return proxy || null;
 	}
 
 
@@ -353,6 +426,10 @@ var UI = new (function(global)
 			// event bindings
 			// directives
 
+			// NOTE: follow https://html.spec.whatwg.org/multipage/scripting.html#custom-element-conformance
+			// to make sure not setting any attributes or children since this is now called in constructor.
+			// In general, should minimize the state change to the host.
+
 			this.bindings.length = 0;
 			let bindingsDef = this.definition.bindings;
 			for (let i = 0; i < bindingsDef.length; i++) 
@@ -401,14 +478,14 @@ var UI = new (function(global)
 			//this.data = null;			
 		}
 
-		replace(replacedNode)
-		{
-			let parentNode = replacedNode.parentNode;
-			if (!parentNode)
-				throw ("To replace a node, the replaced node must have a parent.");
+		// replace(replacedNode)
+		// {
+		// 	let parentNode = replacedNode.parentNode;
+		// 	if (!parentNode)
+		// 		throw ("To replace a node, the replaced node must have a parent.");
 
-			this.attach(parentNode, replacedNode);
-		}
+		// 	this.attach(parentNode, replacedNode);
+		// }
 
 		// setData(data)
 		// {
@@ -955,7 +1032,7 @@ var UI = new (function(global)
 			}
 			else if (attrName === "-proxy")
 			{
-				// Data proxy setup
+				// Data proxy setup (custom element only)
 				attrsToRemove.push(attrName);
 				let [proxyClassName, dataModelBinding] = attr.value.split(":");
 				if (proxyClassName && dataModelBinding)
@@ -968,10 +1045,17 @@ var UI = new (function(global)
 						let dataModelBindingFunc = parseDataBindingToFunc(dataModelBinding, null);
 						if (dataModelBindingFunc)
 						{
-							let dataProxyBinding = new DataProxyBindingInfo();
-							dataProxyBinding.proxyClass = proxyClass;
-							dataProxyBinding.func = dataModelBindingFunc;
-							elementBinding.dataProxyBinding = dataProxyBinding;
+							if (isCustomElement)
+							{
+								let dataProxyBinding = new DataProxyBindingInfo();
+								dataProxyBinding.proxyClass = proxyClass;
+								dataProxyBinding.func = dataModelBindingFunc;
+								elementBinding.dataProxyBinding = dataProxyBinding;	
+							}
+							else
+							{
+								console.error(`Proxy binding ${attrName}=${attr.value} found on node ${node.tagName}, which is not a custom element and does not support proxy binding. full content: ${node.outerHTML}`);
+							}							
 						}
 						else
 						{
@@ -1185,8 +1269,8 @@ var UI = new (function(global)
 	}
 
 	//				   ."string"	 		   .identifier		  .number 				  .mem .operator
-	var bindingRegex = /("(?:[^"\\\n\r]|\\.)*")|(\$?[$_a-zA-Z]\w*)|(-?(?:\d+\.?\d*|\.\d+))|(\.)|([@#$%^&|+\-*/<>=\\[\]{}()"':;,?!])/g;
-	var bindingTokens = [TokenType.string, TokenType.identifier, TokenType.number, TokenType.memberOp, TokenType.operator];
+	var bindingRegex = /("(?:[^"\\\n\r]|\\.)*")|(new)|(\$?[$_a-zA-Z]\w*)|(-?(?:\d+\.?\d*|\.\d+))|(\.)|([@#$%^&|+\-*/<>=\\[\]{}()"':;,?!])/g;
+	var bindingTokens = [TokenType.string, TokenType.operator, TokenType.identifier, TokenType.number, TokenType.memberOp, TokenType.operator];
 
 	function CreateDataBindingLexer(str)
 	{
@@ -1311,11 +1395,11 @@ var UI = new (function(global)
 				// Global var
 				if (token.str[0] === '$')
 				{
-					expr += token.str.substr(1);
+					expr += " " + token.str.substr(1);
 				}
 				else // Data member
 				{
-					expr += ("data." + token.str);
+					expr += (" data." + token.str);
 				}
 			}
 			else if (token.type === TokenType.memberOp)
@@ -1859,72 +1943,74 @@ var UI = new (function(global)
 // ███████╗███████╗███████╗██║ ╚═╝ ██║███████╗██║ ╚████║   ██║   
 // ╚══════╝╚══════╝╚══════╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝   ╚═╝   
 
-	function CustomElement() 
-	{
-		this.template = null;
-		this.component = null;
-		//this.bindings = []; // TODO: can this whole list be pre-compiled and shared? <- hard because the elements need to be resolved by path.
-		//this.dataContext = null;
-		//this.dataObserver = null;
-		//this.properties = null;
-		this.customDispatcher = null;
+	// function CustomElement() 
+	// {
+	// 	this.template = null;
+	// 	this.component = null;
+	// 	//this.bindings = []; // TODO: can this whole list be pre-compiled and shared? <- hard because the elements need to be resolved by path.
+	// 	//this.dataContext = null;
+	// 	//this.dataObserver = null;
+	// 	//this.properties = null;
+	// 	this.customDispatcher = null;
 
-		// TODO: test
-		//this.customEvents = {};
-	}
+	// 	// TODO: test
+	// 	//this.customEvents = {};
+	// }
 
-	var customElemProto = CustomElement.prototype = Object.create(HTMLElement.prototype);
-	customElemProto.constructor = CustomElement;
+	// var customElemProto = CustomElement.prototype = Object.create(HTMLElement.prototype);
+	// customElemProto.constructor = CustomElement;
 
-	customElemProto.setup = function(template)
-	{
-		this.template = template;
-		this.component = new Component(template.componentDef);
+	// customElemProto.setup = function(template)
+	// {
+	// 	this.template = template;
+	// 	this.component = new Component(template.componentDef);
 		
 
-		// TODO: do not create shadow root if the content is empty?
-		// Add the template content to the shadow root
-		//var clonedContent = document.importNode(templateElem.content, true);
-		let shadowRoot = this.createShadowRoot();
-		this.component.attach(shadowRoot, null, this);
-		//shadowRoot.appendChild(clonedContent);
+	// 	// TODO: do not create shadow root if the content is empty?
+	// 	// Add the template content to the shadow root
+	// 	//var clonedContent = document.importNode(templateElem.content, true);
+	// 	let shadowRoot = this.createShadowRoot();
+	// 	this.component.attach(shadowRoot, null, this);
+	// 	//shadowRoot.appendChild(clonedContent);
 
-		// TODO: simplify (do we still need this?)
-		var templateElem = template.element;
-		var numClasses = templateElem.classList.length;
-		for (var i = 0; i < numClasses; i++) 
-		{
-			this.classList.add(templateElem.classList.item(i));
-		}
-	};
+	// 	// TODO: simplify (do we still need this?)
+	// 	var templateElem = template.element;
+	// 	var numClasses = templateElem.classList.length;
+	// 	for (var i = 0; i < numClasses; i++) 
+	// 	{
+	// 		this.classList.add(templateElem.classList.item(i));
+	// 	}
 
-	customElemProto.bind = function(key, value)
-	{
-		this.component.setDataProp(key, value);
-		this.component.refresh();
-	};
+	// 	console.log(`customElemProto.setup finished for ${this.nodeName}, ${this.id}, component: ${this.component}`);
+	// };
 
-	customElemProto.refresh = function()
-	{
-		this.component.refresh();
-	};
+	// customElemProto.bind = function(key, value)
+	// {
+	// 	this.component.setDataProp(key, value);
+	// 	this.component.refresh();
+	// };
 
-	customElemProto.addCustomEventListener = function(type, handler)
-	{
-		if (this.customDispatcher === null)
-			this.customDispatcher = new EventDispatcher();
+	// customElemProto.refresh = function()
+	// {
+	// 	this.component.refresh();
+	// };
 
-		this.customDispatcher.addListener(type, handler, null);
-	};
+	// customElemProto.addCustomEventListener = function(type, handler)
+	// {
+	// 	if (this.customDispatcher === null)
+	// 		this.customDispatcher = new EventDispatcher();
 
-	customElemProto.dispatchCustomEvent = function(e)
-	{
-		if (this.customDispatcher !== null)
-		{
-			e.currentTarget = this;
-			this.customDispatcher.dispatch(e);
-		}
-	};
+	// 	this.customDispatcher.addListener(type, handler, null);
+	// };
+
+	// customElemProto.dispatchCustomEvent = function(e)
+	// {
+	// 	if (this.customDispatcher !== null)
+	// 	{
+	// 		e.currentTarget = this;
+	// 		this.customDispatcher.dispatch(e);
+	// 	}
+	// };
 
 
 // 	███████╗██╗   ██╗███████╗███╗   ██╗████████╗███████╗

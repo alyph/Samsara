@@ -1,5 +1,6 @@
 'use strict';
 
+/* exported EventDispatcher */
 class EventDispatcher 
 {
 	constructor()
@@ -40,6 +41,24 @@ class EventDispatcher
 				handlers[idx] = null;
 			}
 		}
+	}
+
+	waitFor(...types)
+	{
+		return new Promise((resolve, reject) =>
+		{
+			let receipt = new ExclusiveEventReceipt();
+			let handler = (e) => 
+			{
+				receipt.clear();
+				resolve(e);
+			};
+
+			for (let type of types)
+			{
+				this.addListener(type, handler, receipt);
+			}
+		});
 	}
 
 	dispatch(e)

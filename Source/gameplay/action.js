@@ -1,6 +1,6 @@
 'use strict';
 
-/* globals Script */
+/* globals Script Area */
 
 var ActionMode = new Enum
 (
@@ -35,6 +35,10 @@ class ActionInstance
 	{
 		this.card = card;
 		this.definition = action;
+
+		this.instigator = null;
+		this.target = null;
+		this.addon = new Area();
 		//this.targetConditions = [];
 	}
 

@@ -25,6 +25,12 @@ spells:
 	h: 384
 }
 
+creatures:
+{
+	url: "Content/Images/creatures.png"
+	w: 272
+	h: 384
+}
 
 
 // Sprites
@@ -73,6 +79,66 @@ purple_potion:			{ x: 7, y: 0, sheet: #items }
 magic_missile:			{ x: 0, y: 0, sheet: #spells }
 fire_bolt:				{ x: 1, y: 0, sheet: #spells }
 
+
+@namespace sprite.creature
+
+gnoll_captain:			{ x: 0, y: 0, sheet: #creatures }
+gnoll_spearman:			{ x: 2, y: 0, sheet: #creatures }
+gnoll_grunt:			{ x: 3, y: 0, sheet: #creatures }
+goblin_assassin:		{ x: 4, y: 0, sheet: #creatures }
+ooze:					{ x: 6, y: 0, sheet: #creatures }
+ogre_berserker:			{ x: 7, y: 0, sheet: #creatures }
+troll_giant:			{ x: 0, y: 1, sheet: #creatures }
+orc_huntress:			{ x: 1, y: 1, sheet: #creatures }
+boar_charging:			{ x: 2, y: 1, sheet: #creatures }
+goblin_stalker:			{ x: 3, y: 1, sheet: #creatures }
+goblin_rocketeer:		{ x: 5, y: 1, sheet: #creatures }
+crocolisk:				{ x: 6, y: 1, sheet: #creatures }
+troll_defender:			{ x: 7, y: 1, sheet: #creatures }
+orc_marauder:			{ x: 1, y: 2, sheet: #creatures }
+water_elemental:		{ x: 3, y: 2, sheet: #creatures }
+troll_berserker:		{ x: 5, y: 2, sheet: #creatures }
+golem_arcane:			{ x: 6, y: 2, sheet: #creatures }
+fire_elemental:			{ x: 7, y: 2, sheet: #creatures }
+skeleton_mage:			{ x: 0, y: 3, sheet: #creatures }
+goblin_corsair:			{ x: 1, y: 3, sheet: #creatures }
+wolf:					{ x: 2, y: 3, sheet: #creatures }
+orc_battle_mage:		{ x: 3, y: 3, sheet: #creatures }
+cyclops:				{ x: 4, y: 3, sheet: #creatures }
+panther:				{ x: 5, y: 3, sheet: #creatures }
+goblin_bomber:			{ x: 6, y: 3, sheet: #creatures }
+werewarg:				{ x: 7, y: 3, sheet: #creatures }
+rhino:					{ x: 0, y: 4, sheet: #creatures }
+tiger:					{ x: 1, y: 4, sheet: #creatures }
+death_knight:			{ x: 2, y: 4, sheet: #creatures }
+inferno_hound:			{ x: 4, y: 4, sheet: #creatures }
+cultist_pyromancer:		{ x: 5, y: 4, sheet: #creatures }
+harpy:					{ x: 6, y: 4, sheet: #creatures }
+orc_warrior:			{ x: 7, y: 4, sheet: #creatures }
+satyr_charger:			{ x: 0, y: 5, sheet: #creatures }
+spider_black:			{ x: 1, y: 5, sheet: #creatures }
+spider_fiery:			{ x: 2, y: 5, sheet: #creatures }
+waling_spirit:			{ x: 3, y: 5, sheet: #creatures }
+cave_dweller:			{ x: 4, y: 5, sheet: #creatures }
+spider_green:			{ x: 5, y: 5, sheet: #creatures }
+slime:					{ x: 6, y: 5, sheet: #creatures }
+spider_spectral:		{ x: 7, y: 5, sheet: #creatures }
+beetle_gardian:			{ x: 0, y: 6, sheet: #creatures }
+spectral_mage:			{ x: 1, y: 6, sheet: #creatures }
+death_charger:			{ x: 2, y: 6, sheet: #creatures }
+shadow_rider:			{ x: 3, y: 6, sheet: #creatures }
+skeleton:				{ x: 4, y: 6, sheet: #creatures }
+healing_bot:			{ x: 5, y: 6, sheet: #creatures }
+mechanical_tiger:		{ x: 6, y: 6, sheet: #creatures }
+goblin_sniper:			{ x: 7, y: 6, sheet: #creatures }
+troll_witchdoctor:		{ x: 0, y: 7, sheet: #creatures }
+ogre_brute:				{ x: 2, y: 7, sheet: #creatures }
+goblin_mech_harvester:	{ x: 3, y: 7, sheet: #creatures }
+goblin_shaman:			{ x: 5, y: 7, sheet: #creatures }
+dino_raptor:			{ x: 6, y: 7, sheet: #creatures }
+dino_devilsaur_queen:	{ x: 7, y: 7, sheet: #creatures }
+dino_horned_raptor:		{ x: 0, y: 8, sheet: #creatures }
+dino_devilsaur:			{ x: 1, y: 8, sheet: #creatures }
 
 
 

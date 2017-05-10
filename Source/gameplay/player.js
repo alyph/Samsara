@@ -1,6 +1,6 @@
 'use strict';
 
-/* globals Archive Area ActionTarget Encounter */
+/* globals Archive Area ActionTarget Encounter EventDispatcher */
 /*exported Player*/
 class Player extends Entity
 {
@@ -8,21 +8,23 @@ class Player extends Entity
 	{
 		super();
 
+		this.events = new EventDispatcher();
+
 		this.deck = new Area();
 		this.hand = new Area();
 		this.partyArea = new Area();
 		this.encounterArea = new Area();
+		this.activeActionArea = new Area();
 
 		this.playingCard = null;
 		this.cardSelectedCallback = null;
 
 		this.encounter = null;
-
-		this.playerView = document.querySelector("player-view");
 	}
 
 	start()
 	{
+		this.playerView = document.querySelector("player-view");
 		this.playerView.bind("player", this);
 		
 		let starterDeck = this.rule.generateStarterDeck(this.world);
@@ -45,9 +47,36 @@ class Player extends Entity
 		}
 
 		// Create a enoucnter for testing
-		this.encounter = this.createEncounter();
+		this.encounter = this.rule.generateEncounter(this.world);
+		this.encounterArea.placeCards(this.encounter.entities);
 
 		this.refreshView();
+	}
+
+	get allCards()
+	{
+		let allCards = [
+			...this.hand.cards, 
+			...this.partyArea.cards, 
+			...this.encounterArea.cards,
+			...this.activeActionArea.cards];
+
+		for (let hero of this.partyArea.cards)
+		{
+			allCards = allCards.concat(hero.state.attachments);
+		}
+
+		return allCards;
+	}
+
+	get activeActionAddonArea()
+	{
+		if (this.activeActionArea.length > 0)
+		{
+			return this.activeActionArea[0].addon;
+		}
+
+		return null;
 	}
 
 	draw(num)
@@ -62,51 +91,40 @@ class Player extends Entity
 		return drawnCards;
 	}
 
-	selectCard()
+	async selectCard()
 	{
-		return new Promise((resolve, reject) =>
-		{
-			if (this.cardSelectedCallback)
-				reject(new Error("Already selecting a card."));
+		let e = await this.events.waitFor(CardSelected);
+		return e.card;
 
-			this.cardSelectedCallback = (card) => 
-			{
-				resolve(card);
-			};
-		});
-	}
-
-	onCardSelected(card)
-	{
-		if (this.cardSelectedCallback)
-		{
-			let callback = this.cardSelectedCallback;
-			this.cardSelectedCallback = null;
-			callback(card);
-		}
-		// else if (!this.playingCard)
+		// return new Promise((resolve, reject) =>
 		// {
-		// 	this.playingCard = card;
-		// 	let player = this;
-		// 	this.playCard(card).then(() => { player.playingCard = null; this.refreshView(); });
-		// 	this.refreshView();
-		// }
+		// 	if (this.cardSelectedCallback)
+		// 		reject(new Error("Already selecting a card."));
+
+		// 	this.cardSelectedCallback = (card) => 
+		// 	{
+		// 		resolve(card);
+		// 	};
+		// });
 	}
 
-	get allCards()
-	{
-		let allCards = [
-			...this.hand.cards, 
-			...this.partyArea.cards, 
-			...this.encounterArea.cards];
+	// onCardSelected(card)
+	// {
+	// 	if (this.cardSelectedCallback)
+	// 	{
+	// 		let callback = this.cardSelectedCallback;
+	// 		this.cardSelectedCallback = null;
+	// 		callback(card);
+	// 	}
+	// 	// else if (!this.playingCard)
+	// 	// {
+	// 	// 	this.playingCard = card;
+	// 	// 	let player = this;
+	// 	// 	this.playCard(card).then(() => { player.playingCard = null; this.refreshView(); });
+	// 	// 	this.refreshView();
+	// 	// }
+	// }
 
-		for (let hero of this.partyArea.cards)
-		{
-			allCards = allCards.concat(hero.state.attachments);
-		}
-
-		return allCards;
-	}
 
 	refreshView()
 	{
@@ -115,25 +133,147 @@ class Player extends Entity
 
 	async playTurn()
 	{
+		let canContinue = true;
+		while (canContinue)
+		{
+			canContinue = await this.performAction();
+		}
+
+		// while (true)
+		// {
+		// 	let card = await this.selectCard();
+
+		// 	// TODO: can check if the card is even playable (maybe filter out enemy cards?)
+		// 	// Although this should still work, since playCard will just return false.
+		// 	if (card)
+		// 	{
+		// 		if (await this.playCard(card))
+		// 		{
+		// 			// one action per turn
+		// 			break;
+		// 		}
+		// 		// If not played back to choose next card.
+		// 	}
+		// }
+
+		// this.playingCard = null;
+		// this.refreshView();
+	}
+
+	async performAction()
+	{
+		let canContinue = true;
+		let hero = null;
 		while (true)
 		{
 			let card = await this.selectCard();
 
-			// TODO: can check if the card is even playable (maybe filter out enemy cards?)
-			// Although this should still work, since playCard will just return false.
-			if (card)
+			// TODO: check if the hero is recovering
+			if (card.getArea() === this.partyArea)
 			{
-				if (await this.playCard(card))
-				{
-					// one action per turn
-					break;
-				}
-				// If not played back to choose next card.
+				hero = card;
+				break;
 			}
 		}
 
-		this.playingCard = null;
+		// Activate the hero (so he becomes the instigator of the action)
+		this.activateCard(hero);
 		this.refreshView();
+
+		// Now select an common action target 
+		// (the target that has at least one common action that can be perfomed by the hero)
+		let { target, actions } = await this.selectCommonActionTarget(hero);
+
+		// If target is null, that means the action is canceled, return true to try next action
+		if (target)
+		{
+			this.targetCard(target);
+
+			// TODO: if more than one common action, select one.
+
+			let action = actions[0];
+			action.card.placeIn(this.activeActionArea); // more for the UI.
+
+			this.refreshView();
+
+			// Prepare for action (if return false, means canceled)
+			let isConfirmed = await this.prepareForAction(action);
+
+			if (isConfirmed)
+			{
+				let shouldAdvanceTime = await this.action.execute();
+				canContinue = !shouldAdvanceTime;
+			}
+
+			action.card.placeIn(null); // for UI
+
+			// Return all the used cards to previous area.
+			// Note if some cards are discarded in the process of the action,
+			// returnToArea() will basically do nothing, since the card is
+			// no longer in a temp area.
+			for (let addonCard of action.addon.cards)
+			{
+				addonCard.returnToArea();
+			}
+
+			this.untargetCard(target);
+		}
+		
+		// Deactivate hero
+		this.deactivateCard(hero);
+		this.refreshView();
+
+		return canContinue;
+	}
+
+	async selectCommonActionTarget(instigator)
+	{
+		let target = null;
+		let actions = [];
+
+		while (true)
+		{
+			let card = await this.selectCard();
+			if (card === instigator)
+			{
+				break;
+			}
+			else
+			{
+				actions = this.rule.populateDefaultActions(instigator, card);
+				if (actions && actions.length > 0)
+				{
+					target = card;
+					break;
+				}
+			}
+		}
+
+		return { target, actions };
+	}
+
+	async prepareForAction(action)
+	{
+		while (true)
+		{
+			let e = await this.events.waitFor(CardSelected, ActionConfirmed, ActionCanceled);
+			if (e.constructor === CardSelected)
+			{
+				let card = e.card;
+				if (card.isUsableOnAction(action))
+				{
+					card.placeIn(action.addon);
+				}
+			}
+			else if (e.constructor === ActionConfirmed)
+			{
+				return true;
+			}
+			else if (e.constructor === ActionCanceled)
+			{
+				return false;
+			}
+		}
 	}
 
 	async playCard(card) 
@@ -192,6 +332,44 @@ class Player extends Entity
 		encounter.setup();
 		return encounter;
 	}
+
+	activateCard(card)
+	{
+		card.state.activated = true;
+	}
+
+	deactivateCard(card)
+	{
+		card.state.activated = false;
+	}
+
+	targetCard(card)
+	{
+		card.state.targted = true;
+	}
+
+	untargetCard(card)
+	{
+		card.state.targeted = false;
+	}
 }
 
 Player.actionCanceled = Symbol("actionCanceled");
+
+class CardSelected
+{
+	constructor(card)
+	{
+		this.card = card;
+	}
+}
+
+class ActionConfirmed
+{
+	constructor() {}
+}
+
+class ActionCanceled
+{
+	constructor() {}
+}

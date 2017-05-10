@@ -463,7 +463,7 @@ var Archive = new (function(global)
 			}
 			else
 			{
-				input.error(`Unexpected token ${token}, package parsing will now be terminated (any content parsed earlier will be returned).`, token);
+				input.error(`Unexpected token ${token} in package, must start with key (missing :?) or rules, package parsing will now be terminated (any content parsed earlier will be returned).`, token);
 				break;
 			}
 		}

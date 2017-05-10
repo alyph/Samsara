@@ -1,4 +1,6 @@
 @import sprites
+@import creatures
+
 
 rule: .Rule
 {
@@ -126,6 +128,99 @@ rule: .Rule
 		#item.potion_restoration
 		#spell.magic_missile
 		#spell.fire_bolt
+	]
+
+	creatureGroups:
+	[
+		.CreatureGroupDefinition
+		{
+			creatureTemplates:
+			[
+				#creature.goblin_assassin
+				#creature.goblin_stalker
+				#creature.goblin_rocketeer
+				#creature.goblin_bomber
+				#creature.goblin_sniper
+				#creature.goblin_shredder
+				#creature.goblin_shaman
+				#creature.goblin_corsair
+				#creature.healing_bot
+				#creature.mechanical_tiger				
+			]
+		}
+
+		.CreatureGroupDefinition
+		{
+			creatureTemplates:
+			[
+				#creature.gnoll_flind
+				#creature.gnoll_hunter
+				#creature.gnoll_grunt
+				#creature.ooze
+				#creature.slime
+				#creature.crocolisk
+				#creature.shadow_panther
+				#creature.tiger
+				#creature.werewarg
+				#creature.harpy
+				#creature.satyr_charger
+			]
+		}
+
+		.CreatureGroupDefinition
+		{
+			creatureTemplates:
+			[
+				#creature.troll_crusher
+				#creature.troll_shieldmaster
+				#creature.troll_berserker
+				#creature.troll_witchdoctor
+				#creature.trampler
+				#creature.raptor
+				#creature.devilsaur_queen
+				#creature.raptor_brood
+				#creature.Devilsaur
+			]
+		}
+
+		.CreatureGroupDefinition
+		{
+			creatureTemplates:
+			[
+				#creature.boar
+				#creature.wolf
+				#creature.orc_huntress
+				#creature.orc_marauder
+				#creature.orc_windweaver
+				#creature.orc_warrior
+				#creature.ogre_berserker
+				#creature.ogre_brute
+				#creature.cyclops		
+			]
+		}
+
+		.CreatureGroupDefinition
+		{
+			creatureTemplates:
+			[
+				#creature.water_elemental
+				#creature.fire_elemental
+				#creature.arcane_gardian
+				#creature.bone_mage
+				#creature.death_knight
+				#creature.inferno_beast
+				#creature.giant_blackwidow
+				#creature.flaming_spider_queen
+				#creature.spider_brood
+				#creature.spectral_spider
+				#creature.waling_spirit
+				#creature.scarab_gardian
+				#creature.lich_tormentor
+				#creature.death_charger
+				#creature.blight_horseman
+				#creature.skeleton
+			]
+		}
 	]
 }
 

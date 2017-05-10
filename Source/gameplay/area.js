@@ -12,5 +12,13 @@ class Area
 	{
 		return this.cards.length === 0;
 	}
+
+	placeCards(cards)
+	{
+		for (let card of cards)
+		{
+			card.placeIn(this);
+		}
+	}
 }
 

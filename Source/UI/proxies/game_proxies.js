@@ -10,8 +10,18 @@ class CardInfo
 	}
 }
 
+class AreaProxyBase extends UI.Proxy
+{
+	constructor()
+	{
+		super();
+
+		this.expandUpwards = false;
+	}
+}
+
 /* exported AreaProxy */
-class AreaProxy extends UI.Proxy
+class AreaProxy extends AreaProxyBase
 {
 	constructor(area)
 	{
@@ -24,7 +34,7 @@ class AreaProxy extends UI.Proxy
 		this.height = 0;
 
 		//this.padding = new Vector2();
-		this.horizontalPadding = 100;
+		this.horizontalPadding = 200;
 		this.verticalPadding = 100;
 		this.maxRows = 1;
 
@@ -101,7 +111,7 @@ class AreaProxy extends UI.Proxy
 }
 
 /* exported PartyAreaProxy */
-class PartyAreaProxy extends UI.Proxy
+class PartyAreaProxy extends AreaProxyBase
 {
 	constructor(area)
 	{
@@ -119,6 +129,8 @@ class PartyAreaProxy extends UI.Proxy
 		this.paddingBetweenCharacters = 64;
 
 		this.cardInfos = [];
+
+		this.expandUpwards = true; // TODO: this should be set in the view html.
 	}
 
 	onInit()
@@ -268,5 +280,17 @@ class CardProxy extends UI.Proxy
 		super();
 		this.card = card;
 		this.center = new Vector2(); 
+	}
+
+	get areaProxy()
+	{
+		let area = this.card.state.area;
+		return UI.findProxy(area);
+	}
+
+	get expandUpwards()
+	{
+		let areaProxy = this.areaProxy;
+		return areaProxy ? areaProxy.expandUpwards : false;
 	}
 }

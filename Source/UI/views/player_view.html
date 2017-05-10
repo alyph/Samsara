@@ -46,12 +46,10 @@
 	<area-view id="hand" -proxy="AreaProxy:player.hand"></area-view>
 	<area-view id="party" -proxy="PartyAreaProxy:player.partyArea"></area-view>
 	<area-view id="encounter" -proxy="AreaProxy:player.encounterArea"></area-view>
-	<div id="cards">
+	<div id="cards"
+		.on-card-selected="player.events.dispatch(new $CardSelected($e.detail.card))">
 		#map (card in player.allCards)
-			<card-view 
-				-proxy="CardProxy:card"
-				.on-card-selected="player.onCardSelected($e.detail.card)">
-			</card-view>
+			<card-view -proxy="CardProxy:card"></card-view>
 		#end
 	</div>
 </template>
