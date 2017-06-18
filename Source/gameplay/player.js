@@ -79,6 +79,11 @@ class Player extends Entity
 		return null;
 	}
 
+	get hasActiveAction()
+	{
+		return this.activeActionArea.cards.length > 0;
+	}
+
 	draw(num)
 	{
 		let drawnCards = [];
@@ -192,7 +197,8 @@ class Player extends Entity
 			// TODO: if more than one common action, select one.
 
 			let action = actions[0];
-			action.card.placeIn(this.activeActionArea); // more for the UI.
+			let actionCard = action.spawnActionCard();
+			actionCard.placeIn(this.activeActionArea); // more for the UI.
 
 			this.refreshView();
 
@@ -201,11 +207,11 @@ class Player extends Entity
 
 			if (isConfirmed)
 			{
-				let shouldAdvanceTime = await this.action.execute();
+				let shouldAdvanceTime = await action.execute();
 				canContinue = !shouldAdvanceTime;
 			}
 
-			action.card.placeIn(null); // for UI
+			actionCard.destroy();
 
 			// Return all the used cards to previous area.
 			// Note if some cards are discarded in the process of the action,
@@ -240,7 +246,7 @@ class Player extends Entity
 			}
 			else
 			{
-				actions = this.rule.populateDefaultActions(instigator, card);
+				actions = this.rule.populateDefaultActions(this.world, instigator, card);
 				if (actions && actions.length > 0)
 				{
 					target = card;
@@ -345,7 +351,7 @@ class Player extends Entity
 
 	targetCard(card)
 	{
-		card.state.targted = true;
+		card.state.targeted = true;
 	}
 
 	untargetCard(card)

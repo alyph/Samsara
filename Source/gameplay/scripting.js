@@ -1,156 +1,173 @@
+'use strict';
 
 /* exported Script */
 var Func = {};
 var Proc = {};
 
-class VarRef
+class VariableReference
 {
-	constructor()
+	constructor(name = "")
 	{
-		this.name = "";
+		this.name = name;
 	}
 }
 
-var Script = new (function(global)
+function VarRef(name)
 {
-	this.buildContext = (world, locals, scope) =>
+	return new VariableReference(name);
+}
+
+class ScriptFunction
+{
+	constructor()
 	{
-		let context = new ScriptContext();
-
-		context.globals.set("world", world);
-		context.globals.set("player", world.player);
-		context.globals.set("field", world.field);
-
-		for (let localVar in locals)
-		{
-			context.locals.set(localVar, locals[localVar]);
-		}
-
-		context.scope.push(...scope);
-		return context;
-	};
-
-	class ScriptFunction
-	{
-		constructor()
-		{
-		}
-
-		call(context)
-		{
-			throw ("NOT IMPLEMENTED");
-		}
 	}
 
-	class ScriptProcedure
+	call(context)
 	{
-		constructor()
-		{
-		}
+		throw ("NOT IMPLEMENTED");
+	}
+}
 
-		async run(context)
-		{
-			throw ("NOT IMPLEMENTED");
-		}
+class ScriptProcedure
+{
+	constructor()
+	{
 	}
 
-	class ScriptContext
+	async run(context)
 	{
-		constructor()
-		{
-			this.globals = new Map();
-			this.locals = new Map();
-			this.scope = [];
-		}
+		throw ("NOT IMPLEMENTED");
+	}
+}
 
-		resolvePreArgs(...args)
+class ScriptContext
+{
+	constructor()
+	{
+		this.globals = new Map();
+		this.locals = new Map();
+		this.scope = [];
+	}
+
+	resolvePreArgs(...args)
+	{
+		let values = [];
+		values.length = args.length;
+		for (let i = 0; i < args.length; i++)
 		{
-			let values = [];
-			values.length = args.length;
-			for (let i = 0; i < args.length; i++)
+			let arg = args[i];
+			if (arg === undefined && this.scope.length > i)
 			{
-				let arg = args[i];
-				if (arg === undefined && this.scope.length > i)
-				{
-					values[i] = this.scope[i];
-					continue;
-				}
-
-				values[i] = this.resolveArg(arg);
+				values[i] = this.scope[i];
+				continue;
 			}
-			return values;
-		}
 
-		resolvePostArgs(...args)
-		{
-			let values = [];
-			values.length = args.length;
-			for (let i = 0; i < args.length; i++)
-			{
-				let arg = args[i];
-				values[i] = this.resolveArg(arg);
-			}
-			return values;
+			values[i] = this.resolveArg(arg);
 		}
+		return values;
+	}
 
-		resolveArg(arg)
+	resolvePostArgs(...args)
+	{
+		let values = [];
+		values.length = args.length;
+		for (let i = 0; i < args.length; i++)
 		{
-			if (arg.constructor === VarRef)
+			let arg = args[i];
+			values[i] = this.resolveArg(arg);
+		}
+		return values;
+	}
+
+	resolveArg(arg)
+	{
+		if (arg.constructor === VariableReference)
+		{
+			if (this.locals.has(arg.name))
 			{
-				if (this.locals.has(arg.name))
-				{
-					return this.locals.get(arg.name);
-				}
-				else if (this.globals.has(arg.name))
-				{
-					return this.globals.get(arg.name);
-				}
-				else
-				{
-					console.error(`Failed to find the variable '${arg.name}'`);
-					return undefined;
-				}
+				return this.locals.get(arg.name);
 			}
-			else if (arg instanceof ScriptFunction)
+			else if (this.globals.has(arg.name))
 			{
-				return arg.call(this);
+				return this.globals.get(arg.name);
 			}
 			else
 			{
-				// Raw value.
-				return arg;
+				console.error(`Failed to find the variable '${arg.name}'`);
+				return undefined;
 			}
 		}
+		else if (arg instanceof ScriptFunction)
+		{
+			return arg.call(this);
+		}
+		else
+		{
+			// Raw value.
+			return arg;
+		}
+	}
+}
+
+function buildScriptContext(world, locals, scope)
+{
+	let context = new ScriptContext();
+
+	context.globals.set("world", world);
+	context.globals.set("player", world.player);
+	//context.globals.set("field", world.field);
+
+	for (let localVar in locals)
+	{
+		context.locals.set(localVar, locals[localVar]);
 	}
 
-	Proc.AttachTo = class AttachTo extends ScriptProcedure
+	context.scope.push(...scope);
+	return context;
+}
+
+Proc.AttachTo = class extends ScriptProcedure
+{
+	constructor()
 	{
-		constructor()
-		{
-			super();
-			this.card = undefined;
-			this.target = undefined;
-		}
+		super();
+		this.card = undefined;
+		this.target = undefined;
+	}
 
-		async run(context)
-		{
-			let [card] = context.resolvePreArgs(this.card);
-			let [target] = context.resolvePostArgs(this.target);
+	async run(context)
+	{
+		let [card] = context.resolvePreArgs(this.card);
+		let [target] = context.resolvePostArgs(this.target);
 
-			if (!card || !target)
-				return false;
+		if (!card || !target)
+			return false;
 
-			// TODO play anim
-			card.attachTo(target);
+		// TODO play anim
+		card.attachTo(target);
 
-			return true;
-		}
-	};
+		return true;
+	}
+};
 
+Func.HasDesc = class extends ScriptFunction
+{
+	constructor()
+	{
+		super();
+		this.card = undefined;
+		this.descs = [];
+	}
 
-})(this);
+	call(context)
+	{
+		let [card] = context.resolvePreArgs(this.card);
+		if (!card) return false;
 
-
+		return card.desc.hasAllDescriptors(...this.descs);
+	}
+};
 
 // $predicate("$child is a $base", function(child, base)
 // {

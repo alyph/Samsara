@@ -126,8 +126,12 @@ action =
 	// (target will be a usable param in effect script)
 	// some effect may select target itself (for exmple discarding card),
 	// which doesn't require target set here.
-	targetConditions: => { hero && friendly }
-
+	condition: @ (target, instigator) =>
+	{
+		is_living
+		is_hostile
+		instigator.is_living //=> { hero && friendly }
+	}
 	// list of effects to be executed (to be replaced by script)
 	effects: []
 

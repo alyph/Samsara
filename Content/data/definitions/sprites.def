@@ -32,6 +32,21 @@ creatures:
 	h: 384
 }
 
+actions:
+{
+	url: "Content/Images/actions.png"
+	w: 272
+	h: 384
+}
+
+icons:
+{
+	url: "Content/Images/icons.png"
+	w: 256
+	h: 256
+}
+
+
 
 // Sprites
 
@@ -141,5 +156,16 @@ dino_horned_raptor:		{ x: 0, y: 8, sheet: #creatures }
 dino_devilsaur:			{ x: 1, y: 8, sheet: #creatures }
 
 
+
+@namespace sprite.action
+
+melee_attack:			{ x: 0, y: 0, sheet: #actions }
+
+
+@namespace sprite.icon
+
+check_mark:				{ x: 0, y: 0, sheet: #icons }
+cross_mark:				{ x: 1, y: 0, sheet: #icons }
+heart:					{ x: 2, y: 0, sheet: #icons }
 
 

@@ -87,7 +87,7 @@ var GLP =  new (function(global)
 			}
 			else
 			{
-				this.error(`Expected a token ${type}${str?` '${str}'`:""} and instead saw ${token}.`, token);
+				this.error(`Expected a token ${type.toString()}${str?` '${str}'`:""} and instead saw ${token}.`, token);
 				return null;
 			}
 		}

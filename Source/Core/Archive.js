@@ -10,6 +10,7 @@ var Archive = new (function(global)
 	var _objectToRecords = new Map();
 	var _instances = [];
 	var _rules = new Map();
+	var _customValueTypes = [];
 	var _packageLexer = null;
 	var _baseUrl = "";
 
@@ -46,6 +47,12 @@ var Archive = new (function(global)
 			throw (`Rule named '${name}' already exists.`);
 
 		_rules.set(name, new Rule(parser));
+	};
+
+	this.CustomValueType = function(parser, compiler)
+	{
+		// TODO: may want to check duplicates
+		_customValueTypes.push(new CustomValueType(parser, compiler));
 	};
 
 	this.loadInstances = function(path)
@@ -120,20 +127,46 @@ var Archive = new (function(global)
 		return rec ? rec.object : null;
 	};
 
+	this.destroy = function(inst)
+	{
+		let record = _objectToRecords.get(inst);
+		if (!inst)
+		{
+			console.error(`Trying to destroy an instance (${inst}) that does not exist.`);
+			return;
+		}
+
+		if (record.environment !== Environment.instances)
+		{
+			console.error(`Trying to destroy an object (${record.fullName}) that is not an instance.`);
+			return;
+		}
+
+		removeRecord(record);
+	};
+
 	this.getInst = function(name)
 	{
-		name = `${Environment.instances}${Punctuation.envDelim}${name}`;
+		let fullName = `${Environment.instances}${Punctuation.envDelim}${name}`;
+		return getObject(fullName);
+	};
 
-		let rec = _records.get(name);
-		if (!rec)
-			throw (`Cannot find record: ${name}`);
-
-		return rec.object;
+	this.getDef = function(name)
+	{
+		let fullName = `${Environment.definitions}${Punctuation.envDelim}${name}`;
+		return getObject(fullName);
 	};
 
 
 
+	function getObject(fullName)
+	{
+		let rec = _records.get(fullName);
+		if (!rec)
+			throw (`Cannot find record: ${fullName}`);
 
+		return rec.object;
+	}
 
 	function addRecord(record)
 	{
@@ -145,6 +178,21 @@ var Archive = new (function(global)
 
 		if (record.environment === Environment.instances)
 			_instances.push(record.object);
+	}
+
+	function removeRecord(record)
+	{
+		_records.delete(record.fullName);
+		_objectToRecords.delete(record.object);
+
+		if (record.environment === Environment.instances)
+		{
+			let idx = _instances.indexOf(record.object);
+			if (idx >= 0)
+			{
+				_instances.splice(idx, 1);
+			}
+		}
 	}
 
 	function findUniqueRecordName(name)
@@ -369,6 +417,7 @@ var Archive = new (function(global)
 		reference		: '#',
 		object			: '.', // TODO: should rename this to type
 		member			: '.',
+		assignment		: ':',
 	};
 
 	var BinaryOperators = ['+', '-', '*', '/', '%', '**'];
@@ -379,6 +428,7 @@ var Archive = new (function(global)
 	class SyntaxNodeObject 				{constructor() { this.base = null; this.properties = []; }}
 	class SyntaxNodeObjectReference 	{constructor() { this.name = ""; }}
 	class SyntaxNodeList 				{constructor() { this.entries = []; }}
+	class SyntaxNodeCustomValue			{constructor() { this.value = null; this.type = null; }}
 	class SyntaxNodeString 				{constructor() { this.value = ""; }}
 	class SyntaxNodeNull 				{constructor() {}}
 	class SyntaxNodeExpression 			{constructor() { this.value = ""; }}
@@ -387,6 +437,7 @@ var Archive = new (function(global)
 	_packageLexer = (() =>
 	{
 		let identifierRegex = String.raw`[a-zA-Z_]\w*`;
+		//let keyRegex = identifierRegex + String.raw`\s*` + Punctuation.assignment;
 
 		let punctuationSymbols = [];
 		for (let key in Punctuation) 
@@ -403,10 +454,9 @@ var Archive = new (function(global)
 		}
 		let operatorsRegex = generateRegexFromSymbols(operatorsSymbols);
 
-
 		let regexToTokens =
 		[
-			[identifierRegex + String.raw`\s*:`,			TokenTypes.key],
+			//[keyRegex,										TokenTypes.key],
 			[identifierRegex,								TokenTypes.identifier],
 			[String.raw`\/\/.*`					], // single line comment (skipped)
 			[String.raw`\/\*(?:.|[\r\n])*?\*\/`	], // multi line comment (skipped)
@@ -442,7 +492,7 @@ var Archive = new (function(global)
 		let token, entry;
 		while (!(token = input.peek()).isEof())
 		{
-			if (token.type === TokenTypes.key)
+			if (token.type === TokenTypes.identifier)
 			{
 				entry = parseProperty(input);
 				if (entry && entry.value.constructor === SyntaxNodeObject)
@@ -473,8 +523,11 @@ var Archive = new (function(global)
 
 	function parseProperty(input)
 	{
-		let key = input.expect(TokenTypes.key);
+		let key = input.expect(TokenTypes.identifier);
 		if (!key)
+			return null;
+
+		if (!input.expect(TokenTypes.punctuation, Punctuation.assignment))
 			return null;
 
 		let value = parseValue(input); 
@@ -482,7 +535,7 @@ var Archive = new (function(global)
 			return null;
 
 		let propNode = new SyntaxNodeProperty();				
-		propNode.key = key.str.slice(0, -1).trim();
+		propNode.key = key.str.trim();//.slice(0, -1).trim();
 		propNode.value = value;
 
 		return propNode;
@@ -510,8 +563,7 @@ var Archive = new (function(global)
 		else if (token.is(TokenTypes.punctuation, Punctuation.customValue))
 		{
 			input.next();
-			throw ("not implemented!");
-			// TODO impl
+			return parseCustomValue(input);
 		}
 		else if (token.is(TokenTypes.punctuation, Punctuation.objectOpen))
 		{
@@ -694,7 +746,8 @@ var Archive = new (function(global)
 	function parseExpressionTerm(input)	
 	{
 		let token = input.peek();
-		if (token.type === TokenTypes.number)
+		if (token.type === TokenTypes.number ||
+			token.type === TokenTypes.string) // TODO: not entirely correct, does not support expression starting with string
 		{
 			return input.next().str;
 		}
@@ -708,6 +761,13 @@ var Archive = new (function(global)
 				if (!memberToken)
 					return null;
 				refStr += memberToken.str;
+			}
+
+			// A function
+			if (input.peek().is(TokenTypes.punctuation, Punctuation.parenOpen))
+			{
+				// TODO: this only works for a single parameter, must support comma in parseExpressionValue somehow.
+				refStr += parseExpressionTerm(input); // (v)
 			}
 			return refStr;
 		}
@@ -735,6 +795,31 @@ var Archive = new (function(global)
 			input.error(`Unexpected token ${token}, the expression cannot be parsed.`, token);
 			return null;
 		}
+	}
+
+	function parseCustomValue(input)
+	{
+		for (let customType of _customValueTypes)
+		{
+			let result = customType.parser(input);
+			if (result !== undefined) // undefined means the parser determines this is not its type.
+			{
+				if (result !== null)
+				{
+					let customNode = new SyntaxNodeCustomValue();
+					customNode.value = result;
+					customNode.type = customType;
+					return customNode;
+				}
+				else // Error during parsing, but already reported.
+				{
+					return null;
+				}
+			}
+		}
+
+		input.error(`Cannot find a proper parser to parse the custom value.`);
+		return null;
 	}
 
 	class Rule
@@ -845,8 +930,7 @@ var Archive = new (function(global)
 	this.Rule("using", function(input)
 	{
 		let namespaces = [];
-		let token;
-		while ((token = input.peek()).is(TokenTypes.identifier))
+		do//while ((input.peek()).is(TokenTypes.identifier))
 		{
 			let namespace = parseRecordName(input);
 			if (!namespace)
@@ -854,7 +938,8 @@ var Archive = new (function(global)
 
 			// Same idea: adding trailing dot for convenience.
 			namespaces.push(namespace + Punctuation.nameDelim);
-		}
+		} 
+		while(input.skip(TokenTypes.punctuation.itemDelim));
 
 		if (namespaces.length === 0)
 		{
@@ -880,6 +965,260 @@ var Archive = new (function(global)
 			context.defaultBase = baseName;
 		};
 	});
+
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	// CUSTOM VALUES
+
+	class CustomValueType
+	{
+		constructor(parser, compiler)
+		{
+			this.parser = parser;
+			this.compiler = compiler;
+		}
+	}
+
+	class CustomValue
+	{
+		constructor() 							{}
+		resolveBase(dependencies) 				{ throw ("not implemented"); }
+		resolveReferences(scope, recordsMap) 	{ throw ("not implemented"); }
+		assemble(base) 							{ throw ("not implemented"); }
+		reproduce(originalValue)				{ throw ("not implemented"); }
+	}
+
+
+	// map
+	class SyntaxNodeMap {constructor() { this.entries = []; }}
+
+	class MapValue extends CustomValue
+	{
+		constructor()
+		{
+			super();
+			this.entries = [];
+		}
+
+		resolveBase(dependencies)
+		{
+			for (let entry of this.entries)
+			{
+				let value = entry[1];
+				if (value.constructor === Blueprint || 
+					value.constructor === List || 
+					value instanceof CustomValue)
+				{
+					if (!value.resolveBase(dependencies))
+					{
+						console.error(`Failed to resolve base for map value, key: ${entry[0]}, value: ${entry[1]}. Setting it to undefined`);
+						entry[1] = undefined;
+					}
+				}
+			}
+			return true;
+		}
+
+		resolveReferences(scope, recordsMap)
+		{
+			for (let entry of this.entries)
+			{
+				let key = entry[0];
+				let value = entry[1];
+
+				if (key.constructor === ObjectReference)
+					entry[0] = resolveReference(key.name, scope, recordsMap);
+
+				if (value.constructor === ObjectReference)
+					entry[1] = resolveReference(value.name, scope, recordsMap);
+
+				if (value.constructor === Blueprint || 
+					value.constructor === List || 
+					value instanceof CustomValue)
+				{
+					value.resolveReference(scope, recordsMap);
+				}
+			}
+		}
+
+		assemble(base)
+		{ 
+			if (base && base.constructor !== MapValue)
+				base = null;
+
+			for (let entry of this.entries)
+			{
+				let key = entry[0];
+				let value = entry[1];
+				if (value.constructor === Blueprint || 
+					value.constructor === List || 
+					value instanceof CustomValue)
+				{
+					if (!base || !base.findEntry(key))
+						value.assemble(null);
+				}
+			}
+
+			if (base)
+			{
+				for (let entry of base.entries)
+				{
+					let key = entry[0];
+					let myEntry = this.findEntry(key);
+
+					if (myEntry)
+					{
+						let baseValue = entry[1];
+						let myValue = myEntry[1];
+
+						if (baseValue)
+						{
+							if ((myValue.constructor === baseValue.constructor &&
+									(myValue.constructor === Blueprint || 
+									myValue.constructor === List)) ||
+								myValue instanceof CustomValue)
+							{
+								myValue.assemble(baseValue);	
+							}
+						}						
+					}
+					else
+					{
+						// insert into the beginning of the array (so all base entries appear first.)
+						this.entries.unshift([...entry]);
+					}					
+				}
+			}
+
+			// TODO: consider checking duplicated keys here.		
+		}
+		
+		reproduce(originalValue)
+		{
+			let originalMap = 
+				(originalValue && originalValue.constructor === Map ? 
+					originalValue : null);
+
+			let map = (originalMap ? originalMap : new Map());
+
+			for (let entry of this.entries)
+			{
+				let key = entry[0];
+				let value = entry[1];
+
+				if (value.constructor === Blueprint || 
+					value.constructor === List || 
+					value instanceof CustomValue)
+				{
+					let baseValue = originalMap.get(key);
+					// TODO: The code here is correct, however currently List and Blueprint 
+					// does not take originalValue in reproduce() function.
+					map.set(key, value.reproduce(baseValue));
+				}
+				else
+				{
+					map.set(key, value);
+				}
+			}
+
+			return map;
+		}
+
+		findEntry(key)
+		{
+			for (let entry of this.entries)
+			{
+				if (entry[0] === key)
+					return entry;
+			}
+
+			return null;
+		}
+	}
+
+	this.CustomValueType(parseMap, compileMap);
+
+	function parseMap(input)
+	{
+		if (!input.peek().is(TokenTypes.identifier, "map"))
+			return undefined;
+
+		input.next(); // eat the "map"
+
+		let mapNode = new SyntaxNodeMap();
+
+		if (!input.expect(TokenTypes.punctuation, Punctuation.objectOpen))
+			return null;
+
+		while (!input.peek().is(TokenTypes.punctuation, Punctuation.objectClose))
+		{
+			let key = parseValue(input);
+			if (!key)
+				return null;
+
+			if (!input.expect(TokenTypes.punctuation, Punctuation.assignment))
+				return null;
+
+			let value = parseValue(input);
+			if (!value)
+				return null;
+
+			if (key.constructor === SyntaxNodeObject || 
+				key.constructor === SyntaxNodeList ||
+				key.constructor === SyntaxNodeCustomValue)
+			{
+				input.error(`Map key cannot be an object, list or custom value, use object reference instead. The parsing will continue but this key value pair is removed.`);
+			}
+			else
+			{
+				mapNode.entries.push([key, value]);
+			}
+
+			input.skip(TokenTypes.punctuation, Punctuation.itemDelim);
+		}
+
+		if (!input.expect(TokenTypes.punctuation, Punctuation.objectClose))
+			return null;
+
+		return mapNode;
+	}
+
+	function compileMap(mapNode)
+	{
+		let customValue = new MapValue();
+		let dependencies = {};
+		for (let entry of mapNode.entries)
+		{
+			let keyResult = compileValue(entry[0]);
+			let valResult = compileValue(entry[1]);
+
+			if (keyResult.value === undefined ||
+				valResult.value === undefined)
+			{
+				console.error(`Unable to parse the key or value of a map entry. key type: ${entry[0].constructor}, value type: ${entry[1].constructor}`);
+				continue;
+			}
+
+			customValue.entries.push([keyResult.value, valResult.value]);
+
+			if (keyResult.dependencies)
+				Object.assign(dependencies, keyResult.dependencies);
+
+			if (valResult.dependencies)
+				Object.assign(dependencies, valResult.dependencies);
+		}
+
+		return {customValue, dependencies};
+	}
+
+
+
+
+
+
+
+
 
 
 
@@ -982,42 +1321,77 @@ var Archive = new (function(global)
 		
 		for (let prop of objectNode.properties)
 		{
-			switch (prop.value.constructor)	
+			let {value: propVal, dependencies: propDeps} = compileValue(prop.value);
+
+			if (propVal !== undefined)
 			{
-				case SyntaxNodeObject:
+				if (propVal.constructor === Blueprint)
 				{
-					let result = compileBlueprint(prop.value, null);
-					blueprint.components[prop.key] = result.blueprint;
-					Object.assign(dependencies, result.dependencies);
-					break;
+					blueprint.components[prop.key] = propVal;
 				}
-				case SyntaxNodeObjectReference:
+				else if (propVal.constructor === List)
 				{
-					blueprint.references[prop.key] = prop.value.name;
-					break;
+					blueprint.lists[prop.key] = propVal;
 				}
-				case SyntaxNodeList:
+				else if (propVal.constructor === ObjectReference)
 				{
-					let result = compileList(prop.value);
-					blueprint.lists[prop.key] = result.list;
-					Object.assign(dependencies, result.dependencies);
-					break;
+					blueprint.references[prop.key] = propVal;
 				}
-				case SyntaxNodeString:
+				else if (propVal instanceof CustomValue)
 				{
-					blueprint.values[prop.key] = prop.value.value;
-					break;
+					blueprint.customValues[prop.key] = propVal;
 				}
-				case SyntaxNodeNull:
-				{	blueprint.values[prop.key] = null;
-					break;
-				}
-				case SyntaxNodeExpression:
+				else
 				{
-					blueprint.values[prop.key] = evalExpresion(prop.value.value);
-					break;
+					blueprint.values[prop.key] = propVal;
+				}
+
+				if (propDeps)
+				{
+					Object.assign(dependencies, propDeps);
 				}
 			}
+			else
+			{
+				console.error(`Encounter unknown type blueprint property during compiling. key: ${prop.key}, value syntax node type: ${prop.value.constructor}.`);
+			}
+
+			// switch (prop.value.constructor)	
+			// {
+			// 	case SyntaxNodeObject:
+			// 	{
+			// 		let result = compileBlueprint(prop.value, null);
+			// 		blueprint.components[prop.key] = result.blueprint;
+			// 		Object.assign(dependencies, result.dependencies);
+			// 		break;
+			// 	}
+			// 	case SyntaxNodeObjectReference:
+			// 	{
+			// 		blueprint.references[prop.key] = prop.value.name;
+			// 		break;
+			// 	}
+			// 	case SyntaxNodeList:
+			// 	{
+			// 		let result = compileList(prop.value);
+			// 		blueprint.lists[prop.key] = result.list;
+			// 		Object.assign(dependencies, result.dependencies);
+			// 		break;
+			// 	}
+			// 	case SyntaxNodeString:
+			// 	{
+			// 		blueprint.values[prop.key] = prop.value.value;
+			// 		break;
+			// 	}
+			// 	case SyntaxNodeNull:
+			// 	{	blueprint.values[prop.key] = null;
+			// 		break;
+			// 	}
+			// 	case SyntaxNodeExpression:
+			// 	{
+			// 		blueprint.values[prop.key] = evalExpresion(prop.value.value);
+			// 		break;
+			// 	}
+			// }
 		}
 
 		return { blueprint, dependencies };
@@ -1036,6 +1410,7 @@ var Archive = new (function(global)
 			case SyntaxNodeObject:				itemType = ListItemType.blueprint; break;
 			case SyntaxNodeObjectReference:		itemType = ListItemType.reference; break;
 			case SyntaxNodeList:				itemType = ListItemType.list; break;
+			case SyntaxNodeCustomValue:			itemType = ListItemType.customValue; break;
 			case SyntaxNodeString:
 			case SyntaxNodeExpression:			itemType = ListItemType.value; break;
 			}
@@ -1074,6 +1449,15 @@ var Archive = new (function(global)
 				}
 				break;
 
+			case SyntaxNodeCustomValue:
+				if (itemType === ListItemType.customValue)
+				{
+					let result = compileCustomValue(entry);
+					item = result.customValue;
+					Object.assign(dependencies, result.dependencies);
+				}
+				break;	
+
 			case SyntaxNodeString:
 				if (itemType === ListItemType.value)
 				{
@@ -1082,9 +1466,7 @@ var Archive = new (function(global)
 				break;
 
 			case SyntaxNodeNull:
-				if (itemType === ListItemType.blueprint ||
-					itemType === ListItemType.reference ||
-					itemType === ListItemType.list)
+				if (itemType !== ListItemType.value)
 				{
 					item = null;
 				}
@@ -1110,6 +1492,56 @@ var Archive = new (function(global)
 
 		list.itemType = (itemType !== undefined ? itemType : ListItemType.value);
 		return {list: list, dependencies: dependencies};
+	}
+
+	function compileCustomValue(customValNode)
+	{
+		let {customValue = null, dependencies = {}} = 
+			customValNode.type.compiler(customValNode.value);
+
+		return { customValue, dependencies };
+	}
+
+	function compileValue(valueNode)
+	{
+		switch (valueNode.constructor)	
+		{
+			case SyntaxNodeObject:
+			{
+				let result = compileBlueprint(valueNode, null);
+				return { value: result.blueprint, dependencies: result.dependencies };
+			}
+			case SyntaxNodeObjectReference:
+			{
+				return { value: new ObjectReference(valueNode.name), dependencies: null };
+			}
+			case SyntaxNodeList:
+			{
+				let result = compileList(valueNode);
+				return { value: result.list, dependencies: result.dependencies };
+			}
+			case SyntaxNodeCustomValue:
+			{
+				let result = compileCustomValue(valueNode);
+				return { value: result.customValue, dependencies: result.dependencies };
+			}
+			case SyntaxNodeString:
+			{
+				return { value: valueNode.value, dependencies: null };
+			}
+			case SyntaxNodeNull:
+			{	
+				return { value: null, dependencies: null };
+			}
+			case SyntaxNodeExpression:
+			{
+				return { value: evalExpresion(valueNode.value), dependencies: null };
+			}
+			default:
+			{
+				return { value: undefined, dependencies: null };
+			}
+		}
 	}
 
 	function evalExpresion(expr)
@@ -1264,7 +1696,7 @@ var Archive = new (function(global)
 		{
 			this.fullName = "";
 			this.scope = new Scope();
-			this.dependencies = {};
+			this.dependencies = {}; // TODO: should be a map
 			this.dependantCount = 0;
 			this.blueprint = null;
 			this.object = null;
@@ -1356,7 +1788,13 @@ var Archive = new (function(global)
 		reference: 2,
 		blueprint: 3,
 		list: 4,
+		customValue: 5,
 	};
+
+	class ObjectReference
+	{
+		constructor(name = "") { this.name = name; }
+	}
 
 	class List
 	{
@@ -1369,7 +1807,8 @@ var Archive = new (function(global)
 		resolveBase(dependencies)
 		{
 			if (this.itemType === ListItemType.blueprint ||
-				this.itemType === ListItemType.list)
+				this.itemType === ListItemType.list ||
+				this.itemType === ListItemType.customValue)
 			{
 				for (let i = 0; i < this.items.length; i++)
 				{
@@ -1391,7 +1830,8 @@ var Archive = new (function(global)
 		resolveReferences(scope, recordsMap)
 		{
 			if (this.itemType === ListItemType.blueprint ||
-				this.itemType === ListItemType.list)
+				this.itemType === ListItemType.list ||
+				this.itemType === ListItemType.customValue)
 			{
 				for (let item of this.items)
 				{
@@ -1418,7 +1858,8 @@ var Archive = new (function(global)
 				throw ("list cannot have base.");
 
 			if (this.itemType === ListItemType.blueprint ||
-				this.itemType === ListItemType.list)
+				this.itemType === ListItemType.list ||
+				this.itemType === ListItemType.customValue)
 			{
 				for (let item of this.items)
 				{
@@ -1431,7 +1872,8 @@ var Archive = new (function(global)
 		reproduce()
 		{
 			if (this.itemType === ListItemType.blueprint ||
-				this.itemType === ListItemType.list)
+				this.itemType === ListItemType.list ||
+				this.itemType === ListItemType.customValue)
 			{
 				let newList = [];
 				newList.length = this.items.length;
@@ -1439,7 +1881,7 @@ var Archive = new (function(global)
 				for (var i = 0; i < this.items.length; i++) 
 				{
 					let item = this.items[i];
-					newList[i] = item ? item.reproduce() : null;
+					newList[i] = item ? item.reproduce(null) : null;
 				}
 				return newList;
 			}
@@ -1460,6 +1902,7 @@ var Archive = new (function(global)
 			
 			this.components = {};
 			this.lists = {};
+			this.customValues = {};
 			this.references = {};
 			this.values = {};
 		}
@@ -1494,21 +1937,21 @@ var Archive = new (function(global)
 					this.cls = this.base.cls;
 				}
 			}
-			else
-			{
-				console.error(`Cannot resolve base, since the blueprint does not specify a base name.`);
-				return false;
-			}
+			// else
+			// {
+			// 	// TODO: this is not entirely correct, since if the blueprint doesn't have base, 
+			// 	// it may still want to resolve base for its sub components or lists etc.
+			// 	console.error(`Cannot resolve base, since the blueprint does not specify a base name.`);
+			// 	return false;
+			// }
 
+			// TODO: can we merge the code of these three?
+			// but may run into the problem of deoptimizing.
 			for (let key in this.components)
 			{
-				let component = this.components[key];
-				if (component.baseName)
+				if (!this.components[key].resolveBase(dependencies))
 				{
-					if (!this.components[key].resolveBase(dependencies))
-					{
-						delete this.components[key]; // remove the bad component. error already reported.
-					}
+					delete this.components[key]; // remove the bad component. error already reported.
 				}
 			}
 
@@ -1518,6 +1961,15 @@ var Archive = new (function(global)
 				if (!this.lists[key].resolveBase(dependencies))
 				{
 					delete this.lists[key];
+				}
+			}
+
+			for (let key in this.customValues)
+			{
+				if (!this.customValues[key].resolveBase(dependencies))
+				{
+					console.error(`Failed to resolve base for custom value with key ${key}.`);
+					delete this.customValues[key];
 				}
 			}
 
@@ -1536,10 +1988,15 @@ var Archive = new (function(global)
 				list.resolveReferences(scope, recordsMap);
 			}
 
+			for (let customVal of Object.values(this.customValues))
+			{
+				customVal.resolveReferences(scope, recordsMap);
+			}
+
 			for (let key in this.references)
 			{
 				// Can be null, but the error has been reported by resolveReference().
-				let referencedObject = resolveReference(this.references[key], scope, recordsMap);
+				let referencedObject = resolveReference(this.references[key].name, scope, recordsMap);
 
 				if (this.values.hasOwnProperty(key))
 					console.error(`Duplicated property key '${key}'' between references and values: ${this.values[key]}.`);
@@ -1551,6 +2008,8 @@ var Archive = new (function(global)
 
 		assemble(base)
 		{
+			// TODO: maybe the assemble function here can determine based on has cls or not,
+			// and the outside will always pass in base when see fit.
 			if (this.cls && base)
 				throw ("The blueprint has its own base, should not receive a base from outside.");
 
@@ -1570,6 +2029,15 @@ var Archive = new (function(global)
 			for (let key in this.lists)
 			{
 				this.lists[key].assemble(null);
+			}
+
+			// Self custom values
+			for (let key in this.customValues)
+			{
+				if (!base || !base.customValues.hasOwnProperty(key))
+				{
+					this.customValues[key].assemble(null);	
+				}
 			}
 
 			// Merge in base
@@ -1593,7 +2061,20 @@ var Archive = new (function(global)
 						this.components[key] = baseComponent;
 					}
 				}
-				
+
+				for (let key in base.customValues)
+				{
+					let baseCustomVal = base.customValues[key];
+					let myCustomVal = this.customValues[key];
+					if (myCustomVal)
+					{
+						myCustomVal.assemble(baseCustomVal);
+					}
+					else
+					{
+						this.customValues[key] = baseCustomVal;
+					}
+				}				
 
 				for (let key in base.lists)
 				{
@@ -1615,6 +2096,12 @@ var Archive = new (function(global)
 
 		reproduce()
 		{
+			if (!this.cls)
+			{
+				console.error(`The blueprint cannot reproduce since its class is null, this blueprint can only be used to fill the existing object which must be supplied by the owner's constructor.`);
+				return null;
+			}
+
 			return this.fillObject(this.createObject());
 		}
 
@@ -1625,6 +2112,9 @@ var Archive = new (function(global)
 
 		fillObject(obj)
 		{
+			// TODO: maybe reproduce() and fillObject() should always take an original value as parameter,
+			// so inside each reproduce function it can check if the original value is valid and check types etc.
+
 			for (let key in this.components)
 			{
 				let component = this.components[key];
@@ -1669,6 +2159,12 @@ var Archive = new (function(global)
 				{
 					console.error(`Failed to assign property '${key}' in object '${this.baseName?this.baseName:obj.constructor}': The original value (${originalValue}) is not an array and cannot be assigned to array value.`);
 				}
+			}
+
+			for (let key in this.customValues)
+			{
+				let originalValue = obj[key];
+				obj[key] = this.customValues[key].reproduce(originalValue);
 			}
 
 			for (let key in this.values)
@@ -1863,6 +2359,9 @@ var Archive = new (function(global)
 
 	function isFullRecordName(name)
 	{
+		if (!(typeof name === 'string'))
+			throw(`The record name is not a string: ${name}`);
+
 		return (name.indexOf(Punctuation.envDelim) >= 0);
 	}
 

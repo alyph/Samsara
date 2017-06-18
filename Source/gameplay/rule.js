@@ -1,4 +1,6 @@
-/* globals Card Encounter */
+'use strict';
+
+/* globals Card Encounter ActionInstance */
 
 var Sex = new Enum
 (
@@ -15,6 +17,7 @@ class Rule
 		this.characterPortraits = [];
 		this.starterCards = [];
 		this.creatureGroups = [];
+		this.defaultActions = [];
 	}
 
 	generateCharacters(world, num)
@@ -81,7 +84,7 @@ class Rule
 		let portrait = MathEx.randomItem(portraits);
 
 		let instName = "char_" + name.replace(' ',  '_');
-		let generatedChar = world.spawn(Card, instName);
+		let generatedChar = world.spawn("hero.base_hero", instName);
 
 		generatedChar.displayName = name;
 		generatedChar.smallPortrait = portrait;
@@ -102,6 +105,8 @@ class Rule
 	{
 		let encounter = world.spawn(Encounter);	
 
+		let descHostile = Archive.getDef("desc.hostile");
+
 		let group = MathEx.randomItem(this.creatureGroups);
 		if (group)
 		{
@@ -110,6 +115,7 @@ class Rule
 			{
 				let template = MathEx.randomItem(group.creatureTemplates);
 				let creature = world.spawn(template);
+				creature.addDescriptor(descHostile);
 				encounter.entities.push(creature);
 			}
 		}
@@ -117,9 +123,17 @@ class Rule
 		return encounter;
 	}
 
-	populateDefaultActions(instigator, target)
+	populateDefaultActions(world, instigator, target)
 	{
-		throw ("not implemented!");
+		let actions = [];
+		for (let actionDef of this.defaultActions)
+		{
+			if (actionDef.canPerform(world, instigator, target))
+			{
+				actions.push(new ActionInstance(actionDef, world, instigator, target));
+			}
+		}
+		return actions;
 	}
 }
 

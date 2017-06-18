@@ -6,7 +6,7 @@ class World
 	constructor()
 	{
 		this.game = null;
-		this.entities = {};
+		//this.entities = {};
 		
 		this.rule = null;
 		this.global = null;
@@ -30,9 +30,9 @@ class World
 		}
 	}
 
-	spawn(base)
+	spawn(base, name)
 	{
-		let inst = Archive.create(base);
+		let inst = Archive.create(base, name);
 		if (inst)
 		{
 			this.startInstance(inst);
@@ -47,6 +47,11 @@ class World
 		{
 			start.call(inst, this);
 		}
+	}
+
+	destroy(inst)
+	{
+		Archive.destroy(inst);
 	}
 }
 

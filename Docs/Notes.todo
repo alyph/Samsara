@@ -3,6 +3,28 @@
 TODO:
 
 Gameplay:
+	✔	give "living" cards health, this includes implementing the max health attribute (vitality?), health token (or wound token??) @done (17-06-17 16:27)
+	✔	run onstart trigger for each card spawned, the living desc will then place tokens on the card @done (17-06-17 16:27)
+	☐	melee attack, uses strength ability score (imp ability attr) to add wound tokens
+	☐	kill the card when health reduced to 0
+	
+
+	☐	descriptor should just contain the data (super descs, attributes, effects)
+	☐	card will have a descriptor, and functions to modify that descriptor (like adding more super descriptors)
+	☐	card will also have an attribute collection which will be updated when desc changes, attached card changes, or status effect changes
+	☐	attribute system, attribute definition, attribute value, attribute modifier and stack, attribute collection (a place caches and stores the final values and modifier stacks)
+	☐	simple number attribute, additive and multiplictive modifiers
+	☐	ability attribute, dual numbers (score and advantage points), additive and multiplicative modifiers applied to either or both points
+	☐	token attribute, integer number, no modifiers, but allow add or subtract values
+	☐	effects system, effects are mostly declarative, and different effects can be triggered at different timing, and excuted properly
+	☐	effect to apply modifiers
+	☐	effect to add remove tokens (attribute)
+	☐	triggers determine when the effects are applied. each different trigger may also restrict the types of effects allowed. triggers may contain meta data (e.g. conditions)
+	☐	permenant trigger (for applying modifiers)
+	☐	used in action trigger (applying modifiers to action)
+
+
+
 	✔	archive create function should allow taking a single base object name. @done (16-12-11 20:18)
 	✔	place a hero card @done (16-12-11 20:18)
 	✔	draw a weapon card @done (16-12-13 22:07)
@@ -10,11 +32,11 @@ Gameplay:
 
 	✔	area proxy, card proxy etc. @done (17-04-22 21:44)
 
-	☐	descriptor+stats system (used by the card for now, may expand to other system)
+	✔	descriptor+stats system (used by the card for now, may expand to other system) @done (17-05-25 20:51)
 	☐	let the hero take action (probably just an attack)
 
 
-	☐	figure out how to show the cards assigned to heroes
+	✔	figure out how to show the cards assigned to heroes @done (17-05-25 20:51)
 	✔	have a function to randomly generate bunch of heroes, their cards @done (17-04-30 14:48)
 	✔	have a function to generate random monster encounter @done (17-05-08 20:25)
 
@@ -66,12 +88,24 @@ Optimization:
 	☐	resolveNativeClass() pretty expensive, we should avoid creating dynamic function outside of the load time.
 
 Archive:
+	☐	 map object (will require custom value parsing system)
+	☐	 when creating an instance off a template, shouldn't it just use that template's blueprint reproduce the new object rather than forming another blueprint then creating the new object from there? guess the concern is later saving, loading code may need handle this special case.
+	☐	 constructor style object syntax
+	☐	 list inheritance (for now just concatenate base and child lists, you can only add but not remove, should we still add a way to empty/reset?), maybe default to overwrite, but have a special syntax to indicate adding to the base array. (for example: myarray: +[ "added entry" ])
 	☐	 allow lists to set a default base, so each individual items don't have to.
+	☐	 consider refactoring the List, Blueprint, CustomValue code to have them point to the same base (maybe CompositeValue)
+	☐	 loaded callback is not called on sub objects but should.
+	☐	 find a better way to handle temporary objects spawned, probably should not keep a record, and let it garbage collected when not referenced. (the action card is an example)
+	☐	 is there a way to give hint to the parser based on existing object's property type. for example if a property is a Map, maybe @map{} is not necessary, and can just use {} directly?
 
 UI:
 	☐	replace data with proxy, so even without proxy binding, the default proxy will be used.
 	☐	allow a true/false attribute binding, if false, remove the attribute, otherwise assign the attribute with empty string (useful for css selector)
 	☐	catch data binding errors (like missing properties)
+	☐	may want to come up a way to move all the interaction flow from player class to the ui data
+	☐	sprite image can use a custom css property for the sprite setting, like --sprite=sprite.name (does custom property support strings?)
+	☐	data binding need support single quoted strings
+	☐	overall need a better way to specify data, and have data interact with css and layout etc. allow ways to reference the objects in data files, basically treat UI as a special piece of data. maybe data binding shouldn't be bound to the native code properties, instead it should be bound to the exposed script functions? (will that add too much friction?)
 
 	✔	proxy (syntax, parsing, registeration etc.) @done (17-04-06 20:27)
 

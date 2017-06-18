@@ -293,4 +293,19 @@ class CardProxy extends UI.Proxy
 		let areaProxy = this.areaProxy;
 		return areaProxy ? areaProxy.expandUpwards : false;
 	}
+
+	get isLiving()
+	{
+		return this.card.desc.hasAllDescriptors(Archive.getDef("desc.living"));
+	}
+
+	get health()
+	{
+		// TODO: is there a better place to specify the health attribute?
+		// considering UI is basically data, should it use the similar syntax
+		// like in other data files? like #attr.health
+		// maybe instead of having native code, it should use the same scripting language
+		// that other gameplay data uses.
+		return this.card.attributeManager.getAttribute(Archive.getDef("attr.health"));
+	}
 }

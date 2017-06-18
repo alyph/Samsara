@@ -1,4 +1,4 @@
-'use strict';
+/*'use strict';
 
 var Descriptor = Class(
 {
@@ -129,3 +129,5 @@ var DescriptionQueryResult = Class(
 		return others;
 	}
 });
+
+*/

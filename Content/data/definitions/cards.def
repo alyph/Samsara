@@ -1,8 +1,18 @@
 @import sprites
 @import actions
+@import descriptors
 
 @base Card
 @namespace hero
+@using desc
+
+base_hero: .Card
+{
+	desc:
+	{
+		descriptors: [ #living ]
+	}
+}
 
 /*
 paladin:

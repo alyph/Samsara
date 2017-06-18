@@ -1,0 +1,36 @@
+
+@base Descriptor
+@namespace desc
+
+living:
+{
+	displayName: "Living"
+
+	attributes: @map
+	{
+		#attr.vitality: 10
+	}
+
+	triggers:
+	[
+		.Trigger_OnStart
+		{
+			effects:
+			[
+				.Effect_MutateAttribute
+				{
+					attribute: #attr.health
+					operation: .TokenOperation
+					{
+						type: TokenOpType.max
+					}
+				}
+			]
+		}
+	]
+}
+
+hostile:
+{
+	displayName: "Hostile"
+}

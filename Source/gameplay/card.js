@@ -1,4 +1,11 @@
-/* globals World Trait ActionInstance*/
+'use strict';
+
+/* globals World Descriptor 
+	AttributeManager SourcedModifier
+	Trigger_PassiveOnSelf Trigger_OnStart
+	ActiveEffect Effect_AttributeModifier 
+	EffectExecutionContext
+*/
 
 /* exported Card */
 class Card
@@ -7,7 +14,7 @@ class Card
 	{
 		this.displayName = "NO NAME";
 		this.smallPortrait = null;
-		this.definition = new Trait();
+		this.desc = new Descriptor();
 		this.state = null;
 	}
 
@@ -16,14 +23,28 @@ class Card
 		let state = new CardState();
 		state.world = world;
 
-		// TODO: actual populating/caching code
-		//state.actions.push(...this.definition.actions);
-		for (let action of this.definition.actions)
-		{
-			state.actions.push(new ActionInstance(this, action));
-		}
-
 		this.state = state;
+		this.resetAttributes();
+
+		// trigger on start
+		this.triggerOnStart(this.desc);
+	}
+
+	// TODO: need to have an end function,
+	// so it can clean up the attachments, traits and other spawned cards.
+
+	destroy()
+	{
+		if (this.state)
+		{
+			this.placeIn(null);	
+			this.state.world.destroy(this);
+		}
+	}
+
+	get attributeManager()
+	{
+		return this.state ? this.state.attributeManager : null;	
 	}
 
 	getArea()
@@ -96,6 +117,54 @@ class Card
 	{
 		return false;
 	}
+
+	addDescriptor(descriptor)
+	{
+		if (this.desc.descriptors.indexOf(descriptor) < 0)
+		{
+			this.desc.descriptors.push(descriptor);
+			this.desc.rebuildCache();
+			this.resetAttributes();
+			this.triggerOnStart(descriptor); // TODO: duplicated descriptor will have the effects triggered (bad?)
+		}
+	}
+
+	resetAttributes()
+	{
+		let baseValues = this.desc.mergedAttrValues;
+
+		let modifierEffects = this.desc.triggerEffects(Trigger_PassiveOnSelf, Effect_AttributeModifier);
+
+		let modifiers = new Map();
+		for (let effectInfo of modifierEffects)
+		{
+			let attr = effectInfo.effect.attribute;
+			let modifier = effectInfo.effect.modifier;
+			let attrMods = modifiers.get(attr);
+			if (!attrMods)
+			{
+				attrMods = [];
+				modifiers.set(attr, attrMods);
+			}
+			attrMods.push(new SourcedModifier(attr, modifier, this));
+		}
+
+		this.state.attributeManager.setImmutableAttributes(baseValues, modifiers);
+	}
+
+	triggerOnStart(desc)
+	{
+		let effects = desc.triggerEffects(Trigger_OnStart, ActiveEffect);
+
+		let context = new EffectExecutionContext();
+		context.world = this.state.world;
+		context.subject = this;
+
+		for (let {effect} of effects)
+		{
+			effect.execute(context);
+		}
+	}
 }
 
 class CardState
@@ -103,8 +172,8 @@ class CardState
 	constructor()
 	{
 		this.world = null;
+		this.attributeManager = new AttributeManager();
 		this.area = null;
-		this.actions = [];
 		this.host = null;
 		this.attachments = [];
 		this.activated = false;
@@ -112,24 +181,5 @@ class CardState
 	}
 }
 
-// class CardTemplate
-// {
-// 	constructor()
-// 	{
-// 		// any hand cards
-// 		this.playEffects = [];
 
-// 		// any attachment or minion cards
-// 		this.triggeredEffects = [];
-// 		this.modifiers = [];
-
-// 		// any attachment cards
-// 		this.activatableEffects = [];
-
-// 		// actor cards (heroes, minions)
-// 		this.traits = [];
-
-
-// 	}
-// }
 

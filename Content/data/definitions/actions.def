@@ -1,11 +1,32 @@
+@import descriptors
+@import attributes
+
 @base Action
 @namespace action
+@using desc
 
-equip:
+melee_attack:
 {
-	effect:	.Proc.AttachTo
+	displayName: "Melee Attack"
+	smallPortrait: #sprite.action.melee_attack
+	condition: .Func.HasDesc
 	{
-		card: .VarRef{name:"card"}
-		target: .VarRef{name:"target"}
+		card: VarRef("target")
+		descs: [ #living, #hostile ]
+	}
+
+	naturalScore: 1
+	supportAbilities: [ #attr.strength ]
+	counterAbilities: [ #attr.dexterity ]
+
+	effect: .Effect_MutateAttribute
+	{
+		target: "target"
+		attribute: #attr.health
+		operation: .TokenOperation
+		{
+			type: TokenOpType.remove
+			value: { param: "score" }
+		}
 	}
 }

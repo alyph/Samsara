@@ -36,8 +36,8 @@
 	// var components = "Source/Components/";
 	// var definitions = "Source/Definitions/";
 	var gameplay = "Source/gameplay/";
-	var sequences = "Source/Sequences/";
-	var table = "Source/Table/";
+//	var sequences = "Source/Sequences/";
+//	var table = "Source/Table/";
 	var source = "Source/";
 	var core = "Source/Core/";
 	var ui = "Source/UI/";
@@ -53,7 +53,7 @@
 		utils + "GLP.js",
 		core + "BaseObject.js",
 		core + "Components.js",
-		core + "Descriptor.js",
+		//core + "Descriptor.js",
 		core + "events.js",
 		//core + "gallery.js",
 		core + "Planner.js",
@@ -74,7 +74,10 @@
 		gameplay + "entity.js",
 		gameplay + "action.js",
 		gameplay + "area.js",
+		gameplay + "attribute.js",
 		gameplay + "card.js",
+		gameplay + "descriptor.js",
+		gameplay + "effect.js",
 		gameplay + "encounter.js",
 		gameplay + "field.js",
 		gameplay + "global.js",
@@ -84,6 +87,7 @@
 		gameplay + "scripting.js",
 		gameplay + "sprite.js",
 		gameplay + "trait.js",
+		gameplay + "trigger.js",
 		// sequences + "Sequence.js",
 		// sequences + "ActionSequences.js",
 		// table + "Boards.js",

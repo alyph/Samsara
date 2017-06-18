@@ -1,9 +1,20 @@
 @import sprites
 @import actions
-
-@base Card
+@import descriptors
 
 @namespace creature
+@using desc
+
+base_creature: .Card
+{
+	desc:
+	{
+		descriptors: [ #living ]
+	}
+}
+
+
+@base creature.base_creature
 
 gnoll_flind:
 {

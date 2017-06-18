@@ -1,115 +1,141 @@
 'use strict';
 
-/* globals Script Area */
-
-var ActionMode = new Enum
-(
-	"hand",
-	"field",
-	"attached"
-);
-
-var ActionTarget = new Enum
-(
-	"single",
-	"party",
-	"encounter"
-);
+/* globals Area buildScriptContext Card 
+	AttributeManager, SourcedAttributeValue, AbilityValue
+	EffectExecutionContext
+*/
 
 /* exported Action */
 class Action
 {
 	constructor()
 	{
-		this.mode = ActionMode.hand;
-		this.target = ActionTarget.single;
-		this.targetCondition = null;
+		this.displayName = "NO NAME"; // May consider simply have a Card property to define everything within.
+		this.smallPortrait = null;
+		this.condition = null;
+		this.naturalScore = 0;
+		this.supportAbilities = [];
+		this.counterAbilities = [];
 		this.effect = null;
+	}
+
+	canPerform(world, instigator, target)
+	{
+		// If no condition then always performable.
+		if (!this.condition)
+			return true;
+
+		// Build the script context
+		let context = buildScriptContext(world, {instigator, target}, []);
+		return this.condition.call(context);
 	}
 }
 
 /* exported ActionInstance */
 class ActionInstance
 {
-	constructor(card, action)
+	constructor(action, world, instigator, target)
 	{
-		this.card = card;
 		this.definition = action;
-
-		this.instigator = null;
-		this.target = null;
+		this.world = world;
+		this.instigator = instigator;
+		this.target = target;
 		this.addon = new Area();
-		//this.targetConditions = [];
 	}
 
-	isUsable()
+	spawnActionCard()
 	{
-		if (!this.isInRightMode())
-			return false;
-
-		// TODO: check if there's at least one valid target.
-
-		return true;
+		let name = this.definition.displayName.replace(' ',  '_');
+		let card = this.world.spawn(Card, name);
+		card.displayName = this.definition.displayName;
+		card.smallPortrait = this.definition.smallPortrait;
+		return card;
 	}
 
-	isInRightMode()
+	async execute(mods)
 	{
-		let area = this.card.state.area;
-		let world = this.card.state.world;
-		let player = world.player;
+		let def = this.definition;
 
-		switch (this.definition.mode)
+		// Accumulate support abilities to form a starting bonus pool.
+		let supportAttrMgr = new AttributeManager();
+		let baseValues = new Map();
+
+		for (let attr of def.supportAbilities)
 		{
-			case ActionMode.hand:
+			let value = new SourcedAttributeValue(
+				attr, this.instigator.attributeManager.getAttribute(attr), this.instigator);
+
+			baseValues.set(attr, value);
+		}
+		supportAttrMgr.setImmutableAttributes(baseValues);
+
+
+		// Accumulate counter abilities to form counter pool.
+		let counterAttrMgr = new AttributeManager();
+		baseValues = new Map();
+
+		for (let attr of def.counterAbilities)
+		{
+			let value = new SourcedAttributeValue(
+				attr, this.target.attributeManager.getAttribute(attr), this.target);
+
+			baseValues.set(attr, value);			
+		}
+		counterAttrMgr.setImmutableAttributes(baseValues);
+
+		// Add natural difficulties.
+
+		// Run "used in action" trigger on all mod cards.
+
+		// Run "react to action" trigger on all played cards.
+		// Maybe need separate react to instigator and target actions.
+
+		// Draw fate cards based on advantage points.
+
+		// fate cards -> event cards.
+
+		// Resolve all events cards.
+
+		// Generate final results (support score - counter score + modifiers).
+
+		let score = def.naturalScore;
+
+		for (let {value} of supportAttrMgr.attributes())
+		{
+			if (value instanceof AbilityValue)
 			{
-				return area === player.hand;
+				score += value.score;
 			}
-			case ActionMode.field:
-			{
-				return this.card.isOnField();
-			}
-			// TODO: other modes
 		}
 
-		return false;
-	}
+		for (let {value} of counterAttrMgr.attributes())
+		{
+			if (value instanceof AbilityValue)
+			{
+				score -= value.score;
+			}
+		}
 
-	isValidTarget(target)
-	{
-		// Make sure the target is on field.
-		if (!target.isOnField())
-			return false;
+		score = Math.round(score);
 
-		// If no condition then any target is fine.
-		let cond = this.definition.targetCondition;
-		if (!cond)
-			return true;
+		// Let action handle the result.
+		if (def.effect)
+		{
+			let context = new EffectExecutionContext();
+			context.subject = this.instigator;
+			context.world = this.world;
+			context.params.set("instigator", this.instigator);
+			context.params.set("target", this.target);
+			context.params.set("score", score);
+			def.effect.execute(context);
+		}
+		else
+		{
+			console.error(`Action ${def.displayName} has no effect.`);
+		}
 
-		// Build the script context
-		let world = this.card.state.world;
-		let card = this.card;
-		let action = this;
-		let context = Script.buildContext(world, {target, card, action}, [target]);
+		return true;
 
-		return cond.call(context);
-	}
-
-	async execute(target)
-	{		
-		if (this.definition.target === ActionTarget.single && !target)
-			return false;
-
-		let effect = this.definition.effect;
-		if (!effect)
-			return false;
-
-		// Build the script context
-		let world = this.card.state.world;
-		let card = this.card;
-		let action = this;
-		let context = Script.buildContext(world, {card, target, action}, [card]);
-
-		return await effect.run(context);
 	}
 }
 

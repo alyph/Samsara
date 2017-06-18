@@ -1,5 +1,6 @@
 @import sprites
 @import creatures
+@import actions
 
 
 rule: .Rule
@@ -221,6 +222,11 @@ rule: .Rule
 				#creature.skeleton
 			]
 		}
+	]
+
+	defaultActions:
+	[
+		#action.melee_attack
 	]
 }
 
