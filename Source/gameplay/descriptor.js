@@ -37,7 +37,7 @@ class Descriptor
 		return true;
 	}
 
-	triggerEffects(triggerType, effectType = null)
+	triggerEffects(triggerType, info, effectType = null)
 	{
 		let effects = [];
 		for (let desc of this.flattenedDescs)
@@ -45,7 +45,8 @@ class Descriptor
 			for (let trigger of desc.triggers)
 			{
 				// TODO: test conditions
-				if (trigger instanceof triggerType)
+				if (trigger instanceof triggerType &&
+					trigger.matches(info))
 				{
 					for (let effect of trigger.effects)
 					{

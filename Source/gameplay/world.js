@@ -51,6 +51,12 @@ class World
 
 	destroy(inst)
 	{
+		let end = inst[World.Symbol.end];
+		if (end)
+		{
+			end.call(inst, this);
+		}
+
 		Archive.destroy(inst);
 	}
 }
@@ -58,6 +64,7 @@ class World
 World.Symbol =
 {
 	start: Symbol("worldStart"),
+	end: Symbol("worldStart"),
 };
 
 

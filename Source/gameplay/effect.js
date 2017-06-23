@@ -23,7 +23,7 @@ class ActiveEffect extends Effect
 		super();
 	}
 
-	execute(context) { throw "not implemented"; }
+	execute(context, events) { throw "not implemented"; }
 }
 
 /* exported EffectExecutionContext */
@@ -60,6 +60,48 @@ class EffectExecutionContext
 	}
 }
 
+
+function executeEffect(effect, context)
+{
+	let pendingQueue = [[effect, context]];
+	let eventQueue = [];
+	let world = context.world;
+
+	while (pendingQueue.length > 0)
+	{
+		for (let [currentEffect, currentContext] of pendingQueue)
+		{
+			currentEffect.execute(currentContext, eventQueue);
+		}
+
+		pendingQueue.length = 0;
+
+		for (let event of eventQueue)
+		{
+			let target = event.target;
+			if (target)
+			{
+				let effects = target.desc.triggerEffects(Trigger_OnEvent, {world, event}, ActiveEffect);
+
+				let eventContext = new EffectExecutionContext();
+				eventContext.world = context.world;
+				eventContext.subject = target;
+				eventContext.params = event.params;
+
+				for (let triggeredEffect of effects)
+				{
+					pendingQueue.push([triggeredEffect.effect, eventContext]);
+				}
+			}
+			else
+			{
+				console.error(`Dispatched event ${event.constructor} with no target.`);
+			}
+		}
+		eventQueue.length = 0;
+	}
+}
+
 // what's in the context?
 // should have one primary subject (self?), this is different per each trigger
 // in this subject, it should have two properties
@@ -91,7 +133,7 @@ class Effect_MutateAttribute extends ActiveEffect
 		this.operation = null; // TODO: maybe we should figure out the operation based on the attribute type?
 	}
 
-	execute(context)
+	execute(context, events)
 	{
 		if (!this.attribute || !this.operation)
 		{
@@ -99,10 +141,39 @@ class Effect_MutateAttribute extends ActiveEffect
 			return;
 		}
 
-		let targetAttrs = context.resolveEntityAttributeManager(this.target);
-		if (targetAttrs)
+		let target = context.resolveEntity(this.target);
+		if (target && target.attributeManager)
 		{
-			targetAttrs.mutateAttribute(this.attribute, this.operation, context);
+			let targetAttrs = target.attributeManager;
+			let oldValue = targetAttrs.getAttribute(this.attribute);
+			let newValue = targetAttrs.mutateAttribute(this.attribute, this.operation, context);
+
+			let event = new GameEvent_AttributeMutated();
+			event.target = target;
+			event.params.set("attribute", this.attribute);
+			event.params.set("oldValue", oldValue);
+			event.params.set("newValue", newValue);
+			events.push(event);
 		}
 	}
 }
+
+class Effect_Destroy extends ActiveEffect
+{
+	constructor()
+	{
+		super();
+		this.target = "";
+	}
+
+	execute(context, events)
+	{
+		let target = context.resolveEntity(this.target);
+		if (target)
+		{
+			context.world.destroy(target);
+		}
+	}	
+}
+
+

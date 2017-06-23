@@ -130,7 +130,7 @@ var Archive = new (function(global)
 	this.destroy = function(inst)
 	{
 		let record = _objectToRecords.get(inst);
-		if (!inst)
+		if (!record)
 		{
 			console.error(`Trying to destroy an instance (${inst}) that does not exist.`);
 			return;
@@ -1353,7 +1353,7 @@ var Archive = new (function(global)
 			}
 			else
 			{
-				console.error(`Encounter unknown type blueprint property during compiling. key: ${prop.key}, value syntax node type: ${prop.value.constructor}.`);
+				console.error(`Encounter unknown type blueprint property during compiling. key: "${prop.key}", value node:`, prop.value);
 			}
 
 			// switch (prop.value.constructor)	

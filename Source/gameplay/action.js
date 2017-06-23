@@ -2,7 +2,7 @@
 
 /* globals Area buildScriptContext Card 
 	AttributeManager, SourcedAttributeValue, AbilityValue
-	EffectExecutionContext
+	EffectExecutionContext, executeEffect
 */
 
 /* exported Action */
@@ -25,8 +25,12 @@ class Action
 		if (!this.condition)
 			return true;
 
+		let locals = new Map();
+		locals.set("instigator", instigator);
+		locals.set("target", target);
+
 		// Build the script context
-		let context = buildScriptContext(world, {instigator, target}, []);
+		let context = buildScriptContext(world, locals, []);
 		return this.condition.call(context);
 	}
 }
@@ -127,7 +131,8 @@ class ActionInstance
 			context.params.set("instigator", this.instigator);
 			context.params.set("target", this.target);
 			context.params.set("score", score);
-			def.effect.execute(context);
+			//def.effect.execute(context);
+			executeEffect(def.effect, context);
 		}
 		else
 		{

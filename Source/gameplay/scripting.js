@@ -118,9 +118,9 @@ function buildScriptContext(world, locals, scope)
 	context.globals.set("player", world.player);
 	//context.globals.set("field", world.field);
 
-	for (let localVar in locals)
+	if (locals)
 	{
-		context.locals.set(localVar, locals[localVar]);
+		context.locals = locals;
 	}
 
 	context.scope.push(...scope);
@@ -166,6 +166,55 @@ Func.HasDesc = class extends ScriptFunction
 		if (!card) return false;
 
 		return card.desc.hasAllDescriptors(...this.descs);
+	}
+};
+
+Func.And = class extends ScriptFunction
+{
+	constructor()
+	{
+		super();
+		this.conditions = [];
+	}
+
+	call(context)
+	{
+		for (let cond of this.conditions)
+		{
+			if (!cond.call(context))
+				return false;
+		}
+
+		return true;
+	}
+};
+
+var CompareOp = new Enum("equal", "less", "lessEqual", "greater", "greaterEqual");
+
+Func.Compare = class extends ScriptFunction
+{
+	constructor()
+	{
+		super();
+		this.op = CompareOp.equal;
+		this.a = undefined;
+		this.b = undefined;
+	}
+
+	call(context)
+	{
+		let [a] = context.resolvePreArgs(this.a);
+		let [b] = context.resolvePostArgs(this.b);
+
+		switch (this.op)
+		{
+			case CompareOp.equal: 			return (a === b);
+			case CompareOp.less: 			return (a < b);
+			case CompareOp.lessEqual: 		return (a <= b);
+			case CompareOp.greater: 		return (a > b);
+			case CompareOp.greaterEqual: 	return (a >= b);
+			default: return false;			
+		}
 	}
 };
 

@@ -27,6 +27,35 @@ living:
 				}
 			]
 		}
+
+		.Trigger_OnEvent
+		{
+			eventType: GameEvent_AttributeMutated
+			condition: .Func.And
+			{
+				conditions:
+				[
+					.Func.Compare
+					{
+						op: CompareOp.equal
+						a: VarRef("attribute")
+						b: #attr.health
+					}
+
+					.Func.Compare
+					{
+						op: CompareOp.lessEqual
+						a: VarRef("newValue")
+						b: 0
+					}
+				]
+			}
+
+			effects:
+			[
+				.Effect_Destroy {}
+			]
+		}
 	]
 }
 

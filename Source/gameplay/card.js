@@ -4,7 +4,7 @@
 	AttributeManager SourcedModifier
 	Trigger_PassiveOnSelf Trigger_OnStart
 	ActiveEffect Effect_AttributeModifier 
-	EffectExecutionContext
+	EffectExecutionContext, executeEffect
 */
 
 /* exported Card */
@@ -30,14 +30,20 @@ class Card
 		this.triggerOnStart(this.desc);
 	}
 
-	// TODO: need to have an end function,
-	// so it can clean up the attachments, traits and other spawned cards.
+	[World.Symbol.end](world)
+	{
+		if (this.state)
+		{
+			this.placeIn(null);
+
+			// TODO: clean up the attachments, traits and other spawned cards.
+		}
+	}
 
 	destroy()
 	{
 		if (this.state)
 		{
-			this.placeIn(null);	
 			this.state.world.destroy(this);
 		}
 	}
@@ -133,7 +139,7 @@ class Card
 	{
 		let baseValues = this.desc.mergedAttrValues;
 
-		let modifierEffects = this.desc.triggerEffects(Trigger_PassiveOnSelf, Effect_AttributeModifier);
+		let modifierEffects = this.desc.triggerEffects(Trigger_PassiveOnSelf, null, Effect_AttributeModifier);
 
 		let modifiers = new Map();
 		for (let effectInfo of modifierEffects)
@@ -154,7 +160,7 @@ class Card
 
 	triggerOnStart(desc)
 	{
-		let effects = desc.triggerEffects(Trigger_OnStart, ActiveEffect);
+		let effects = desc.triggerEffects(Trigger_OnStart, null, ActiveEffect);
 
 		let context = new EffectExecutionContext();
 		context.world = this.state.world;
@@ -162,7 +168,7 @@ class Card
 
 		for (let {effect} of effects)
 		{
-			effect.execute(context);
+			executeEffect(effect, context);
 		}
 	}
 }

@@ -146,6 +146,7 @@ class AttributeManager
 
 		let value = attr.mutate(this.getAttribute(attr), operation, context);
 		this.mutableAttrs.set(attr, value);
+		return value;
 	}
 
 	cacheImmutableAttribute(attr)
