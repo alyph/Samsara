@@ -3,24 +3,28 @@
 TODO:
 
 Gameplay:
+	☐	figure out traits
+	☐	timeline
+	☐	new action execution sequence
+
 	✔	give "living" cards health, this includes implementing the max health attribute (vitality?), health token (or wound token??) @done (17-06-17 16:27)
 	✔	run onstart trigger for each card spawned, the living desc will then place tokens on the card @done (17-06-17 16:27)
-	☐	melee attack, uses strength ability score (imp ability attr) to add wound tokens
-	☐	kill the card when health reduced to 0
+	✔	melee attack, uses strength ability score (imp ability attr) to add wound tokens @done (17-06-22 20:59)
+	✔	kill the card when health reduced to 0 @done (17-06-22 20:59)
 	
 
 	☐	descriptor should just contain the data (super descs, attributes, effects)
-	☐	card will have a descriptor, and functions to modify that descriptor (like adding more super descriptors)
+	✔	card will have a descriptor, and functions to modify that descriptor (like adding more super descriptors) @done (17-06-22 21:00)
 	☐	card will also have an attribute collection which will be updated when desc changes, attached card changes, or status effect changes
-	☐	attribute system, attribute definition, attribute value, attribute modifier and stack, attribute collection (a place caches and stores the final values and modifier stacks)
-	☐	simple number attribute, additive and multiplictive modifiers
-	☐	ability attribute, dual numbers (score and advantage points), additive and multiplicative modifiers applied to either or both points
-	☐	token attribute, integer number, no modifiers, but allow add or subtract values
-	☐	effects system, effects are mostly declarative, and different effects can be triggered at different timing, and excuted properly
-	☐	effect to apply modifiers
-	☐	effect to add remove tokens (attribute)
+	✔	attribute system, attribute definition, attribute value, attribute modifier and stack, attribute collection (a place caches and stores the final values and modifier stacks) @done (17-06-22 21:02)
+	✔	simple number attribute, additive and multiplictive modifiers @done (17-06-22 21:02)
+	✔	ability attribute, dual numbers (score and advantage points), additive and multiplicative modifiers applied to either or both points @done (17-06-22 21:02)
+	✔	token attribute, integer number, no modifiers, but allow add or subtract values @done (17-06-22 21:02)
+	✔	effects system, effects are mostly declarative, and different effects can be triggered at different timing, and excuted properly @done (17-06-22 21:03)
+	✔	effect to apply modifiers @done (17-06-22 21:03)
+	✔	effect to add remove tokens (attribute) @done (17-06-22 21:03)
 	☐	triggers determine when the effects are applied. each different trigger may also restrict the types of effects allowed. triggers may contain meta data (e.g. conditions)
-	☐	permenant trigger (for applying modifiers)
+	✔	permenant trigger (for applying modifiers) (now named passive triggers) @done (17-06-22 21:03)
 	☐	used in action trigger (applying modifiers to action)
 
 
@@ -33,7 +37,7 @@ Gameplay:
 	✔	area proxy, card proxy etc. @done (17-04-22 21:44)
 
 	✔	descriptor+stats system (used by the card for now, may expand to other system) @done (17-05-25 20:51)
-	☐	let the hero take action (probably just an attack)
+	✔	let the hero take action (probably just an attack) @done (17-06-22 21:04)
 
 
 	✔	figure out how to show the cards assigned to heroes @done (17-05-25 20:51)
@@ -44,8 +48,8 @@ Gameplay:
 
 
 
-	☐	new UI layout (focus on where each area goes.)
-	☐	show party and encounter etc. (get the basic data setup)
+	✔	new UI layout (focus on where each area goes.) @done (17-06-22 21:04)
+	✔	show party and encounter etc. (get the basic data setup) @done (17-06-22 21:04)
 	
 	☐	cards moving between areas
 	☐	the encounter area needs to be split into groups (per affliation?), this can come late, for now, put everything in one group in one area
