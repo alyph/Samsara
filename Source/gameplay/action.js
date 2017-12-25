@@ -144,3 +144,95 @@ class ActionInstance
 	}
 }
 
+class SkillCheck
+{
+	constructor()
+	{
+		this.supportSkills = [];
+		this.counterSkills = [];
+	}
+}
+
+
+class Effect_Move extends ActiveEffect
+{
+	constructor()
+	{
+		super();
+
+		this.check = new SkillCheck();
+		this.result = null;
+	}
+
+	execute(context, events)
+	{
+		let instigator = context.resolveParameter("instigator");
+		let target = context.resolveParameter("target");
+
+		if (!instigator || !target)
+		{
+			console.error(`Missing instigator or target`);
+			return;
+		}
+
+
+		// collect all the skills involved in the check (make a copy, since we will modify them at move time)
+		let supportAttrs = collectSkillAttributes(instigator, this.check.supportSkills);
+		let counterAttrs = collectSkillAttributes(target, this.check.counterSkills);
+
+
+		// apply move time attribute modifiers from instigator/target's features to the collected attributes
+
+		// apply other move time modifiers (like nullify certain types of attributes, or doulbe certain attributes)
+
+		// calculate final score
+		let supportScore = calcScore(supportAttrs);
+		let counterScore = calcScore(counterAttrs);
+
+		let finalScore = Math.round(Math.max(supportScore - counterScore, 0));
+
+		if (!this.result)
+		{
+			console.error(`Move effect missing result.`);
+			return;
+		}
+
+		// execute result effect with { action, instigator, target, score }
+		let resultContext = new EffectExecutionContext();
+		resultContext.subject = instigator;
+		resultContext.world = context.world;
+		resultContext.params.set("instigator", instigator);
+		resultContext.params.set("target", target);
+		resultContext.params.set("score", finalScore);
+		executeEffect(this.result, resultContext);
+
+		function collectSkillAttributes(card, skills)
+		{
+			let attrs = [];
+			for (let skill of skills)
+			{
+				let attr = instigator.getAttribute(skill);
+				if (attr)
+				{
+					attrs.push(attr.clone());
+				}
+				else
+				{
+					console.error(`Missing attribute ${skill.displayName} on card %o`, card);
+				}
+			}
+
+			return attrs;
+		}
+
+		function calcScore(attributes)
+		{
+			let score = 0;
+			for (let attr of attributes)
+			{
+				score += attr.value;
+			}
+			return score;
+		}
+	}
+}

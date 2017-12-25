@@ -1,32 +1,39 @@
 @import descriptors
 @import attributes
 
-@base Action
+@base Card
 @namespace action
 @using desc
 
 melee_attack:
 {
-	displayName: "Melee Attack"
-	smallPortrait: #sprite.action.melee_attack
-	condition: .Func.HasDesc
+	descriptor:
 	{
-		card: VarRef("target")
-		descs: [ #living, #hostile ]
-	}
+		displayName: "Melee Attack"
+		smallPortrait: #sprite.action.melee_attack
 
-	naturalScore: 1
-	supportAbilities: [ #attr.strength ]
-	counterAbilities: [ #attr.dexterity ]
-
-	effect: .Effect_MutateAttribute
-	{
-		target: "target"
-		attribute: #attr.health
-		operation: .TokenOperation
-		{
-			type: TokenOpType.remove
-			value: { param: "score" }
-		}
+		triggers:
+		[
+			.Trigger_OnActivate
+			{
+				activations:
+				[
+					.ActionActivation
+					{
+						target:
+						{
+							rule: TargetRule.single
+							condition: .Func.HasTag
+							{
+								card: VarRef("target")
+								tags: [ #living, #hostile ]
+							}
+						}
+						effect: .move.melee_attack {}
+					}
+				]				
+			}
+		]
 	}
 }
+

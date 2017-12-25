@@ -8,6 +8,12 @@ class Attribute
 		this.default = null;
 	}
 
+	calc(runtimeValue, modifiers)
+	{
+		let baseValue = runtimeValue || this.default;
+		return this.modify(baseValue, modifiers);
+	}
+
 	modify(manager, value, modifiers)
 	{
 		console.error(`The attribute ${this.displayName} does not implement modify() function cannot be immutable.`);
@@ -67,6 +73,38 @@ class SourcedAttributeModifier
 		this.source = source;
 	}
 }
+
+
+class AttributeInstance
+{
+	constructor()
+	{
+		this.type = null;
+		this.cachedValue = null;
+		this.runtimeValue = null;
+		this.modifiers = [];
+	}
+
+	get value()
+	{
+		if (!this.cachedValue)
+			this.cachedValue = this.type.calc(this.runtimeValue, this.modifiers);
+
+		return this.cachedValue;
+	}
+
+	clone()
+	{
+		let cloned = new AttributeInstance();
+		cloned.type = this.type;
+		cloned.runtimeValue = this.runtimeValue;
+		cloned.modifiers = this.modifiers.concat();
+		return cloned;
+	}
+}
+
+
+
 
 /* exported AttributeManager */
 class AttributeManager

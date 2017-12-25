@@ -306,6 +306,7 @@ class CardProxy extends UI.Proxy
 		// like in other data files? like #attr.health
 		// maybe instead of having native code, it should use the same scripting language
 		// that other gameplay data uses.
-		return this.card.attributeManager.getAttribute(Archive.getDef("attr.health"));
+		//return this.card.attributeManager.getAttribute(Archive.getDef("attr.health"));
+		return this.card.getAttributeValue(Archive.getDef("attr.health"));
 	}
 }

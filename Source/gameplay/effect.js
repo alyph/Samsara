@@ -52,6 +52,7 @@ class EffectExecutionContext
 		return value;
 	}
 
+	// TODO: no longer needed?
 	resolveEntityAttributeManager(entityName)
 	{
 		// TODO: real impl and error msg.

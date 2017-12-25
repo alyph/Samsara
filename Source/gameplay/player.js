@@ -258,6 +258,47 @@ class Player extends Entity
 		return { target, actions };
 	}
 
+	async executeAction(instigator, action, preselectedTarget)
+	{
+		// get OnActivate trigger (ignore multiple just return first one)
+		let activationTrigger = action.getTrigger(Trigger_Activation);
+
+		// loop over all activations
+		for (let activation of activationTrigger.activations)
+		{
+			// select target(s) (if pre selected, use it for the first one)
+			let targets = null;
+
+			if (preselectedTarget)
+			{
+				targets.push(preselectedTarget);
+				preselectedTarget = null;
+			}
+			else
+			{
+				targets = await this.selectTargets(action, activation);
+			}
+
+			// play the effect with param { action, instigator, target } on all targets
+			for (let target of targets)
+			{
+				let context = new EffectExecutionContext();
+				context.subject = instigator;
+				context.world = this.world;
+				context.params.set("instigator", instigator);
+				context.params.set("target", target);
+				context.params.set("action", action);
+				//def.effect.execute(context);
+				executeEffect(activation.effect, context);
+			}			
+		}
+	}
+
+	async selectTargets(action, activation)
+	{
+		throw ("impl");
+	}
+
 	async prepareForAction(action)
 	{
 		while (true)

@@ -30,7 +30,7 @@ class World
 		}
 	}
 
-	spawn(base, name)
+	spawn(base, name = "")
 	{
 		let inst = Archive.create(base, name);
 		if (inst)

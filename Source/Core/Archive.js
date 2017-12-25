@@ -157,6 +157,18 @@ var Archive = new (function(global)
 		return getObject(fullName);
 	};
 
+	this.isInstance = function(obj)
+	{
+		let record = _objectToRecords.get(obj);
+		if (!record)
+		{
+			console.error(`Trying to determined instance (${obj}) that does not exist.`);
+			return false;
+		}
+
+		return (record.environment === Environment.instances);
+	};
+
 
 
 	function getObject(fullName)

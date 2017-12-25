@@ -1,0 +1,25 @@
+@namespace move
+@using desc
+
+////////////////////////////////////////////////////////////////////////
+@base Effect_Move
+
+melee_attack:
+{
+	check:
+	{
+		supportSkills: [ #attr.strength ]
+		counterSkills: [ #attr.dexterity ]	
+	}
+
+	result: .Effect_MutateAttribute
+	{
+		target: "target"
+		attribute: #attr.health
+		operation: .TokenOperation
+		{
+			type: TokenOpType.remove
+			value: { param: "score" }
+		}
+	}
+}

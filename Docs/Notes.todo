@@ -3,9 +3,32 @@
 TODO:
 
 Gameplay:
-	☐	figure out traits
-	☐	timeline
+
+	☐	card draw mechanics
+	☐	figure out the basic needs for card, attributes, modifiers, effects etc.
+	☐	checks, events, results
+	☐	encounter structure, each characters/groups/agents should have goals? 
+	☐	time in the city
+
+	---------------------------------------------------------------------------------------
+	☐	runtime attribute and mutation and init
+	☐	remove attribute manager then fill up unimpl funcs
+	☐	apply modifiers to attribute instances (from the features recursively, collect ones related to supported attributes only)
+	☐	new action data setup and other relevant data
+	☐	action, move, check revamp
+	☐	attribute revamp, separate runtime attribute data and attribute cache
+	☐	effects now need affect the host attribute, basically traits and tags act similar to what descriptor does before. and retire descriptors
+	☐ should we separate modifiers out of effects?
+	☐	attribute types may need specify host type (or tag?) like some attributes only make sense for certain cards (like health only useful for living things, and weapon damage only used for weapons, there may be ones across multiple ones), once we have this, may make modifiers implementation bit easier, since we can deduce which modifiers for host which for itself, and which for the host of host.
+	☐	traits, attribute merge
+	
+
+	☐	basic traits, derived traits, racial, str, vit mods etc.
+	☐	action uses stats (like str etc.) and usable attachment cards (weapons, talents etc.) (need bit more design, think more general, think the net weapon, no damage, but may use the same stats comparison)
 	☐	new action execution sequence
+	☐	timeline
+	☐	figure out traits
+	☐	new set of creatures that make more sense in lore
 
 	✔	give "living" cards health, this includes implementing the max health attribute (vitality?), health token (or wound token??) @done (17-06-17 16:27)
 	✔	run onstart trigger for each card spawned, the living desc will then place tokens on the card @done (17-06-17 16:27)
@@ -91,7 +114,13 @@ System:
 Optimization:
 	☐	resolveNativeClass() pretty expensive, we should avoid creating dynamic function outside of the load time.
 
+Infrastructure:
+	☐	convert scripts to modules (import/export)
+
 Archive:
+	☐	redesign for a schema based serialization system.
+
+
 	☐	 map object (will require custom value parsing system)
 	☐	 when creating an instance off a template, shouldn't it just use that template's blueprint reproduce the new object rather than forming another blueprint then creating the new object from there? guess the concern is later saving, loading code may need handle this special case.
 	☐	 constructor style object syntax
