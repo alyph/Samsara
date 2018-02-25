@@ -1,0 +1,8 @@
+
+main();
+
+function main()
+{
+
+}
+
