@@ -33,6 +33,12 @@ p
 	transform: scale(calc(var(--screen-height) / var(--base-screen-height)));
 }
 
+#viewCanvas
+{
+	width: 100%;
+	height: 100%;
+}
+
 #viewport.res720p
 {
 	--screen-width: 1280;
@@ -297,7 +303,7 @@ html /deep/ card-item
 	border: 1px solid grey;
 	font: 18px 'Bubblegum Sans', cursive;
 	word-wrap: break-word;
-	//word-break: break-all;
+	/*word-break: break-all;*/
 	z-index:200;
 }
 
