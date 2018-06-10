@@ -35,6 +35,9 @@ sysinfo.txt
 *.apk
 *.unitypackage
 
+/rogue/intermediate/
+/rogue/bin/
+
 
 #############
 ## Sublime
