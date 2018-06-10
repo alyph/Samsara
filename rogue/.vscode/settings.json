@@ -5,7 +5,7 @@
         "**/.hg": true,
         "**/CVS": true,
         "**/.DS_Store": true,
-        "**/intermediate": true,
+        "**/build": true,
         "**/bin": true
     }
 }

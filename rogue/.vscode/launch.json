@@ -8,12 +8,17 @@
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "./bin/win64/samsara.exe",
+            "program": "samsara.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/bin/win64",
             "environment": [],
-            "externalConsole": true
+            "externalConsole": true,
+            "logging": {
+                "exceptions": true,
+                "moduleLoad": true,
+                "trace": true
+            }
         }
     ]
 }

@@ -10,6 +10,7 @@
             },
             "includePath": [
                 "${workspaceFolder}",
+                "${workspaceFolder}/external/glew/include",
                 "${workspaceFolder}/external/glfw/include"
             ],
             "defines": [

@@ -4,7 +4,12 @@ call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary
 set compilerflags=/Od /Zi /MD
 set linkerflags=
 pushd %~dp0
-cl.exe %compilerflags% @build/resp_msvc /link %linkerflags%
+set "buildDir=build\win64\"
+set "binDir=bin\win64\"
+if not exist %buildDir% (md "%buildDir%")
+if not exist %binDir% (md "%binDir%")
+
+cl.exe %compilerflags% /Fo"%buildDir%\" /Fd"%buildDir%\" @tools/resp_msvc /link %linkerflags% /OUT:"%binDir%samsara.exe"
 popd
 
 
