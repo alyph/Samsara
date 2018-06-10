@@ -1,9 +1,9 @@
 source\main.cpp
+external\glew\src\glew.c
 /I.\source
 /I.\external\glew\include
 /I.\external\glfw\include
 /D_HAS_EXCEPTIONS=0
 /DGLEW_STATIC=1
-/link /LIBPATH:external\glew\lib\Release\x64
 /link /LIBPATH:external\glfw\bin\win64
-/link opengl32.lib glew32s.lib glfw3.lib User32.lib Gdi32.lib Shell32.lib
+/link opengl32.lib glfw3.lib User32.lib Gdi32.lib Shell32.lib
