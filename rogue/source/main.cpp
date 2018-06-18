@@ -9,6 +9,10 @@
 #include <fstream>
 #include <algorithm>
 #include <sstream>
+
+#include "math/math_utils.h"
+#include "graphics/viewpoint.h"
+
 using namespace std;
 
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path);
@@ -62,6 +66,18 @@ int main()
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders( "../../data/test/simple_vs.gls", "../../data/test/simple_fs.gls" );
 
+	// Get a handle for our "MVP" uniform
+	GLuint MatrixID = glGetUniformLocation(programID, "MVP");
+
+	Viewpoint vp = 
+	{
+		make_lookat(Vec3{4, 3, 3}, Vec3{0, 0, 0}, Vec3{0, 1, 0}),
+		make_perspective(to_rad(45.f), 4.f / 3.f, 0.1f, 100.f),
+	};
+
+	auto mat_vp = calc_mat_vp(vp);
+
+
 	static const GLfloat g_vertex_buffer_data[] = { 
 		-1.0f, -1.0f, 0.0f,
 		 1.0f, -1.0f, 0.0f,
@@ -81,6 +97,10 @@ int main()
 
 		// Use our shader
 		glUseProgram(programID);
+
+		// Send our transformation to the currently bound shader, 
+		// in the "MVP" uniform
+		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, mat_vp.data());
 
 		// 1rst attribute buffer : vertices
 		glEnableVertexAttribArray(0);

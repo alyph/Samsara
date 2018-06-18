@@ -7,5 +7,10 @@
         "**/.DS_Store": true,
         "**/build": true,
         "**/bin": true
+    },
+    "editor.insertSpaces": false,
+    "files.associations": {
+        "*.gls": "glsl",
+        "*.shader": "glsl"
     }
 }
