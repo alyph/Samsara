@@ -66,6 +66,7 @@ public:
 };
 
 
+// Vec3
 inline Vec3 operator-(const Vec3& v);
 inline Vec3 operator+(const Vec3& v0, const Vec3& v1);
 inline Vec3 operator-(const Vec3& v0, const Vec3& v1);
@@ -75,14 +76,19 @@ inline Vec3 normal(const Vec3& v);
 inline Vec3 cross(const Vec3& v0, const Vec3& v1);
 inline Vec4 to_vec4(const Vec3& v3, float w);
 
+// Vec4
 inline Vec4 operator+(const Vec4& v0, const Vec4& v1);
 inline Vec4 operator*(const Vec4& v, float s);
 
+// Mat33
 inline Quat to_quat(const Mat33& m);
 
+// Mat44
 inline Vec4 operator*(const Mat44& m, const Vec4& v);
 inline Mat44 operator*(const Mat44& m0, const Mat44& m1);
 
+// Quat
+inline Quat make_quat_angle_axis(float angle, const Vec3& axis);
 inline Vec3 operator*(const Quat& quat, const Vec3& v);
 inline Quat operator*(const Quat& quat, float s);
 inline Quat operator/(const Quat& quat, float d);
@@ -91,11 +97,12 @@ inline Quat conjugate(const Quat& quat);
 inline Quat inverse(const Quat& quat);
 inline Mat33 to_mat33(const Quat& quat);
 
+// Pose
 inline Pose inverse(const Pose& pose);
 inline Mat44 to_mat44(const Pose& pose);
 
 
-// Vec3
+// Vec3 Impl
 
 inline float& Vec3::operator[](int i)
 {
@@ -159,7 +166,7 @@ inline Vec4 to_vec4(const Vec3& v3, float w)
 }
 
 
-// Vec4
+// Vec4 Impl
 
 inline float& Vec4::operator[](int i)
 {
@@ -187,7 +194,7 @@ inline Vec4 operator*(const Vec4& v, float s)
 }
 
 
-// Mat33
+// Mat33 Impl
 
 inline Vec3& Mat33::operator[](int col)
 {
@@ -245,7 +252,7 @@ inline Quat to_quat(const Mat33& m)
 	return q;
 }
 
-// Mat44
+// Mat44 Impl
 
 inline Vec4& Mat44::operator[](int col)
 {
@@ -278,7 +285,15 @@ inline Mat44 operator*(const Mat44& m0, const Mat44& m1)
 }
 
 
-// Quat
+// Quat Impl
+
+inline Quat make_quat_angle_axis(float angle, const Vec3& axis)
+{
+	const auto s = std::sin(angle * 0.5f);
+	const auto c = std::cos(angle * 0.5f);
+
+	return Quat{ axis.x * s, axis.y * s, axis.z * s, c };
+}
 
 inline Vec3 operator*(const Quat& quat, const Vec3& v)
 {
@@ -340,7 +355,7 @@ inline Mat33 to_mat33(const Quat& quat)
 	return m;
 }
 
-// Pose
+// Pose Impl
 
 inline Pose inverse(const Pose& pose)
 {
