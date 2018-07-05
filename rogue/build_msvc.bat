@@ -1,7 +1,7 @@
 @echo off
 
 call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64     
-set compilerflags=/Od /Zi /MD
+set compilerflags=/Od /Zi /MD /GR- /MP /utf-8 /std:c++latest
 set linkerflags=
 pushd %~dp0
 set "buildDir=build\win64\"

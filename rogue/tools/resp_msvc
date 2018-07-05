@@ -1,4 +1,9 @@
 source\main.cpp
+source\graphics\mesh.cpp
+source\graphics\renderer.cpp
+source\graphics\shader.cpp
+source\window\window.cpp
+source\test\mesh_viewer.cpp
 external\glew\src\glew.c
 /I.\source
 /I.\external\glew\include

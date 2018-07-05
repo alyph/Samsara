@@ -55,7 +55,7 @@ public:
 class Quat
 {
 public:
-	float x{}, y{}, z{}, w{};
+	float x{}, y{}, z{}, w{1.f};
 };
 
 class Pose
@@ -91,6 +91,7 @@ inline Mat44 operator*(const Mat44& m0, const Mat44& m1);
 inline Quat make_quat_angle_axis(float angle, const Vec3& axis);
 inline Vec3 operator*(const Quat& quat, const Vec3& v);
 inline Quat operator*(const Quat& quat, float s);
+inline Quat operator*(const Quat& q0, const Quat& q1);
 inline Quat operator/(const Quat& quat, float d);
 inline float dot(const Quat& q0, const Quat& q1);
 inline Quat conjugate(const Quat& quat);
@@ -305,6 +306,17 @@ inline Vec3 operator*(const Quat& quat, const Vec3& v)
 inline Quat operator*(const Quat& quat, float s)
 {
 	return Quat{ quat.x * s, quat.y * s, quat.z * s, quat.w * s };
+}
+
+inline Quat operator*(const Quat& q0, const Quat& q1)
+{
+	return Quat
+	{
+		q0.w * q1.x + q0.x * q1.w + q0.y * q1.z - q0.z * q1.y,
+		q0.w * q1.y + q0.y * q1.w + q0.z * q1.x - q0.x * q1.z,
+		q0.w * q1.z + q0.z * q1.w + q0.x * q1.y - q0.y * q1.x,
+		q0.w * q1.w - q0.x * q1.x - q0.y * q1.y - q0.z * q1.z,
+	};
 }
 
 inline Quat operator/(const Quat& quat, float d)
