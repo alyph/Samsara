@@ -1,9 +1,11 @@
 
 #include "test/mesh_viewer.h"
+#include "test/tablet_test.h"
 
 int main()
 {
-	MeshViewerApp app;
+	// MeshViewerApp app;
+	TabletTestApp app;
 
 	while (!app.ended())
 	{

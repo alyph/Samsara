@@ -40,6 +40,9 @@ std::unique_ptr<Window> Window::create(const WindowCreationParams& params)
 		return nullptr;
 	}
 
+	// vsync
+	glfwSwapInterval(1);
+
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(glfw, GLFW_STICKY_KEYS, GL_TRUE);
 

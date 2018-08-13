@@ -19,12 +19,18 @@ class Shader
 {
 public:
 	~Shader();
-	static std::shared_ptr<Shader> create(const ShaderDesc& desc);
+	static Shader create(const ShaderDesc& desc);
 
-	Id id() { return shader_id; }
+	Shader() = default;
+	Shader(const Shader& other) = delete;
+	Shader& operator=(const Shader& other) = delete;
+	Shader(Shader&& other);
+	Shader& operator=(Shader&& other);
 
-	int uniform_loc(const char* name);
-	int attribute_loc(const char* name);
+	Id id() const { return shader_id; }
+
+	int uniform_loc(const char* name) const;
+	int attribute_loc(const char* name) const;
 
 private:
 	Id shader_id{};

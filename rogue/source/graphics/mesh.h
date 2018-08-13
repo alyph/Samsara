@@ -2,11 +2,12 @@
 
 #include "math/math_types.h"
 #include "types/id.h"
-#include "shader.h"
 #include "color.h"
 #include <vector>
 #include <memory>
 #include <optional>
+
+class Shader;
 
 class Mesh
 {
@@ -24,14 +25,14 @@ struct MeshCache
 
 struct MeshShaderCache
 {
-	std::shared_ptr<Shader> shader;
+	Id shader_id;
 	int param_mvp;
 };
 
 class MeshStore
 {
 public:
-	std::optional<Id> add_mesh(Mesh&& mesh, const std::shared_ptr<Shader>& shader);
+	Id add_mesh(Mesh&& mesh, const Shader& shader);
 	const MeshCache& mesh_cache(Id mesh_id) const;
 	const MeshShaderCache& shader_cache(Id mesh_id) const;
 	

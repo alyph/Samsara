@@ -107,14 +107,16 @@ MeshViewerApp::MeshViewerApp()
 	ShaderDesc desc;
 	desc.vs_path = "../../data/test/simple_vs.gls";
 	desc.fs_path = "../../data/test/simple_fs.gls";
-	auto shader = Shader::create(desc);
+	store.mesh_shader = Shader::create(desc);
 
-	const auto id = store.mesh_store.add_mesh(std::move(mesh), shader);
+	const auto id = store.mesh_store.add_mesh(std::move(mesh), store.mesh_shader);
 
 
 	// create a item
 	model.cam_pose = make_lookat(Vec3{4, 3, 3}, Vec3{0, 0, 0}, Vec3{0, 1, 0});
-	model.meshes = { { id.value(), Pose{} } };
+	model.meshes = { { id, Pose{} } };
+
+	start_time = std::chrono::system_clock::now();
 }
 
 void MeshViewerApp::update()
@@ -133,6 +135,15 @@ void MeshViewerApp::update()
 
 	// present
 	window->present();
+
+	frame_count++;
+	auto now = std::chrono::system_clock::now();
+	if ((now - start_time) >= std::chrono::duration<double>(1.0))
+	{
+		printf("-- fps: %f\n", frame_count / (std::chrono::duration_cast<std::chrono::duration<double>>(now - start_time).count()));
+		start_time = now;
+		frame_count = 0;
+	}
 }
 
 bool MeshViewerApp::ended()

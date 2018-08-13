@@ -5,9 +5,11 @@
 #include "types/id.h"
 #include "graphics/mesh.h"
 #include "graphics/viewpoint.h"
+#include "graphics/shader.h"
 #include "window/window.h"
 #include <vector>
 #include <memory>
+#include <chrono>
 
 class MeshViewerModel
 {
@@ -26,6 +28,7 @@ public:
 class MeshViewerStore
 {
 public:
+	Shader mesh_shader;
 	MeshStore mesh_store;
 };
 
@@ -53,4 +56,7 @@ private:
 
 	MeshViewerModel model;
 	MeshViewerStore store;
+
+	std::chrono::system_clock::time_point start_time;
+	int frame_count{};
 };

@@ -1,35 +1,38 @@
 #include "mesh.h"
+#include "shader.h"
+#include "core/assertion.h"
 #include <GL/glew.h>
+
 
 static constexpr const char* uniform_mvp = "MVP";
 static constexpr const char* attribute_pos = "VertexPos";
 static constexpr const char* attribute_color = "VertexColor";
 
 
-std::optional<Id> MeshStore::add_mesh(Mesh&& mesh, const std::shared_ptr<Shader>& shader)
+Id MeshStore::add_mesh(Mesh&& mesh, const Shader& shader)
 {
-	// TODO: accept no indices mesh (use verts directly?)
-	if (!shader || (mesh.indices.empty() || mesh.vertices.empty()))
-	{
-		return std::nullopt;
-	}
+	asserts(shader.id(), "mesh shader must be valid.");
+	asserts(!mesh.indices.empty(), "indices must not be empty.");
+	asserts(!mesh.vertices.empty(), "vertices must not be empty.");
 
 	// find or create a shader cache
+	const auto shader_id = shader.id();
 	size_t shader_cache_idx = -1;
 	for (size_t i = 0; i < shader_caches.size(); i++)
 	{
-		if (shader_caches[i].shader == shader)
+		if (shader_caches[i].shader_id == shader_id)
 		{
 			shader_cache_idx = i;
 			break;
 		}
 	}
+
 	if (shader_cache_idx == -1)
 	{
 		shader_cache_idx = shader_caches.size();
 		auto& cache = shader_caches.emplace_back();
-		cache.shader = shader;
-		cache.param_mvp = shader->uniform_loc(uniform_mvp);
+		cache.shader_id = shader_id;
+		cache.param_mvp = shader.uniform_loc(uniform_mvp);
 	}
 
 	const Id id = mesh_objects.size();
@@ -45,7 +48,7 @@ std::optional<Id> MeshStore::add_mesh(Mesh&& mesh, const std::shared_ptr<Shader>
 
 	// create and bind verts
 	GLuint vbo;
-	const auto vert_loc = shader->attribute_loc(attribute_pos);
+	const auto vert_loc = shader.attribute_loc(attribute_pos);
 	if (vert_loc >= 0)
 	{
 		glGenBuffers(1, &vbo);
@@ -57,11 +60,11 @@ std::optional<Id> MeshStore::add_mesh(Mesh&& mesh, const std::shared_ptr<Shader>
 	}
 	else
 	{
-		printf("Cannot find shader attribute: %s", attribute_pos);
+		printf("Cannot find shader attribute: %s\n", attribute_pos);
 	}
 
 	// create and bind colors
-	const auto color_loc = shader->attribute_loc(attribute_color);
+	const auto color_loc = shader.attribute_loc(attribute_color);
 	if (color_loc >= 0)
 	{
 		glGenBuffers(1, &vbo);
@@ -71,6 +74,10 @@ std::optional<Id> MeshStore::add_mesh(Mesh&& mesh, const std::shared_ptr<Shader>
 		glEnableVertexAttribArray(color_loc);
 		mesh_obj.color_buffer = vbo;
 	}
+	else
+	{
+		printf("Cannot find shader attribute: %s\n", attribute_color);
+	}
 
 	// create and bind indices
 	GLuint ebo;
@@ -79,6 +86,8 @@ std::optional<Id> MeshStore::add_mesh(Mesh&& mesh, const std::shared_ptr<Shader>
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(mesh.indices[0]), mesh.indices.data(), GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	mesh_obj.mesh = std::move(mesh);
 	mesh_obj.shader_cache_idx = shader_cache_idx;
@@ -120,7 +129,7 @@ namespace renderer
 			const auto& shader_cache = store.shader_cache(item.mesh_id);
 
 			// use shader
-			glUseProgram(static_cast<GLuint>(shader_cache.shader->id()));
+			glUseProgram(static_cast<GLuint>(shader_cache.shader_id));
 			
 			// set mvp
 			glUniformMatrix4fv(shader_cache.param_mvp, 1, GL_FALSE, item.mvp.data());

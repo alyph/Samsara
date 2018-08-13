@@ -8,8 +8,10 @@
 #include <fstream>
 #include <sstream>
 
-std::shared_ptr<Shader> Shader::create(const ShaderDesc& desc)
+Shader Shader::create(const ShaderDesc& desc)
 {
+	Shader shader; // id == 0 shader, empty one
+
 	// Read the Vertex Shader code from the file
 	std::string vs_code;
 	std::ifstream vs_stream(desc.vs_path, std::ios::in);
@@ -23,7 +25,7 @@ std::shared_ptr<Shader> Shader::create(const ShaderDesc& desc)
 	else
 	{
 		printf("Unable to open vertex shader file %s. Are you in the right directory?\n", desc.vs_path.c_str());
-		return nullptr;
+		return shader;
 	}
 
 	// Read the Fragment Shader code from the file
@@ -39,7 +41,7 @@ std::shared_ptr<Shader> Shader::create(const ShaderDesc& desc)
 	else
 	{
 		printf("Unable to open fragment shader file %s. Are you in the right directory?\n", desc.fs_path.c_str());
-		return nullptr;
+		return shader;
 	}
 	
 	auto compile_shader = [](GLuint id, const std::string& source, const std::string& path)
@@ -76,7 +78,7 @@ std::shared_ptr<Shader> Shader::create(const ShaderDesc& desc)
 	{
 		glDeleteShader(vs);
 		glDeleteShader(fs);
-		return nullptr;
+		return shader;
 	}
 
 	// Link the program
@@ -86,13 +88,15 @@ std::shared_ptr<Shader> Shader::create(const ShaderDesc& desc)
 	glLinkProgram(program);
 
 	// Check the program
-	std::shared_ptr<Shader> shader;
+	//std::shared_ptr<Shader> shader;
 	GLint link_success;
 	glGetProgramiv(program, GL_LINK_STATUS, &link_success);
 	if (link_success)
 	{
-		shader = std::make_shared<Shader>();
-		shader->shader_id = program;
+		//handle = Storage<Shader>::create();
+		//shader = std::make_shared<Shader>();
+		//auto& shader = Storage<Shader>::get(handle);
+		shader.shader_id = program;
 	}
 	else
 	{
@@ -115,15 +119,29 @@ std::shared_ptr<Shader> Shader::create(const ShaderDesc& desc)
 
 Shader::~Shader()
 {
-	glDeleteProgram(shader_id);
+	if (shader_id > 0)
+	{
+		glDeleteProgram(shader_id);
+	}
 }
 
-int Shader::uniform_loc(const char* name)
+Shader::Shader(Shader&& other)
+{
+	*this = std::move(other);
+}
+Shader& Shader::operator=(Shader&& other)
+{
+	shader_id = other.shader_id;
+	other.shader_id = 0;
+	return *this;
+}
+
+int Shader::uniform_loc(const char* name) const
 {
 	return glGetUniformLocation(static_cast<GLuint>(shader_id), name);
 }
 
-int Shader::attribute_loc(const char* name)
+int Shader::attribute_loc(const char* name) const
 {
 	return glGetAttribLocation(static_cast<GLuint>(shader_id), name);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstdint>
 
 class Vec3
 {
@@ -20,6 +21,12 @@ public:
 	inline float& operator[](int i);
 	inline float operator[](int i) const;
 	inline const float* data() const;
+};
+
+class IVec2
+{
+public:
+	int32_t x{}, y{};
 };
 
 // column major, post multiply
