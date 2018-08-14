@@ -8,6 +8,7 @@
 #include <GL/glew.h>
 
 static constexpr const char* uniform_mvp = "MVP";
+static constexpr const char* uniform_dims = "Dims";
 static constexpr const char* attribute_vert_pos = "VertexPos";
 static constexpr const char* attribute_coord = "Coordinates";
 static constexpr const char* attribute_color1 = "Color1";
@@ -38,6 +39,7 @@ Id TabletStore::add_tablet(int width, int height, const Shader& shader)
 		auto& cache = shader_caches.emplace_back();
 		cache.shader_id = shader_id;
 		cache.param_mvp = shader.uniform_loc(uniform_mvp);
+		cache.param_dims = shader.uniform_loc(uniform_dims);
 	}
 
 	const Id id = tablets.size();
@@ -181,6 +183,7 @@ namespace renderer
 			
 			// set mvp
 			glUniformMatrix4fv(shader_cache.param_mvp, 1, GL_FALSE, item.mvp.data());
+			glUniform2i(shader_cache.param_dims, tablet_cache.width, tablet_cache.height);
 
 			glBindVertexArray(static_cast<GLuint>(tablet_cache.vao));
 

@@ -32,6 +32,7 @@ struct TabletShaderCache
 {
 	Id shader_id;
 	int param_mvp;
+	int param_dims;
 };
 
 class TabletStore

@@ -4,9 +4,9 @@
 in vec2 VertexPos;
 in vec2 Coordinates;
 in vec4 Color1;
-// in vec4 Color2;
-// in int Page;
-// in int Code;
+in vec4 Color2;
+in int Page;
+in int Code;
 
 // Out to fs
 out vec4 inColor1;
@@ -16,20 +16,22 @@ out int inCode;
 
 // Values that stay constant for the whole mesh.
 uniform mat4 MVP;
+uniform ivec2 Dims;
 
 void main(){
 
 	// Output position of the vertex, in clip space : MVP * position
-	vec3 pos = vec3(VertexPos + Coordinates,0);
+	vec2 offset = vec2(Dims) * -0.5;
+	vec3 pos = vec3(VertexPos + Coordinates + offset, 0);
 	// vec3 pos = vec3(float(VertexPos.x) * 0.0000000005, float(VertexPos.y) * 0.0000000005,0);
 	// vec3 pos = vec3(float(VertexPos.x), float(VertexPos.y),0) * 0.5;
 	// gl_Position =  vec4(pos * 0.5,1.0);//MVP * vec4(pos,1);
-	gl_Position =  MVP * vec4(pos,1);
+	gl_Position =  MVP * vec4(pos, 1);
 	
 	// inColor1 = vec4(VertexPos.xy, 0, 1);
 	inColor1 = Color1;
-	// inColor2 = Color2;
-	// inPage = Page;
-	// inCode = Code;
+	inColor2 = Color2;
+	inPage = Page;
+	inCode = Code;
 }
 
