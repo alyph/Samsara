@@ -5,6 +5,35 @@
 #include <cstdlib>
 #include <ctime>
 
+
+static uint8_t rand_byte()
+{
+	return (std::rand() & 0xff);
+}
+
+static double rand_num()
+{
+	return static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
+}
+
+static void randomize_tablets(std::vector<TabletTestModel::TabletItem>& tablets, double prob)
+{
+	for (auto& tablet_item : tablets)
+	{
+		for (auto& glyph : tablet_item.glyphs)
+		{
+			if (rand_num() <= prob)
+			{
+				glyph.color1.r = rand_byte();
+				glyph.color1.g = rand_byte();
+				glyph.color1.b = rand_byte();
+				glyph.color1.a = 255;
+				glyph.code = rand_byte();
+			}
+		}
+	}
+}
+
 TabletTestApp::TabletTestApp()
 {
 	// set a seed
@@ -13,7 +42,7 @@ TabletTestApp::TabletTestApp()
 	WindowCreationParams params;
 	params.width = 1024;
 	params.height = 768;
-	params.title = "Mesh Viewer";
+	params.title = "Tablet Test";
 	window = Window::create(params);
 
 	renderer = std::make_unique<TabletTestRenderer>(*window);
@@ -25,8 +54,8 @@ TabletTestApp::TabletTestApp()
 	desc.fs_path = "../../data/shaders/tablet_fs.gls";
 	store.tablet_shader = Shader::create(desc);
 
-	int width = 40;
-	int height = 40;
+	int width = 120;
+	int height = 80;
 
 	const auto id = store.tablet_store.add_tablet(width, height, store.tablet_shader);
 
@@ -34,12 +63,9 @@ TabletTestApp::TabletTestApp()
 	model.cam_pose = make_lookat(Vec3{0, 0, -60}, Vec3{0, 0, 0}, Vec3{0, 1, 0});
 	model.tablets = { { id, Pose{}, width, height, {}, std::vector<GlyphData>(width * height) } };
 
-	start_time = std::chrono::system_clock::now();
-}
+	randomize_tablets(model.tablets, 1.0);
 
-static uint8_t rand_byte()
-{
-	return (std::rand() & 0xff);
+	start_time = std::chrono::system_clock::now();
 }
 
 void TabletTestApp::update()
@@ -49,17 +75,7 @@ void TabletTestApp::update()
 	uint8_t c = 0;
 
 	// randomize all glyphs
-	for (auto& tablet_item : model.tablets)
-	{
-		for (auto& glyph : tablet_item.glyphs)
-		{
-			glyph.color1.r = rand_byte();
-			glyph.color1.g = rand_byte();
-			glyph.color1.b = rand_byte();
-			glyph.color1.a = 255;
-			glyph.code = rand_byte();
-		}
-	}
+	randomize_tablets(model.tablets, 0.01);
 
 	// render stuff out
 	renderer->render(store, model);

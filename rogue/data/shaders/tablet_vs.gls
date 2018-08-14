@@ -1,8 +1,8 @@
 #version 450 core
 
 // Input vertex data, different for all executions of this shader.
-in vec2 VertexPos;
-in vec2 Coordinates;
+in ivec2 VertexPos;
+in ivec2 Coordinates;
 in vec4 Color1;
 in vec4 Color2;
 in int Page;

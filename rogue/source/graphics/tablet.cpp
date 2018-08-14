@@ -68,7 +68,7 @@ Id TabletStore::add_tablet(int width, int height, const Shader& shader)
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
 		// TODO: use glVertexAttribIPointer
-		glVertexAttribPointer(vert_loc, 2, GL_INT, GL_FALSE, 0, 0);
+		glVertexAttribIPointer(vert_loc, 2, GL_INT, 0, 0);
 		glEnableVertexAttribArray(vert_loc);
 	}
 	else
@@ -97,7 +97,7 @@ Id TabletStore::add_tablet(int width, int height, const Shader& shader)
 	const auto coord_loc = shader.attribute_loc(attribute_coord);
 	if (coord_loc >= 0)
 	{
-		glVertexAttribPointer(coord_loc, 2, GL_INT, GL_FALSE, 0, 0);
+		glVertexAttribIPointer(coord_loc, 2, GL_INT, 0, 0);
 		// TODO: use glVertexAttribIPointer
 		glEnableVertexAttribArray(coord_loc);
 		glVertexAttribDivisor(coord_loc, 1);
