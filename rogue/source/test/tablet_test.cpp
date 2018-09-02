@@ -2,6 +2,7 @@
 #include "tablet_test.h"
 #include "graphics/renderer.h"
 #include "math/math_utils.h"
+#include "utils/image_utils.h"
 #include <cstdlib>
 #include <ctime>
 
@@ -16,20 +17,21 @@ static double rand_num()
 	return static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
 }
 
-static void randomize_tablets(std::vector<TabletTestModel::TabletItem>& tablets, double prob)
+static void randomize_tablet(TabletTestModel::TabletItem& tablet, double prob)
 {
-	for (auto& tablet_item : tablets)
+	for (auto& glyph : tablet.glyphs)
 	{
-		for (auto& glyph : tablet_item.glyphs)
+		if (rand_num() <= prob)
 		{
-			if (rand_num() <= prob)
-			{
-				glyph.color1.r = rand_byte();
-				glyph.color1.g = rand_byte();
-				glyph.color1.b = rand_byte();
-				glyph.color1.a = 255;
-				glyph.code = rand_byte();
-			}
+			glyph.color1.r = rand_byte();
+			glyph.color1.g = rand_byte();
+			glyph.color1.b = rand_byte();
+			glyph.color1.a = 255;
+			glyph.color2.r = rand_byte();
+			glyph.color2.g = rand_byte();
+			glyph.color2.b = rand_byte();
+			glyph.color2.a = 255;
+			glyph.code = rand_byte();
 		}
 	}
 }
@@ -54,16 +56,36 @@ TabletTestApp::TabletTestApp()
 	desc.fs_path = "../../data/shaders/tablet_fs.gls";
 	store.tablet_shader = Shader::create(desc);
 
+	auto tex_desc = load_texture("../../data/fonts/cp437_20x20.png");
+	store.atlas_texture = Texture::create(tex_desc);
+
 	int width = 120;
 	int height = 80;
 
-	const auto id = store.tablet_store.add_tablet(width, height, store.tablet_shader);
+	const auto id = store.tablet_store.add_tablet(width, height, store.atlas_texture.id(), store.tablet_shader);
+
+	const auto fixed_tablet_id = store.tablet_store.add_tablet(16, 16, store.atlas_texture.id(), store.tablet_shader);
 
 	// create a item
 	model.cam_pose = make_lookat(Vec3{0, 0, -60}, Vec3{0, 0, 0}, Vec3{0, 1, 0});
-	model.tablets = { { id, Pose{}, width, height, {}, std::vector<GlyphData>(width * height) } };
+	model.tablets = 
+	{ 
+		{ id, Pose{}, width, height, {}, std::vector<GlyphData>(width * height) },
+		{ fixed_tablet_id, Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, std::vector<GlyphData>(16 * 16) },
+	};
 
-	randomize_tablets(model.tablets, 1.0);
+	randomize_tablet(model.tablets[0], 1.0);
+
+	for (size_t i = 0; i < model.tablets[1].glyphs.size(); i++)
+	{
+		auto& glyph = model.tablets[1].glyphs[i];		
+		glyph.code = i;
+		glyph.color1.r = (255 - i);
+		glyph.color2.g = i;
+		glyph.color1.g = glyph.color1.b = glyph.color2.r = glyph.color2.b = 0;
+		glyph.color1.a = 255;
+		glyph.color2.a = 255;
+	}
 
 	start_time = std::chrono::system_clock::now();
 }
@@ -72,10 +94,8 @@ void TabletTestApp::update()
 {
 	window->poll_events();
 
-	uint8_t c = 0;
-
 	// randomize all glyphs
-	randomize_tablets(model.tablets, 0.01);
+	randomize_tablet(model.tablets[0], 0.01);
 
 	// render stuff out
 	renderer->render(store, model);

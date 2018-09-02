@@ -3,6 +3,8 @@ source\graphics\mesh.cpp
 source\graphics\renderer.cpp
 source\graphics\shader.cpp
 source\graphics\tablet.cpp
+source\graphics\texture.cpp
+source\utils\image_utils.cpp
 source\window\window.cpp
 source\test\mesh_viewer.cpp
 source\test\tablet_test.cpp
@@ -10,6 +12,7 @@ external\glew\src\glew.c
 /I.\source
 /I.\external\glew\include
 /I.\external\glfw\include
+/I.\external\stb
 /D_HAS_EXCEPTIONS=0
 /DGLEW_STATIC=1
 /link /LIBPATH:external\glfw\bin\win64

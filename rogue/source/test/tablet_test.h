@@ -5,6 +5,7 @@
 #include "graphics/viewpoint.h"
 #include "graphics/shader.h"
 #include "graphics/tablet.h"
+#include "graphics/texture.h"
 #include "window/window.h"
 #include <vector>
 #include <memory>
@@ -34,6 +35,7 @@ class TabletTestStore
 {
 public:
 	Shader tablet_shader;
+	Texture atlas_texture;
 	TabletStore tablet_store;
 };
 

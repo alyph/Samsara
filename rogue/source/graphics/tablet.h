@@ -23,6 +23,7 @@ struct TabletCache
 	Id vao;
 	Id coord_buffer;
 	Id glyph_buffer;
+	Id texture;
 	int width;
 	int height;
 	int max_num_glyphs;
@@ -38,7 +39,7 @@ struct TabletShaderCache
 class TabletStore
 {
 public:
-	Id add_tablet(int width, int height, const Shader& shader);
+	Id add_tablet(int width, int height, Id texture, const Shader& shader);
 	const TabletCache& tablet_cache(Id tablet_id) const;
 	const TabletShaderCache& shader_cache(Id tablet_id) const;
 

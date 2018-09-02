@@ -4,7 +4,6 @@
 #include "types/id.h"
 #include <string>
 #include <vector>
-#include <memory>
 
 struct ShaderDesc
 {

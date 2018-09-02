@@ -9,6 +9,7 @@
 
 static constexpr const char* uniform_mvp = "MVP";
 static constexpr const char* uniform_dims = "Dims";
+static constexpr const char* uniform_atlas = "Atlas";
 static constexpr const char* attribute_vert_pos = "VertexPos";
 static constexpr const char* attribute_coord = "Coordinates";
 static constexpr const char* attribute_color1 = "Color1";
@@ -16,10 +17,11 @@ static constexpr const char* attribute_color2 = "Color2";
 static constexpr const char* attribute_page = "Page";
 static constexpr const char* attribute_code = "Code";
 
-Id TabletStore::add_tablet(int width, int height, const Shader& shader)
+Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shader)
 {
 	asserts(shader.id(), "tablet shader must be valid.");
 	asserts(width > 0 && height > 0, "tablet cannot be empty sized");
+	asserts(texture != null_id, "tablet requires valid texture to render");
 
 	// find or create a shader cache
 	const auto shader_id = shader.id();
@@ -52,6 +54,7 @@ Id TabletStore::add_tablet(int width, int height, const Shader& shader)
 
 	tablet.shader_cache_idx = shader_cache_idx;
 	tablet.cache.vao = vao;
+	tablet.cache.texture = texture;
 	tablet.cache.width = width;
 	tablet.cache.height = height;
 
@@ -67,7 +70,6 @@ Id TabletStore::add_tablet(int width, int height, const Shader& shader)
 		glGenBuffers(1, &vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
-		// TODO: use glVertexAttribIPointer
 		glVertexAttribIPointer(vert_loc, 2, GL_INT, 0, 0);
 		glEnableVertexAttribArray(vert_loc);
 	}
@@ -98,7 +100,6 @@ Id TabletStore::add_tablet(int width, int height, const Shader& shader)
 	if (coord_loc >= 0)
 	{
 		glVertexAttribIPointer(coord_loc, 2, GL_INT, 0, 0);
-		// TODO: use glVertexAttribIPointer
 		glEnableVertexAttribArray(coord_loc);
 		glVertexAttribDivisor(coord_loc, 1);
 	}
@@ -114,12 +115,19 @@ Id TabletStore::add_tablet(int width, int height, const Shader& shader)
 	glBufferData(GL_ARRAY_BUFFER, tablet.cache.max_num_glyphs * sizeof(GlyphData), nullptr, GL_STREAM_DRAW);
 	tablet.cache.glyph_buffer = vbo;
 
-	auto setup_glyph_data_attribute = [&shader](const char* attr, GLint size, GLenum type, GLboolean normalized, const GLvoid* offset)
+	auto setup_glyph_data_attribute = [&shader](const char* attr, GLint size, GLenum type, GLboolean normalized, bool integer, const GLvoid* offset)
 	{
 		const auto attr_loc = shader.attribute_loc(attr);
 		if (attr_loc >= 0)
 		{
-			glVertexAttribPointer(attr_loc, size, type, normalized, sizeof(GlyphData), offset);
+			if (integer)
+			{
+				glVertexAttribIPointer(attr_loc, size, type, sizeof(GlyphData), offset);
+			}
+			else
+			{
+				glVertexAttribPointer(attr_loc, size, type, normalized, sizeof(GlyphData), offset);
+			}
 			glEnableVertexAttribArray(attr_loc);
 			glVertexAttribDivisor(attr_loc, 1);
 		}
@@ -129,12 +137,11 @@ Id TabletStore::add_tablet(int width, int height, const Shader& shader)
 		}
 	};
 
-	setup_glyph_data_attribute(attribute_color1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0);
-	// setup_glyph_data_attribute(attribute_color2, 4, GL_UNSIGNED_BYTE, GL_TRUE, (void*)offsetof(GlyphData, color2));
+	setup_glyph_data_attribute(attribute_color1, 4, GL_UNSIGNED_BYTE, GL_TRUE, false, 0);
+	setup_glyph_data_attribute(attribute_color2, 4, GL_UNSIGNED_BYTE, GL_TRUE, false, (void*)offsetof(GlyphData, color2));
 	
-	// TODO: use glVertexAttribIPointer
-	// setup_glyph_data_attribute(attribute_page, 1, GL_UNSIGNED_BYTE, GL_FALSE, (void*)offsetof(GlyphData, page));
-	// setup_glyph_data_attribute(attribute_code, 1, GL_UNSIGNED_BYTE, GL_FALSE, (void*)offsetof(GlyphData, code));
+	setup_glyph_data_attribute(attribute_page, 1, GL_UNSIGNED_BYTE, GL_FALSE, true, (void*)offsetof(GlyphData, page));
+	setup_glyph_data_attribute(attribute_code, 1, GL_UNSIGNED_BYTE, GL_FALSE, true, (void*)offsetof(GlyphData, code));
 
 
 	uint32_t indices[] = { 0, 1, 2, 0, 2, 3 };
@@ -143,6 +150,18 @@ Id TabletStore::add_tablet(int width, int height, const Shader& shader)
 	glGenBuffers(1, &ebo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+
+	const auto atlas_loc = shader.uniform_loc(uniform_atlas);
+	if (atlas_loc >= 0)
+	{
+		glUseProgram(static_cast<GLuint>(shader_id));
+		glUniform1i(atlas_loc, 0);
+	}
+	else
+	{
+		printf("Cannot find uniform: %s\n", uniform_atlas);
+	}
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -178,6 +197,9 @@ namespace renderer
 			const auto& tablet_cache = store.tablet_cache(item.tablet_id);
 			const auto& shader_cache = store.shader_cache(item.tablet_id);
 
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, tablet_cache.texture);
+
 			// use shader
 			glUseProgram(static_cast<GLuint>(shader_cache.shader_id));
 			
@@ -211,7 +233,7 @@ namespace renderer
 
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 			glBindVertexArray(0);
-
+			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 	}
 }

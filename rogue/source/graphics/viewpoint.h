@@ -11,7 +11,7 @@ enum class Handedness
 class Viewpoint
 {
 public:
-	Pose pose; // world pose, the viewpoint look toward +z, up is +y, left/right is x (depending on handiness)
+	Pose pose; // world pose, the viewpoint look toward +z, up is +y, left/right is x (depending on handedness)
 	Mat44 projection;
 	Handedness handedness = Handedness::left;
 };
