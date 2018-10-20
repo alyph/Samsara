@@ -21,38 +21,54 @@ struct GlyphData
 struct TabletCache
 {
 	Id vao;
+	Id vao_screen;
 	Id coord_buffer;
 	Id glyph_buffer;
 	Id texture;
+	Id fbo;
+	Id rt_texture;
 	int width;
 	int height;
 	int max_num_glyphs;
+	int rt_width;
+	int rt_height;
 };
 
 struct TabletShaderCache
 {
 	Id shader_id;
-	int param_mvp;
 	int param_dims;
+};
+
+struct TabletScreenShaderCache
+{
+	Id shader_id;
+	int param_mvp;
+	int param_texture;
+	int param_vert;
+	int param_uv;
 };
 
 class TabletStore
 {
 public:
-	Id add_tablet(int width, int height, Id texture, const Shader& shader);
+	Id add_tablet(int width, int height, Id texture, const Shader& shader, const Shader& screen_shader);
 	const TabletCache& tablet_cache(Id tablet_id) const;
 	const TabletShaderCache& shader_cache(Id tablet_id) const;
+	const TabletScreenShaderCache& screen_shader_cache(Id tablet_id) const;
 
 private:
 	struct InternalTabletObject
 	{
 		TabletCache cache;
 		Id vert_buffer;
-		size_t shader_cache_idx{};		
+		size_t shader_cache_idx{};
+		size_t screen_shader_cache_idx{};	
 	};
 
 	std::vector<InternalTabletObject> tablets;
 	std::vector<TabletShaderCache> shader_caches;
+	std::vector<TabletScreenShaderCache> screen_shader_caches;
 };
 
 struct TabletDrawItem

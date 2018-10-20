@@ -35,6 +35,7 @@ class TabletTestStore
 {
 public:
 	Shader tablet_shader;
+	Shader tablet_screen_shader;
 	Texture atlas_texture;
 	TabletStore tablet_store;
 };

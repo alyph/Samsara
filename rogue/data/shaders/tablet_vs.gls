@@ -22,13 +22,16 @@ uniform ivec2 Dims;
 void main(){
 
 	// Output position of the vertex, in clip space : MVP * position
-	float scale = 1.0;
-	vec2 offset = vec2(Dims) * -0.5;
-	vec3 pos = vec3((VertexPos + Coordinates + offset) * scale, 0);
+	// float scale = 1.0;
+	// vec2 offset = vec2(Dims) * -0.5;
+	// vec3 pos = vec3((VertexPos + Coordinates + offset) * scale, 0);
 	// vec3 pos = vec3(float(VertexPos.x) * 0.0000000005, float(VertexPos.y) * 0.0000000005,0);
 	// vec3 pos = vec3(float(VertexPos.x), float(VertexPos.y),0) * 0.5;
 	// gl_Position =  vec4(pos * 0.5,1.0);//MVP * vec4(pos,1);
-	gl_Position =  MVP * vec4(pos, 1);
+	// gl_Position =  MVP * vec4(pos, 1);
+	// to clip space directly
+	// TODO: add z
+	gl_Position = vec4((vec2(VertexPos + Coordinates) * 2.0 / vec2(Dims)) - vec2(1, 1), 0, 1);
 	
 	// inColor1 = vec4(VertexPos.xy, 0, 1);
 	inColor1 = Color1;

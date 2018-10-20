@@ -56,15 +56,21 @@ TabletTestApp::TabletTestApp()
 	desc.fs_path = "../../data/shaders/tablet_fs.gls";
 	store.tablet_shader = Shader::create(desc);
 
+	desc.vs_path = "../../data/shaders/basic_textured_vs.gls";
+	desc.fs_path = "../../data/shaders/basic_textured_fs.gls";
+	store.tablet_screen_shader = Shader::create(desc);
+
+	// TODO: the atlas texture should probably use nearest filter 
+	// since we are drawing into pixel perfect render buffer
 	auto tex_desc = load_texture("../../data/fonts/cp437_20x20.png");
 	store.atlas_texture = Texture::create(tex_desc);
 
 	int width = 120;
 	int height = 80;
 
-	const auto id = store.tablet_store.add_tablet(width, height, store.atlas_texture.id(), store.tablet_shader);
+	const auto id = store.tablet_store.add_tablet(width, height, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
 
-	const auto fixed_tablet_id = store.tablet_store.add_tablet(16, 16, store.atlas_texture.id(), store.tablet_shader);
+	const auto fixed_tablet_id = store.tablet_store.add_tablet(16, 16, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
 
 	// create a item
 	model.cam_pose = make_lookat(Vec3{0, 0, -60}, Vec3{0, 0, 0}, Vec3{0, 1, 0});

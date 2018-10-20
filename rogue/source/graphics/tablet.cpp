@@ -10,14 +10,16 @@
 static constexpr const char* uniform_mvp = "MVP";
 static constexpr const char* uniform_dims = "Dims";
 static constexpr const char* uniform_atlas = "Atlas";
+static constexpr const char* uniform_texture = "Texture";
 static constexpr const char* attribute_vert_pos = "VertexPos";
 static constexpr const char* attribute_coord = "Coordinates";
 static constexpr const char* attribute_color1 = "Color1";
 static constexpr const char* attribute_color2 = "Color2";
 static constexpr const char* attribute_page = "Page";
 static constexpr const char* attribute_code = "Code";
+static constexpr const char* attribute_uv = "UV";
 
-Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shader)
+Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shader, const Shader& screen_shader)
 {
 	asserts(shader.id(), "tablet shader must be valid.");
 	asserts(width > 0 && height > 0, "tablet cannot be empty sized");
@@ -40,9 +42,32 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 		shader_cache_idx = shader_caches.size();
 		auto& cache = shader_caches.emplace_back();
 		cache.shader_id = shader_id;
-		cache.param_mvp = shader.uniform_loc(uniform_mvp);
+		//cache.param_mvp = shader.uniform_loc(uniform_mvp);
 		cache.param_dims = shader.uniform_loc(uniform_dims);
 	}
+
+	const auto screen_shader_id = screen_shader.id();
+	size_t screen_shader_cache_idx = -1;
+	for (size_t i = 0; i < screen_shader_caches.size(); i++)
+	{
+		if (screen_shader_caches[i].shader_id == screen_shader_id)
+		{
+			screen_shader_cache_idx = i;
+			break;
+		}
+	}
+
+	if (screen_shader_cache_idx == -1)
+	{
+		screen_shader_cache_idx = screen_shader_caches.size();
+		auto& cache = screen_shader_caches.emplace_back();
+		cache.shader_id = screen_shader_id;
+		cache.param_mvp = screen_shader.uniform_loc(uniform_mvp);
+		cache.param_texture = screen_shader.uniform_loc(uniform_texture);
+		cache.param_vert = screen_shader.attribute_loc(attribute_vert_pos);
+		cache.param_uv = screen_shader.attribute_loc(attribute_uv);
+	}
+
 
 	const Id id = tablets.size();
 	auto& tablet = tablets.emplace_back();
@@ -53,6 +78,7 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 	glBindVertexArray(vao);
 
 	tablet.shader_cache_idx = shader_cache_idx;
+	tablet.screen_shader_cache_idx = screen_shader_cache_idx;
 	tablet.cache.vao = vao;
 	tablet.cache.texture = texture;
 	tablet.cache.width = width;
@@ -166,6 +192,112 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glUseProgram(0);
+
+
+	// create vao for screen
+	GLuint vao_screen;
+	glGenVertexArrays(1, &vao_screen);
+	glBindVertexArray(vao_screen);
+
+	tablet.cache.vao_screen = vao_screen;
+	
+	const auto& screen_shader_cache = screen_shader_caches[screen_shader_cache_idx];
+	if (screen_shader_cache.param_vert >= 0)
+	{
+		const float scale = 1.f;
+		const float half_w = width * scale * 0.5f;
+		const float half_h = height * scale * 0.5f;
+		Vec3 verts[] = 
+		{ 
+			{ -half_w, -half_h, 0 }, { half_w, -half_h, 0 }, 
+			{ half_w, half_h, 0 }, { -half_w, half_h, 0 } 
+		};
+		GLuint vbo_screen;
+		glGenBuffers(1, &vbo_screen);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_screen);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+		glVertexAttribPointer(screen_shader_cache.param_vert, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(screen_shader_cache.param_vert);
+	}
+	else
+	{
+		printf("Cannot find shader attribute: %s\n", attribute_vert_pos);
+	}
+
+	if (screen_shader_cache.param_uv >= 0)
+	{
+		float uvs[] = { 0.f, 0.f, 1.f, 0.f, 1.f, 1.f, 0.f, 1.f };
+		GLuint vbo_uv;
+		glGenBuffers(1, &vbo_uv);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_uv);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);
+		glVertexAttribPointer(screen_shader_cache.param_uv, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(screen_shader_cache.param_uv);
+	}
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	
+	if (screen_shader_cache.param_texture >= 0)
+	{
+		glUseProgram(static_cast<GLuint>(screen_shader_id));
+		glUniform1i(screen_shader_cache.param_texture, 0);
+	}
+	else
+	{
+		printf("Cannot find uniform: %s\n", uniform_texture);
+	}
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glUseProgram(0);
+
+
+	// create frame buffer for rendering to texture
+	GLuint fbo;
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+	// TODO: rt texture size can become really big if width, height were set to real large?
+	int glyph_w = 20; // TODO: read glyph pixel size from data (or based on texture size)
+	int glyph_h = 20;
+	int rt_w = width * glyph_w;
+	int rt_h = height * glyph_h;
+
+	// generate texture
+	GLuint texColorBuffer;
+	glGenTextures(1, &texColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, rt_w, rt_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0); 
+
+	GLuint rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo); 
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, rt_w, rt_h);  
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		printf("tablet framebuffer is not ready!");
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); 
+
+	tablet.cache.fbo = fbo;
+	tablet.cache.rt_texture = texColorBuffer;
+	tablet.cache.rt_width = rt_w;
+	tablet.cache.rt_height = rt_h;
 
 	return id;
 }
@@ -181,10 +313,19 @@ const TabletShaderCache& TabletStore::shader_cache(Id tablet_id) const
 	return shader_caches[shader_idx];
 }
 
+const TabletScreenShaderCache& TabletStore::screen_shader_cache(Id tablet_id) const
+{
+	const auto shader_idx = tablets[tablet_id].screen_shader_cache_idx;
+	return screen_shader_caches[shader_idx];
+}
+
 namespace renderer
 {
 	void draw(const TabletStore& store, const TabletDrawStream& stream)
 	{
+		GLint viewport[4];
+		glGetIntegerv(GL_VIEWPORT, viewport);
+
 		// TODO: revert states
 		// opengl states
 		// depth test
@@ -196,6 +337,17 @@ namespace renderer
 		{
 			const auto& tablet_cache = store.tablet_cache(item.tablet_id);
 			const auto& shader_cache = store.shader_cache(item.tablet_id);
+			const auto& screen_shader_cache = store.screen_shader_cache(item.tablet_id);
+
+			// render the tablet to texture
+			glBindFramebuffer(GL_FRAMEBUFFER, tablet_cache.fbo);
+
+			glViewport(0, 0, tablet_cache.rt_width, tablet_cache.rt_height);
+
+			glClearColor(0.f, 0.f, 0.f, 0.f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			// glEnable(GL_DEPTH_TEST);
+			// glDepthFunc(GL_LESS);
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, tablet_cache.texture);
@@ -204,7 +356,7 @@ namespace renderer
 			glUseProgram(static_cast<GLuint>(shader_cache.shader_id));
 			
 			// set mvp
-			glUniformMatrix4fv(shader_cache.param_mvp, 1, GL_FALSE, item.mvp.data());
+			//glUniformMatrix4fv(shader_cache.param_mvp, 1, GL_FALSE, item.mvp.data());
 			glUniform2i(shader_cache.param_dims, tablet_cache.width, tablet_cache.height);
 
 			glBindVertexArray(static_cast<GLuint>(tablet_cache.vao));
@@ -232,6 +384,27 @@ namespace renderer
 			// glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+
+			// draw quad on screen
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, tablet_cache.rt_texture);
+
+			// use shader
+			glUseProgram(static_cast<GLuint>(screen_shader_cache.shader_id));
+			
+			// set mvp
+			glUniformMatrix4fv(screen_shader_cache.param_mvp, 1, GL_FALSE, item.mvp.data());
+
+			// draw elements
+			glBindVertexArray(static_cast<GLuint>(tablet_cache.vao_screen));
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}

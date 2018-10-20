@@ -1,0 +1,12 @@
+#version 450 core
+
+uniform sampler2D Texture;
+
+in vec2 fragUV;
+
+out vec4 color;
+
+void main()
+{
+	color = texture(Texture, fragUV);
+}
