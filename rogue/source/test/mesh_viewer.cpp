@@ -3,6 +3,16 @@
 #include "graphics/renderer.h"
 #include "math/math_utils.h"
 
+int main()
+{
+	MeshViewerApp app;
+	while (!app.ended())
+	{
+		app.update();
+	}
+	return 0;
+}
+
 MeshViewerApp::MeshViewerApp()
 {
 	WindowCreationParams params;

@@ -6,6 +6,16 @@
 #include <cstdlib>
 #include <ctime>
 
+int main()
+{
+	TabletTestApp app;
+	while (!app.ended())
+	{
+		app.update();
+	}
+	return 0;
+}
+
 
 static uint8_t rand_byte()
 {
@@ -154,5 +164,4 @@ void TabletTestRenderer::render(const TabletTestStore& store, const TabletTestMo
 	// draw meshes
 	renderer::draw(store.tablet_store, stream);
 }
-
 

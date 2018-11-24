@@ -6,7 +6,8 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "./build_msvc.bat",
+            "command": "./build.bat",
+            "args": ["tablet_ui"],
             "group": {
                 "kind": "build",
                 "isDefault": true
