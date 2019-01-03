@@ -1,13 +1,19 @@
 #include "mesh.h"
 #include "shader.h"
-#include "core/assertion.h"
+#include "assertion.h"
+#include "viewport.h"
 #include <GL/glew.h>
 
+namespace attrs
+{
+	Attribute<Id> mesh_id{null_id};
+}
 
 static constexpr const char* uniform_mvp = "MVP";
 static constexpr const char* attribute_pos = "VertexPos";
 static constexpr const char* attribute_color = "VertexColor";
 
+static MeshStore global_mesh_store;
 
 Id MeshStore::add_mesh(Mesh&& mesh, const Shader& shader)
 {
@@ -44,7 +50,7 @@ Id MeshStore::add_mesh(Mesh&& mesh, const Shader& shader)
 	glBindVertexArray(vao);
 
 	mesh_obj.cache.vao = vao;
-	mesh_obj.cache.vert_count = mesh.indices.size();
+	mesh_obj.cache.vert_count = static_cast<uint32_t>(mesh.indices.size());
 
 	// create and bind verts
 	GLuint vbo;
@@ -141,3 +147,46 @@ namespace renderer
 		}
 	}
 }
+
+Id add_mesh(Mesh&& mesh, const Shader& shader)
+{
+	return global_mesh_store.add_mesh(std::move(mesh), shader);
+}
+
+static Render3dType render_mesh(const Frame& frame, Id elem_id, const Mat44& transform)
+{
+	const Id mesh_id = get_elem_attr(frame, elem_id, attrs::mesh_id);
+
+	const auto& mesh_cache = global_mesh_store.mesh_cache(mesh_id);
+	const auto& shader_cache = global_mesh_store.shader_cache(mesh_id);
+
+	// use shader
+	glUseProgram(static_cast<GLuint>(shader_cache.shader_id));
+	
+	// set mvp
+	const auto& mesh_tf = get_elem_attr(frame, elem_id, attrs::transform);
+	const auto& mvp = transform * mesh_tf;
+	glUniformMatrix4fv(shader_cache.param_mvp, 1, GL_FALSE, mvp.data());
+ 
+	// draw elements
+	glBindVertexArray(static_cast<GLuint>(mesh_cache.vao));
+	glDrawElements(GL_TRIANGLES, mesh_cache.vert_count, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+
+	return Render3dType::single;
+}
+
+static const Id mesh_elem_type = register_elem_type([](ElementTypeSetup& setup)
+{
+	setup.set_name("mesh");
+	setup.set_attr(attrs::renderer_3d, &render_mesh);
+});
+
+namespace elem
+{
+	Id mesh(const Context ctx)
+	{
+		return make_element(ctx, mesh_elem_type);
+	}
+}
+

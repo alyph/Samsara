@@ -3,9 +3,8 @@
 #include <cmath>
 #include <cstdint>
 
-class Vec3
+struct Vec3
 {
-public:
 	float x{}, y{}, z{};
 
 	inline float& operator[](int i);
@@ -13,9 +12,8 @@ public:
 	inline const float* data() const;
 };
 
-class Vec4
+struct Vec4
 {
-public:
 	float x{}, y{}, z{}, w{};
 
 	inline float& operator[](int i);
@@ -23,9 +21,8 @@ public:
 	inline const float* data() const;
 };
 
-class IVec2
+struct IVec2
 {
-public:
 	int32_t x{}, y{};
 };
 
@@ -34,9 +31,8 @@ public:
 // [x, y, z]
 //  ^  ^  ^
 //  c0 c1 c2
-class Mat33
+struct Mat33
 {
-public:
 	Vec3 cols[3]{};
 
 	inline Vec3& operator[](int col);
@@ -49,25 +45,23 @@ public:
 // [x, y, z, T]
 //  ^  ^  ^  ^
 //  c0 c1 c2 c3
-class Mat44
+struct Mat44
 {
-public:
 	Vec4 cols[4]{};
 
 	inline Vec4& operator[](int col);
 	inline const Vec4& operator[](int col) const;
 	inline const float* data() const;
+	static inline Mat44 identity();
 };
 
-class Quat
+struct Quat
 {
-public:
 	float x{}, y{}, z{}, w{1.f};
 };
 
-class Pose
+struct Pose
 {
-public:
 	Vec3 pos;
 	Quat rot;
 };
@@ -78,6 +72,7 @@ inline Vec3 operator-(const Vec3& v);
 inline Vec3 operator+(const Vec3& v0, const Vec3& v1);
 inline Vec3 operator-(const Vec3& v0, const Vec3& v1);
 inline Vec3 operator*(const Vec3& v, float s);
+inline Vec3 operator*(const Vec3& v0, const Vec3& v1);
 inline float length(const Vec3& v);
 inline Vec3 normal(const Vec3& v);
 inline Vec3 cross(const Vec3& v0, const Vec3& v1);
@@ -275,6 +270,16 @@ inline const Vec4& Mat44::operator[](int col) const
 inline const float* Mat44::data() const
 {
 	return cols[0].data();
+}
+
+inline Mat44 Mat44::identity()
+{
+	Mat44 m;
+	m[0][0] = 1.f;
+	m[1][1] = 1.f;
+	m[2][2] = 1.f;
+	m[3][3] = 1.f;
+	return m;
 }
 
 inline Vec4 operator*(const Mat44& m, const Vec4& v)

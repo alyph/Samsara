@@ -1,5 +1,5 @@
 #include "image_utils.h"
-#include "core/assertion.h"
+#include "assertion.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"

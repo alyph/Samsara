@@ -50,6 +50,11 @@ std::unique_ptr<Window> Window::create(const WindowCreationParams& params)
 
 	auto window = std::make_unique<Window>();
 	window->glfw = glfw;
+	glfwSetWindowUserPointer(glfw, window.get());
+
+	glfwSetKeyCallback(glfw, key_callback);
+	glfwSetCursorPosCallback(glfw, mouse_position_callback);
+	glfwSetMouseButtonCallback(glfw, mouse_button_callback);
 
 	return window;
 }
@@ -65,9 +70,12 @@ void Window::present()
 	glfwSwapBuffers(glfw);
 }
 
-void Window::poll_events()
+std::vector<InputEvent> Window::poll_events()
 {
 	glfwPollEvents();
+	std::vector<InputEvent> new_events = input_events;
+	input_events.clear();
+	return new_events;
 }
 
 bool Window::should_close() const
@@ -82,4 +90,78 @@ float Window::aspect() const
 	return (static_cast<float>(width) / height);
 }
 
+int Window::width() const
+{
+	int width{}, height{};
+	glfwGetWindowSize(glfw, &width, &height);
+	return width;
+}
+
+int Window::height() const
+{
+	int width{}, height{};
+	glfwGetWindowSize(glfw, &width, &height);
+	return height;
+}
+
+void Window::key_callback(GLFWwindow* glfw, int key, int scancode, int action, int mods)
+{
+	auto window = static_cast<Window*>(glfwGetWindowUserPointer(glfw));
+	if (window)
+	{
+		InputEvent event;
+		if (action == GLFW_PRESS)
+		{
+			event.type = InputEventType::key_down;
+		}
+		else if (action == GLFW_RELEASE)
+		{
+			event.type = InputEventType::key_up;
+		}
+		else
+		{
+			return;
+		}
+		event.key = key;
+		event.mods = mods;
+		window->input_events.push_back(event);
+	}
+}
+
+void Window::mouse_position_callback(GLFWwindow* glfw, double xpos, double ypos)
+{
+	auto window = static_cast<Window*>(glfwGetWindowUserPointer(glfw));
+	if (window)
+	{
+		InputEvent event;
+		event.type = InputEventType::mouse_move;
+		event.x = xpos;
+		event.y = ypos;
+		window->input_events.push_back(event);
+	}
+}
+
+void Window::mouse_button_callback(GLFWwindow* glfw, int button, int action, int mods)
+{
+	auto window = static_cast<Window*>(glfwGetWindowUserPointer(glfw));
+	if (window)
+	{
+		InputEvent event;
+		if (action == GLFW_PRESS)
+		{
+			event.type = InputEventType::mouse_down;
+		}
+		else if (action == GLFW_RELEASE)
+		{
+			event.type = InputEventType::mouse_up;
+		}
+		else
+		{
+			return;
+		}
+		event.button = button;
+		event.mods = mods;
+		window->input_events.push_back(event);
+	}
+}
 

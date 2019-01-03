@@ -1,13 +1,19 @@
 #pragma once
 
-#include "math/math_types.h"
-#include "types/id.h"
+#include "math_types.h"
+#include "id.h"
 #include "color.h"
+#include "presenter.h"
 #include <vector>
 #include <memory>
 #include <optional>
 
 class Shader;
+
+namespace attrs
+{
+	extern Attribute<Id> mesh_id;
+}
 
 class Mesh
 {
@@ -68,5 +74,12 @@ public:
 namespace renderer
 {
 	void draw(const MeshStore& store, const MeshDrawStream& stream);
+}
+
+extern Id add_mesh(Mesh&& mesh, const Shader& shader);
+
+namespace elem
+{
+	extern Id mesh(const Context ctx);
 }
 

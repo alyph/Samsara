@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math/math_types.h"
+#include "math_types.h"
 
 enum class Handedness
 {
@@ -12,7 +12,7 @@ class Viewpoint
 {
 public:
 	Pose pose; // world pose, the viewpoint look toward +z, up is +y, left/right is x (depending on handedness)
-	Mat44 projection;
+	Mat44 projection{Mat44::identity()};
 	Handedness handedness = Handedness::left;
 };
 

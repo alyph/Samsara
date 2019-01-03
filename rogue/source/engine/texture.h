@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types/id.h"
+#include "id.h"
 #include <vector>
 
 enum class TextureFormat

@@ -121,7 +121,7 @@ Shader::~Shader()
 {
 	if (shader_id > 0)
 	{
-		glDeleteProgram(shader_id);
+		glDeleteProgram(static_cast<GLuint>(shader_id));
 	}
 }
 

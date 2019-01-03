@@ -7,7 +7,7 @@
             "label": "build",
             "type": "shell",
             "command": "./build.bat",
-            "args": ["tablet_ui"],
+            "args": ["mesh_viewer"],
             "group": {
                 "kind": "build",
                 "isDefault": true

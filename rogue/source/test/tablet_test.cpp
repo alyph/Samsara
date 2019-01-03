@@ -1,8 +1,8 @@
 
 #include "tablet_test.h"
-#include "graphics/renderer.h"
-#include "math/math_utils.h"
-#include "utils/image_utils.h"
+#include "engine/renderer.h"
+#include "engine/math_utils.h"
+#include "engine/image_utils.h"
 #include <cstdlib>
 #include <ctime>
 

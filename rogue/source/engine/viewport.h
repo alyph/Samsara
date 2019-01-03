@@ -1,14 +1,25 @@
 #pragma once
 
-#include "math/math_types.h"
+#include "math_types.h"
+#include "viewpoint.h"
+#include "presenter.h"
 
-class Viewport
+enum class Render3dType
 {
-
+	single,
+	sub_tree,
 };
 
-inline Mat44 calc_mat_projection(const Viewport& viewport)
-{
+using Renderer3dFunc = Render3dType(*)(const Frame& frame, Id elem_id, const Mat44& transform);
 
+namespace attrs
+{
+	extern Attribute<Viewpoint> viewpoint;
+	extern Attribute<Renderer3dFunc> renderer_3d;
+}
+
+namespace elem
+{
+	extern Id viewport(const Context ctx);
 }
 

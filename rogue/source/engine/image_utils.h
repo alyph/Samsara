@@ -1,6 +1,6 @@
 #pragma once
 
-#include "graphics/texture.h"
+#include "engine/texture.h"
 
 struct ImageLoadResult
 {

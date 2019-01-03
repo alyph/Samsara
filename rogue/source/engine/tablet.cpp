@@ -1,8 +1,8 @@
 
 #include "tablet.h"
 #include "shader.h"
-#include "math/math_types.h"
-#include "core/assertion.h"
+#include "math_types.h"
+#include "assertion.h"
 #include <cstddef>
 #include <algorithm>
 #include <GL/glew.h>
@@ -85,7 +85,7 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 	tablet.cache.height = height;
 
 	const size_t num_fixed_glyphs = (width * height);
-	tablet.cache.max_num_glyphs = num_fixed_glyphs * 2; // allow twice as many glyphs to support layers
+	tablet.cache.max_num_glyphs = static_cast<int>(num_fixed_glyphs * 2); // allow twice as many glyphs to support layers
 
 	GLuint vbo;
 
@@ -340,7 +340,7 @@ namespace renderer
 			const auto& screen_shader_cache = store.screen_shader_cache(item.tablet_id);
 
 			// render the tablet to texture
-			glBindFramebuffer(GL_FRAMEBUFFER, tablet_cache.fbo);
+			glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(tablet_cache.fbo));
 
 			glViewport(0, 0, tablet_cache.rt_width, tablet_cache.rt_height);
 
@@ -350,7 +350,7 @@ namespace renderer
 			// glDepthFunc(GL_LESS);
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, tablet_cache.texture);
+			glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.texture));
 
 			// use shader
 			glUseProgram(static_cast<GLuint>(shader_cache.shader_id));
@@ -368,19 +368,19 @@ namespace renderer
 			// copy in extra coordinates
 			if (!item.extra_coords.empty())			
 			{
-				glBindBuffer(GL_ARRAY_BUFFER, tablet_cache.coord_buffer);
+				glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.coord_buffer));
 				glBufferSubData(GL_ARRAY_BUFFER, num_fixed_glyphs * sizeof(IVec2), item.extra_coords.size() * sizeof(IVec2), item.extra_coords.data());
 			}
 
 			// copy in the glyph data
-			glBindBuffer(GL_ARRAY_BUFFER, tablet_cache.glyph_buffer);
+			glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.glyph_buffer));
 			glBufferSubData(GL_ARRAY_BUFFER, 0, item.glyphs.size() * sizeof(GlyphData), item.glyphs.data());
 
 			// Draw all glyphs instanced
 			// TODO: another way to draw this is to draw a quad, and have the pixel shader 
 			// fill in the content based on uv
 			// 6 because of two triangles, see above indices in add_tablet()
-			glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, num_glyphs);
+			glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(num_glyphs));
 			// glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -394,7 +394,7 @@ namespace renderer
 
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, tablet_cache.rt_texture);
+			glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.rt_texture));
 
 			// use shader
 			glUseProgram(static_cast<GLuint>(screen_shader_cache.shader_id));

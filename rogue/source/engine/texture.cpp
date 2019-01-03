@@ -1,5 +1,5 @@
 #include "texture.h"
-#include "core/assertion.h"
+#include "assertion.h"
 #include <GL/glew.h>
 
 Texture Texture::create(const TextureDesc& desc)
@@ -33,7 +33,7 @@ Texture Texture::create(const TextureDesc& desc)
 
 Texture::~Texture()
 {
-	GLuint id = texture_id;
+	GLuint id = static_cast<GLuint>(texture_id);
 	glDeleteTextures(1, &id);
 }
 

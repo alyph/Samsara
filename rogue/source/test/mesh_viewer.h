@@ -1,12 +1,13 @@
 
 #pragma once
 
-#include "math/math_types.h"
-#include "types/id.h"
-#include "graphics/mesh.h"
-#include "graphics/viewpoint.h"
-#include "graphics/shader.h"
-#include "window/window.h"
+#include "engine/math_types.h"
+#include "engine/id.h"
+#include "engine/mesh.h"
+#include "engine/viewpoint.h"
+#include "engine/shader.h"
+#include "engine/window.h"
+#include "engine/presenter.h"
 #include <vector>
 #include <memory>
 #include <chrono>
@@ -49,9 +50,11 @@ public:
 	MeshViewerApp();
 	void update();
 	bool ended();
+	void present(const Context& ctx);
 
 private:
 	std::unique_ptr<Window> window;
+	Presenter presenter;
 	std::unique_ptr<MeshViewerRenderer> renderer;
 
 	MeshViewerModel model;

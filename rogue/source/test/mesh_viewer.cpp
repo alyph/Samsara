@@ -1,7 +1,8 @@
 
 #include "mesh_viewer.h"
-#include "graphics/renderer.h"
-#include "math/math_utils.h"
+#include "engine/renderer.h"
+#include "engine/math_utils.h"
+#include "engine/viewport.h"
 
 int main()
 {
@@ -119,7 +120,7 @@ MeshViewerApp::MeshViewerApp()
 	desc.fs_path = "../../data/test/simple_fs.gls";
 	store.mesh_shader = Shader::create(desc);
 
-	const auto id = store.mesh_store.add_mesh(std::move(mesh), store.mesh_shader);
+	const auto id = add_mesh(std::move(mesh), store.mesh_shader);
 
 
 	// create a item
@@ -127,11 +128,13 @@ MeshViewerApp::MeshViewerApp()
 	model.meshes = { { id, Pose{} } };
 
 	start_time = std::chrono::system_clock::now();
+
+	presenter.set_present_object(this);
 }
 
 void MeshViewerApp::update()
 {
-	window->poll_events();
+	presenter.process_control(window->poll_events());
 
 	// rotate the mesh item
 	auto& item = model.meshes[0];
@@ -141,7 +144,10 @@ void MeshViewerApp::update()
 		make_quat_angle_axis(0.01f, Vec3{1, 0, 0});
 
 	// render stuff out
-	renderer->render(store, model);
+	// renderer->render(store, model);
+
+	const double dt = 1.0 / 60.0;
+	presenter.step_frame(dt);
 
 	// present
 	window->present();
@@ -165,6 +171,32 @@ MeshViewerRenderer::MeshViewerRenderer(Window& window)
 {
 	// TODO: window asepct may change at runtime.
 	vp.projection = make_perspective(to_rad(60.f), window.aspect(), 0.1f, 100.f);
+}
+
+void MeshViewerApp::present(const Context& ctx)
+{
+	using namespace elem;
+
+	Viewpoint vp;
+	vp.projection = make_perspective(to_rad(60.f), window->aspect(), 0.1f, 100.f);
+	vp.pose = model.cam_pose;	
+
+	viewport(_ctx);
+	_attr(attrs::width, static_cast<double>(window->width()));
+	_attr(attrs::height, static_cast<double>(window->height()));
+	_attr(attrs::viewpoint, vp);
+	_attr(attrs::background_color, Color{});
+
+	_children
+	{
+		for (size_t i = 0; i < model.meshes.size(); i++)
+		{
+			auto& mesh_model = model.meshes[i];
+			mesh(_ctx_id(i));
+			_attr(attrs::mesh_id, mesh_model.mesh_id);
+			_attr(attrs::transform, to_mat44(mesh_model.pose));
+		}
+	}
 }
 
 void MeshViewerRenderer::render(const MeshViewerStore& store, const MeshViewerModel& model)

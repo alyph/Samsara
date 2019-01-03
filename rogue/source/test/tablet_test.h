@@ -1,12 +1,12 @@
 #pragma once
 
-#include "math/math_types.h"
-#include "types/id.h"
-#include "graphics/viewpoint.h"
-#include "graphics/shader.h"
-#include "graphics/tablet.h"
-#include "graphics/texture.h"
-#include "window/window.h"
+#include "engine/math_types.h"
+#include "engine/id.h"
+#include "engine/viewpoint.h"
+#include "engine/shader.h"
+#include "engine/tablet.h"
+#include "engine/texture.h"
+#include "engine/window.h"
 #include <vector>
 #include <memory>
 #include <chrono>
@@ -57,7 +57,7 @@ public:
 	TabletTestApp();
 	void update();
 	bool ended();
-
+	
 private:
 	std::unique_ptr<Window> window;
 	std::unique_ptr<TabletTestRenderer> renderer;

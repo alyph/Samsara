@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/assertion.h"
+#include "assertion.h"
 #include <cstdint>
 #include <vector>
 

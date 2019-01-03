@@ -1,8 +1,8 @@
 #pragma once
 
 #include "color.h"
-#include "types/id.h"
-#include "math/math_types.h"
+#include "id.h"
+#include "math_types.h"
 #include <vector>
 #include <memory>
 
