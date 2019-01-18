@@ -3,10 +3,20 @@
 #include "color.h"
 #include "id.h"
 #include "math_types.h"
+#include "presenter.h"
+#include "buffer.h"
 #include <vector>
 #include <memory>
 
 class Shader;
+struct GlyphData;
+struct EngineData;
+
+namespace attrs
+{
+	extern Attribute<Id> tablet_id; // TODO: remove
+	extern Attribute<Buffer<GlyphData>> glyphs;
+}
 
 struct GlyphData
 {
@@ -88,4 +98,12 @@ public:
 namespace renderer
 {
 	void draw(const TabletStore& store, const TabletDrawStream& stream);
+}
+
+// TODO: remove
+extern Id add_tablet(EngineData& engine, int width, int height, Id texture, const Shader& shader, const Shader& screen_shader);
+
+namespace elem
+{
+	extern Id tablet(const Context ctx);
 }

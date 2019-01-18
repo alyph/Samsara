@@ -3,6 +3,7 @@
 #include "engine/renderer.h"
 #include "engine/math_utils.h"
 #include "engine/image_utils.h"
+#include "engine/viewport.h"
 #include <cstdlib>
 #include <ctime>
 
@@ -46,10 +47,11 @@ static void randomize_tablet(TabletTestModel::TabletItem& tablet, double prob)
 	}
 }
 
-TabletTestApp::TabletTestApp()
+TabletTestApp::TabletTestApp():
+	presenter(engine)
 {
 	// set a seed
-	std::srand(std::time(nullptr));
+	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
 	WindowCreationParams params;
 	params.width = 1024;
@@ -58,6 +60,7 @@ TabletTestApp::TabletTestApp()
 	window = Window::create(params);
 
 	renderer = std::make_unique<TabletTestRenderer>(*window);
+	presenter.set_present_object(this);
 
 
 	// create a shader
@@ -78,16 +81,16 @@ TabletTestApp::TabletTestApp()
 	int width = 120;
 	int height = 80;
 
-	const auto id = store.tablet_store.add_tablet(width, height, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
+	const auto id = add_tablet(engine, width, height, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
 
-	const auto fixed_tablet_id = store.tablet_store.add_tablet(16, 16, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
+	const auto fixed_tablet_id = add_tablet(engine, 16, 16, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
 
 	// create a item
 	model.cam_pose = make_lookat(Vec3{0, 0, -60}, Vec3{0, 0, 0}, Vec3{0, 1, 0});
 	model.tablets = 
 	{ 
-		{ id, Pose{}, width, height, {}, std::vector<GlyphData>(width * height) },
-		{ fixed_tablet_id, Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, std::vector<GlyphData>(16 * 16) },
+		{ id, Pose{}, width, height, {}, engine.buffer_store.allocate<GlyphData>(width * height) },
+		{ fixed_tablet_id, Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, engine.buffer_store.allocate<GlyphData>(16 * 16) },
 	};
 
 	randomize_tablet(model.tablets[0], 1.0);
@@ -95,9 +98,9 @@ TabletTestApp::TabletTestApp()
 	for (size_t i = 0; i < model.tablets[1].glyphs.size(); i++)
 	{
 		auto& glyph = model.tablets[1].glyphs[i];		
-		glyph.code = i;
-		glyph.color1.r = (255 - i);
-		glyph.color2.g = i;
+		glyph.code = static_cast<decltype(glyph.code)>(i);
+		glyph.color1.r = static_cast<decltype(glyph.color1.r)>(255 - i);
+		glyph.color2.g = static_cast<decltype(glyph.color2.g)>(i);
 		glyph.color1.g = glyph.color1.b = glyph.color2.r = glyph.color2.b = 0;
 		glyph.color1.a = 255;
 		glyph.color2.a = 255;
@@ -108,13 +111,16 @@ TabletTestApp::TabletTestApp()
 
 void TabletTestApp::update()
 {
-	window->poll_events();
+	presenter.process_control(window->poll_events());
 
 	// randomize all glyphs
 	randomize_tablet(model.tablets[0], 0.01);
 
 	// render stuff out
-	renderer->render(store, model);
+	//renderer->render(store, model);
+
+	const double dt = 1.0 / 60.0;
+	presenter.step_frame(dt);
 
 	// present
 	window->present();
@@ -136,12 +142,43 @@ bool TabletTestApp::ended()
 }
 
 
+void TabletTestApp::present(const Context& ctx)
+{
+	using namespace elem;
+
+	Viewpoint vp;
+	vp.projection = make_perspective(to_rad(60.f), window->aspect(), 0.1f, 100.f);
+	vp.pose = model.cam_pose;	
+
+	viewport(_ctx);
+	_attr(attrs::width, static_cast<double>(window->width()));
+	_attr(attrs::height, static_cast<double>(window->height()));
+	_attr(attrs::viewpoint, vp);
+	_attr(attrs::background_color, Color{});
+
+	_children
+	{
+		for (size_t i = 0; i < model.tablets.size(); i++)
+		{
+			auto& tablet_model = model.tablets[i];
+			tablet(_ctx_id(i));
+			// shouldn't need tablet id, will create GPU buffers at runtime
+			//item.tablet_id = tablet_model.tablet_id;
+			_attr(attrs::transform, to_mat44(tablet_model.pose));
+			_attr(attrs::glyphs, tablet_model.glyphs);
+			_attr(attrs::tablet_id, tablet_model.tablet_id);
+		}
+	}
+}
+
+
 TabletTestRenderer::TabletTestRenderer(Window& window)
 {
 	// TODO: window asepct may change at runtime.
 	vp.projection = make_perspective(to_rad(60.f), window.aspect(), 0.1f, 100.f);
 }
 
+#if 0
 void TabletTestRenderer::render(const TabletTestStore& store, const TabletTestModel& model)
 {
 	vp.pose = model.cam_pose;
@@ -164,4 +201,6 @@ void TabletTestRenderer::render(const TabletTestStore& store, const TabletTestMo
 	// draw meshes
 	renderer::draw(store.tablet_store, stream);
 }
+
+#endif
 

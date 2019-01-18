@@ -261,10 +261,11 @@ static PresentGlobals make_globals()
 	return globals;
 }
 
-Presenter::Presenter()
+Presenter::Presenter(EngineData& engine)
 {
 	globals = make_globals();
 	curr_frame.globals = &globals;
+	curr_frame.engine = &engine;
 }
 
 void Presenter::set_present_func(PresentFunc func, void* param)
@@ -313,6 +314,7 @@ void Presenter::present()
 	// prepare the data for the new frame
 	// use the current UI state
 
+	curr_frame.frame_id++;
 	curr_frame.elements.clear();
 	curr_frame.attr_table.clear();
 	curr_frame.attr_buffer.clear();

@@ -7,6 +7,9 @@
 #include "engine/tablet.h"
 #include "engine/texture.h"
 #include "engine/window.h"
+#include "engine/buffer.h"
+#include "engine/engine.h"
+#include "engine/presenter.h"
 #include <vector>
 #include <memory>
 #include <chrono>
@@ -23,7 +26,7 @@ public:
 		int height;
 
 		std::vector<IVec2> extra_coords;
-		std::vector<GlyphData> glyphs;
+		Buffer<GlyphData> glyphs;
 	};
 
 	Pose cam_pose;
@@ -37,14 +40,14 @@ public:
 	Shader tablet_shader;
 	Shader tablet_screen_shader;
 	Texture atlas_texture;
-	TabletStore tablet_store;
+	// TabletStore tablet_store;
 };
 
 class TabletTestRenderer
 {
 public:
 	TabletTestRenderer(Window& window);
-	void render(const TabletTestStore& store, const TabletTestModel& model);
+	//void render(const TabletTestStore& store, const TabletTestModel& model);
 
 private:
 	Viewpoint vp;
@@ -57,9 +60,13 @@ public:
 	TabletTestApp();
 	void update();
 	bool ended();
+	void present(const Context& ctx);
 	
 private:
+	EngineData engine;
+
 	std::unique_ptr<Window> window;
+	Presenter presenter;
 	std::unique_ptr<TabletTestRenderer> renderer;
 
 	TabletTestModel model;
