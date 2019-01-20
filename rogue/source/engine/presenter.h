@@ -16,7 +16,7 @@ struct ScopedChildrenBlock;
 struct PresentWorker;
 struct ElementType;
 struct ElementTypeSetup;
-struct EngineData;
+struct Engine;
 
 using RendererFunc = void(*)(const Frame& frame, Id elem_id);
 using ElemTypeInitFunc = std::function<void(ElementTypeSetup&)>;
@@ -116,7 +116,7 @@ struct Context
 struct Frame
 {
 	Id frame_id{};
-	EngineData* engine{};
+	Engine* engine{};
 	const PresentGlobals* globals{};
 	std::vector<Element> elements;
 	std::vector<AttrTableEntry> attr_table;
@@ -137,7 +137,7 @@ class Presenter final
 public:
 	using PresentFunc = void (*)(const Context ctx, void* param);
 
-	Presenter(EngineData& engine);
+	Presenter(Engine& engine);
 
 	template<class T>
 	void set_present_object(T* obj);

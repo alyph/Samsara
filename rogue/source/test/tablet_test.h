@@ -43,36 +43,26 @@ public:
 	// TabletStore tablet_store;
 };
 
-class TabletTestRenderer
-{
-public:
-	TabletTestRenderer(Window& window);
-	//void render(const TabletTestStore& store, const TabletTestModel& model);
-
-private:
-	Viewpoint vp;
-	TabletDrawStream stream;
-};
-
 class TabletTestApp
 {
 public:
-	TabletTestApp();
+	TabletTestApp(Engine& engine, Window* window);
 	void update();
 	bool ended();
 	void present(const Context& ctx);
 	
-private:
-	EngineData engine;
+public:
+	Engine* app_engine{};
+	Window* window{};
 
-	std::unique_ptr<Window> window;
-	Presenter presenter;
-	std::unique_ptr<TabletTestRenderer> renderer;
+	// std::unique_ptr<Window> window;
+	// Presenter presenter;
+	// std::unique_ptr<TabletTestRenderer> renderer;
 
 	TabletTestModel model;
 	TabletTestStore store;
 
-	std::chrono::system_clock::time_point start_time;
-	int frame_count{};
+	// std::chrono::system_clock::time_point start_time;
+	// int frame_count{};
 };
 

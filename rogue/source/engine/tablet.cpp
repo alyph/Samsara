@@ -37,7 +37,7 @@ struct TabletGlobals
 
 SingletonHandle<TabletGlobals> tablet_globals;
 
-Id add_tablet(EngineData& engine, int width, int height, Id texture, const Shader& shader, const Shader& screen_shader)
+Id add_tablet(Engine& engine, int width, int height, Id texture, const Shader& shader, const Shader& screen_shader)
 {
 	return engine.singletons.get(tablet_globals).store.add_tablet(width, height, texture, shader, screen_shader);
 }

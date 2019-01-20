@@ -4,15 +4,56 @@
 #include "engine/math_utils.h"
 #include "engine/image_utils.h"
 #include "engine/viewport.h"
+#include "easy/profiler.h"
 #include <cstdlib>
 #include <ctime>
 
 int main()
 {
-	TabletTestApp app;
+	profiler::startListen();
+
+
+	Engine engine;
+
+	WindowCreationParams params;
+	params.width = 1024;
+	params.height = 768;
+	params.title = "Tablet Test";
+	auto window = Window::create(params);
+
+	TabletTestApp app(engine, window.get());
+	Presenter presenter(engine);
+	presenter.set_present_object(&app);
+
+	int frame_count{};
+	std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
+
+	// TabletTestApp app;
+	// set_present_func(present_func, std::ref(app.engine), std::ref(app.model));
 	while (!app.ended())
 	{
+		presenter.process_control(window->poll_events());
+		
 		app.update();
+
+		// render stuff out
+		//renderer->render(store, model);
+
+		const double dt = 1.0 / 60.0;
+		presenter.step_frame(dt);
+
+		// present
+		window->present();
+
+		// TODO: reuse this code
+		frame_count++;
+		auto now = std::chrono::system_clock::now();
+		if ((now - start_time) >= std::chrono::duration<double>(1.0))
+		{
+			printf("-- fps: %f\n", frame_count / (std::chrono::duration_cast<std::chrono::duration<double>>(now - start_time).count()));
+			start_time = now;
+			frame_count = 0;
+		}
 	}
 	return 0;
 }
@@ -30,6 +71,8 @@ static double rand_num()
 
 static void randomize_tablet(TabletTestModel::TabletItem& tablet, double prob)
 {
+	EASY_FUNCTION();
+
 	for (auto& glyph : tablet.glyphs)
 	{
 		if (rand_num() <= prob)
@@ -47,20 +90,21 @@ static void randomize_tablet(TabletTestModel::TabletItem& tablet, double prob)
 	}
 }
 
-TabletTestApp::TabletTestApp():
-	presenter(engine)
+TabletTestApp::TabletTestApp(Engine& engine, Window* window):
+	app_engine(&engine),
+	window(window)
 {
 	// set a seed
 	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-	WindowCreationParams params;
-	params.width = 1024;
-	params.height = 768;
-	params.title = "Tablet Test";
-	window = Window::create(params);
+	// WindowCreationParams params;
+	// params.width = 1024;
+	// params.height = 768;
+	// params.title = "Tablet Test";
+	// window = Window::create(params);
 
-	renderer = std::make_unique<TabletTestRenderer>(*window);
-	presenter.set_present_object(this);
+	// renderer = std::make_unique<TabletTestRenderer>(*window);
+	// presenter.set_present_object(this);
 
 
 	// create a shader
@@ -106,12 +150,14 @@ TabletTestApp::TabletTestApp():
 		glyph.color2.a = 255;
 	}
 
-	start_time = std::chrono::system_clock::now();
+	// start_time = std::chrono::system_clock::now();
 }
 
 void TabletTestApp::update()
 {
-	presenter.process_control(window->poll_events());
+	EASY_FUNCTION();
+
+	// presenter.process_control(window->poll_events());
 
 	// randomize all glyphs
 	randomize_tablet(model.tablets[0], 0.01);
@@ -119,21 +165,21 @@ void TabletTestApp::update()
 	// render stuff out
 	//renderer->render(store, model);
 
-	const double dt = 1.0 / 60.0;
-	presenter.step_frame(dt);
+	// const double dt = 1.0 / 60.0;
+	// presenter.step_frame(dt);
 
-	// present
-	window->present();
+	// // present
+	// window->present();
 
 	// TODO: reuse this code
-	frame_count++;
-	auto now = std::chrono::system_clock::now();
-	if ((now - start_time) >= std::chrono::duration<double>(1.0))
-	{
-		printf("-- fps: %f\n", frame_count / (std::chrono::duration_cast<std::chrono::duration<double>>(now - start_time).count()));
-		start_time = now;
-		frame_count = 0;
-	}
+	// frame_count++;
+	// auto now = std::chrono::system_clock::now();
+	// if ((now - start_time) >= std::chrono::duration<double>(1.0))
+	// {
+	// 	printf("-- fps: %f\n", frame_count / (std::chrono::duration_cast<std::chrono::duration<double>>(now - start_time).count()));
+	// 	start_time = now;
+	// 	frame_count = 0;
+	// }
 }
 
 bool TabletTestApp::ended()
@@ -171,36 +217,4 @@ void TabletTestApp::present(const Context& ctx)
 	}
 }
 
-
-TabletTestRenderer::TabletTestRenderer(Window& window)
-{
-	// TODO: window asepct may change at runtime.
-	vp.projection = make_perspective(to_rad(60.f), window.aspect(), 0.1f, 100.f);
-}
-
-#if 0
-void TabletTestRenderer::render(const TabletTestStore& store, const TabletTestModel& model)
-{
-	vp.pose = model.cam_pose;
-	const auto mat_vp = calc_mat_vp(vp);
-
-	stream.items.resize(model.tablets.size());
-	for (size_t i = 0; i < model.tablets.size(); i++)
-	{
-		auto& tablet_model = model.tablets[i];
-		auto& item = stream.items[i];
-		item.tablet_id = tablet_model.tablet_id;
-		item.mvp = (mat_vp * to_mat44(tablet_model.pose));
-		item.extra_coords = tablet_model.extra_coords;
-		item.glyphs = tablet_model.glyphs;
-	}
-
-	// clear
-	renderer::clear(Color{});
-
-	// draw meshes
-	renderer::draw(store.tablet_store, stream);
-}
-
-#endif
 

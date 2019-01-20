@@ -1,4 +1,5 @@
 #include "presenter.h"
+#include "easy/profiler.h"
 
 struct PresentWorker
 {
@@ -261,7 +262,7 @@ static PresentGlobals make_globals()
 	return globals;
 }
 
-Presenter::Presenter(EngineData& engine)
+Presenter::Presenter(Engine& engine)
 {
 	globals = make_globals();
 	curr_frame.globals = &globals;
@@ -293,6 +294,8 @@ void Presenter::process_control(const std::vector<InputEvent>& events)
 
 void Presenter::step_frame(double dt)
 {
+	EASY_FUNCTION();
+
 	// increment time with dt
 	time += dt;
 
@@ -309,6 +312,8 @@ void Presenter::step_frame(double dt)
 
 void Presenter::present()
 {
+	EASY_FUNCTION();
+
 	// keep the data of previous frame and previous UI state (the state when previous frame was presented)
 
 	// prepare the data for the new frame

@@ -13,10 +13,10 @@ TESTS := $(TESTS_EXE:$(BIN_DIR)/%.exe=%)
 # TABLET_TEST := tablet_test
 # TABLET_TEST_EXE := $(BIN_DIR)/$(TABLET_TEST).exe
 
-INCLUDES := /I.\source /I.\external\glew\include /I.\external\glfw\include /I.\external\stb
-COMPILER_FLAGS := /Od /W3 /WX /Zi /MD /GR- /MP /utf-8 /std:c++latest /D_HAS_EXCEPTIONS=0 /DGLEW_STATIC=1 $(INCLUDES)
-LINKER_FLAGS := /INCREMENTAL:NO /LIBPATH:external\glfw\bin\win64 
-LIBS := opengl32.lib glfw3.lib User32.lib Gdi32.lib Shell32.lib
+INCLUDES := /I.\source /I.\external\glew\include /I.\external\glfw\include /I.\external\stb /I.\external\easy_profiler\include
+COMPILER_FLAGS := /Od /W3 /WX /Zi /MD /GR- /MP /utf-8 /std:c++latest /D_HAS_EXCEPTIONS=0 /DGLEW_STATIC=1 /DBUILD_WITH_EASY_PROFILER=1 $(INCLUDES)
+LINKER_FLAGS := /INCREMENTAL:NO /LIBPATH:external\glfw\bin\win64 /LIBPATH:external\easy_profiler\bin
+LIBS := opengl32.lib glfw3.lib User32.lib Gdi32.lib Shell32.lib easy_profiler.lib
 
 .PHONY: all engine clean makedirs $(TESTS)
 
