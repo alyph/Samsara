@@ -101,7 +101,7 @@ namespace renderer
 }
 
 // TODO: remove
-extern Id add_tablet(Engine& engine, int width, int height, Id texture, const Shader& shader, const Shader& screen_shader);
+extern Id add_tablet(int width, int height, Id texture, const Shader& shader, const Shader& screen_shader);
 
 namespace elem
 {

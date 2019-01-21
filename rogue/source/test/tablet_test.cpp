@@ -12,8 +12,8 @@ int main()
 {
 	profiler::startListen();
 
-
-	Engine engine;
+	Engine app_engine;
+	set_engine(app_engine);
 
 	WindowCreationParams params;
 	params.width = 1024;
@@ -21,8 +21,8 @@ int main()
 	params.title = "Tablet Test";
 	auto window = Window::create(params);
 
-	TabletTestApp app(engine, window.get());
-	Presenter presenter(engine);
+	TabletTestApp app(window.get());
+	Presenter presenter;
 	presenter.set_present_object(&app);
 
 	int frame_count{};
@@ -90,8 +90,7 @@ static void randomize_tablet(TabletTestModel::TabletItem& tablet, double prob)
 	}
 }
 
-TabletTestApp::TabletTestApp(Engine& engine, Window* window):
-	app_engine(&engine),
+TabletTestApp::TabletTestApp(Window* window):
 	window(window)
 {
 	// set a seed
@@ -125,16 +124,16 @@ TabletTestApp::TabletTestApp(Engine& engine, Window* window):
 	int width = 120;
 	int height = 80;
 
-	const auto id = add_tablet(engine, width, height, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
+	const auto id = add_tablet(width, height, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
 
-	const auto fixed_tablet_id = add_tablet(engine, 16, 16, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
+	const auto fixed_tablet_id = add_tablet(16, 16, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
 
 	// create a item
 	model.cam_pose = make_lookat(Vec3{0, 0, -60}, Vec3{0, 0, 0}, Vec3{0, 1, 0});
 	model.tablets = 
 	{ 
-		{ id, Pose{}, width, height, {}, engine.buffer_store.allocate<GlyphData>(width * height) },
-		{ fixed_tablet_id, Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, engine.buffer_store.allocate<GlyphData>(16 * 16) },
+		{ id, Pose{}, width, height, {}, engine().buffer_store.allocate<GlyphData>(width * height) },
+		{ fixed_tablet_id, Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, engine().buffer_store.allocate<GlyphData>(16 * 16) },
 	};
 
 	randomize_tablet(model.tablets[0], 1.0);

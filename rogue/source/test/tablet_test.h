@@ -46,13 +46,13 @@ public:
 class TabletTestApp
 {
 public:
-	TabletTestApp(Engine& engine, Window* window);
+	TabletTestApp(Window* window);
 	void update();
 	bool ended();
 	void present(const Context& ctx);
 	
 public:
-	Engine* app_engine{};
+	//Engine* app_engine{};
 	Window* window{};
 
 	// std::unique_ptr<Window> window;

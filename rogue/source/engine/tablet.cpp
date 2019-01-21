@@ -6,6 +6,7 @@
 #include "viewport.h"
 #include "singleton.h"
 #include "engine.h"
+#include "easy/profiler.h"
 #include <cstddef>
 #include <algorithm>
 #include <GL/glew.h>
@@ -37,9 +38,9 @@ struct TabletGlobals
 
 SingletonHandle<TabletGlobals> tablet_globals;
 
-Id add_tablet(Engine& engine, int width, int height, Id texture, const Shader& shader, const Shader& screen_shader)
+Id add_tablet(int width, int height, Id texture, const Shader& shader, const Shader& screen_shader)
 {
-	return engine.singletons.get(tablet_globals).store.add_tablet(width, height, texture, shader, screen_shader);
+	return engine().singletons.get(tablet_globals).store.add_tablet(width, height, texture, shader, screen_shader);
 }
 
 Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shader, const Shader& screen_shader)
@@ -437,10 +438,12 @@ namespace renderer
 
 static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& transform)
 {
+	EASY_FUNCTION();
+
 	GLint viewport[4];
 	glGetIntegerv(GL_VIEWPORT, viewport);
 
-	const TabletStore& store = frame.engine->singletons.get(tablet_globals).store;
+	const TabletStore& store = engine().singletons.get(tablet_globals).store;
 	const auto tablet_id = get_elem_attr(frame, elem_id, attrs::tablet_id);
 	const auto& glyphs = get_elem_attr(frame, elem_id, attrs::glyphs);
 	const auto& tablet_cache = store.tablet_cache(tablet_id);

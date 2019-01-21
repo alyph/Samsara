@@ -116,7 +116,7 @@ struct Context
 struct Frame
 {
 	Id frame_id{};
-	Engine* engine{};
+	// Engine* engine{};
 	const PresentGlobals* globals{};
 	std::vector<Element> elements;
 	std::vector<AttrTableEntry> attr_table;
@@ -137,7 +137,7 @@ class Presenter final
 public:
 	using PresentFunc = void (*)(const Context ctx, void* param);
 
-	Presenter(Engine& engine);
+	Presenter();
 
 	template<class T>
 	void set_present_object(T* obj);

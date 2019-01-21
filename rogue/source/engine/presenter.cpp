@@ -262,11 +262,11 @@ static PresentGlobals make_globals()
 	return globals;
 }
 
-Presenter::Presenter(Engine& engine)
+Presenter::Presenter()
 {
 	globals = make_globals();
 	curr_frame.globals = &globals;
-	curr_frame.engine = &engine;
+	// curr_frame.engine = &engine;
 }
 
 void Presenter::set_present_func(PresentFunc func, void* param)
@@ -342,6 +342,8 @@ void Presenter::present()
 
 void Presenter::render(const Frame& frame)
 {
+	EASY_FUNCTION();
+
 	// render the last frame presented
 	if (frame.elements.size() > 0)
 	{

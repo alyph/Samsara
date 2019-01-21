@@ -1,6 +1,7 @@
 
 #include "viewport.h"
 #include "presenter.h"
+#include "easy/profiler.h"
 #include <GL/glew.h>
 #include <cmath>
 
@@ -12,6 +13,8 @@ namespace attrs
 
 static void render_viewport(const Frame& frame, Id elem_id)
 {
+	EASY_FUNCTION();
+
 	const auto width = std::lround(get_defined_elem_attr_asserted(frame, elem_id, attrs::width));
 	const auto height = std::lround(get_defined_elem_attr_asserted(frame, elem_id, attrs::height));
 	glViewport(0, 0, width, height);
