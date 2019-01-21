@@ -38,19 +38,19 @@ struct TabletGlobals
 
 SingletonHandle<TabletGlobals> tablet_globals;
 
-Id add_tablet(int width, int height, Id texture, const Shader& shader, const Shader& screen_shader)
+Id add_tablet(int width, int height, Id texture, Id shader, Id screen_shader)
 {
 	return engine().singletons.get(tablet_globals).store.add_tablet(width, height, texture, shader, screen_shader);
 }
 
-Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shader, const Shader& screen_shader)
+Id TabletStore::add_tablet(int width, int height, Id texture, Id shader, Id screen_shader)
 {
-	asserts(shader.id(), "tablet shader must be valid.");
+	asserts(shader, "tablet shader must be valid.");
 	asserts(width > 0 && height > 0, "tablet cannot be empty sized");
 	asserts(texture != null_id, "tablet requires valid texture to render");
 
 	// find or create a shader cache
-	const auto shader_id = shader.id();
+	const auto shader_id = shader;
 	size_t shader_cache_idx = -1;
 	for (size_t i = 0; i < shader_caches.size(); i++)
 	{
@@ -67,10 +67,10 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 		auto& cache = shader_caches.emplace_back();
 		cache.shader_id = shader_id;
 		//cache.param_mvp = shader.uniform_loc(uniform_mvp);
-		cache.param_dims = shader.uniform_loc(uniform_dims);
+		cache.param_dims = shader_uniform_loc(shader, uniform_dims);
 	}
 
-	const auto screen_shader_id = screen_shader.id();
+	const auto screen_shader_id = screen_shader;
 	size_t screen_shader_cache_idx = -1;
 	for (size_t i = 0; i < screen_shader_caches.size(); i++)
 	{
@@ -86,10 +86,10 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 		screen_shader_cache_idx = screen_shader_caches.size();
 		auto& cache = screen_shader_caches.emplace_back();
 		cache.shader_id = screen_shader_id;
-		cache.param_mvp = screen_shader.uniform_loc(uniform_mvp);
-		cache.param_texture = screen_shader.uniform_loc(uniform_texture);
-		cache.param_vert = screen_shader.attribute_loc(attribute_vert_pos);
-		cache.param_uv = screen_shader.attribute_loc(attribute_uv);
+		cache.param_mvp = shader_uniform_loc(screen_shader, uniform_mvp);
+		cache.param_texture = shader_uniform_loc(screen_shader, uniform_texture);
+		cache.param_vert = shader_attribute_loc(screen_shader, attribute_vert_pos);
+		cache.param_uv = shader_attribute_loc(screen_shader, attribute_uv);
 	}
 
 
@@ -113,7 +113,7 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 
 	GLuint vbo;
 
-	const auto vert_loc = shader.attribute_loc(attribute_vert_pos);
+	const auto vert_loc = shader_attribute_loc(shader, attribute_vert_pos);
 	if (vert_loc >= 0)
 	{
 		IVec2 verts[] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
@@ -146,7 +146,7 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 	glBufferSubData(GL_ARRAY_BUFFER, 0, num_fixed_glyphs * sizeof(IVec2), coords.data());
 	tablet.cache.coord_buffer = vbo;
 
-	const auto coord_loc = shader.attribute_loc(attribute_coord);
+	const auto coord_loc = shader_attribute_loc(shader, attribute_coord);
 	if (coord_loc >= 0)
 	{
 		glVertexAttribIPointer(coord_loc, 2, GL_INT, 0, 0);
@@ -167,7 +167,7 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 
 	auto setup_glyph_data_attribute = [&shader](const char* attr, GLint size, GLenum type, GLboolean normalized, bool integer, const GLvoid* offset)
 	{
-		const auto attr_loc = shader.attribute_loc(attr);
+		const auto attr_loc = shader_attribute_loc(shader, attr);
 		if (attr_loc >= 0)
 		{
 			if (integer)
@@ -202,7 +202,7 @@ Id TabletStore::add_tablet(int width, int height, Id texture, const Shader& shad
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 
-	const auto atlas_loc = shader.uniform_loc(uniform_atlas);
+	const auto atlas_loc = shader_uniform_loc(shader, uniform_atlas);
 	if (atlas_loc >= 0)
 	{
 		glUseProgram(static_cast<GLuint>(shader_id));

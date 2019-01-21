@@ -110,11 +110,11 @@ TabletTestApp::TabletTestApp(Window* window):
 	ShaderDesc desc;
 	desc.vs_path = "../../data/shaders/tablet_vs.gls";
 	desc.fs_path = "../../data/shaders/tablet_fs.gls";
-	store.tablet_shader = Shader::create(desc);
+	store.tablet_shader = create_shader(desc);
 
 	desc.vs_path = "../../data/shaders/basic_textured_vs.gls";
 	desc.fs_path = "../../data/shaders/basic_textured_fs.gls";
-	store.tablet_screen_shader = Shader::create(desc);
+	store.tablet_screen_shader = create_shader(desc);
 
 	// TODO: the atlas texture should probably use nearest filter 
 	// since we are drawing into pixel perfect render buffer

@@ -8,9 +8,9 @@
 #include <fstream>
 #include <sstream>
 
-Shader Shader::create(const ShaderDesc& desc)
+Id create_shader(const ShaderDesc& desc)
 {
-	Shader shader; // id == 0 shader, empty one
+	// Shader shader; // id == 0 shader, empty one
 
 	// Read the Vertex Shader code from the file
 	std::string vs_code;
@@ -25,7 +25,7 @@ Shader Shader::create(const ShaderDesc& desc)
 	else
 	{
 		printf("Unable to open vertex shader file %s. Are you in the right directory?\n", desc.vs_path.c_str());
-		return shader;
+		return null_id;
 	}
 
 	// Read the Fragment Shader code from the file
@@ -41,7 +41,7 @@ Shader Shader::create(const ShaderDesc& desc)
 	else
 	{
 		printf("Unable to open fragment shader file %s. Are you in the right directory?\n", desc.fs_path.c_str());
-		return shader;
+		return null_id;
 	}
 	
 	auto compile_shader = [](GLuint id, const std::string& source, const std::string& path)
@@ -78,7 +78,7 @@ Shader Shader::create(const ShaderDesc& desc)
 	{
 		glDeleteShader(vs);
 		glDeleteShader(fs);
-		return shader;
+		return null_id;
 	}
 
 	// Link the program
@@ -89,6 +89,7 @@ Shader Shader::create(const ShaderDesc& desc)
 
 	// Check the program
 	//std::shared_ptr<Shader> shader;
+	Id shader_id = null_id;
 	GLint link_success;
 	glGetProgramiv(program, GL_LINK_STATUS, &link_success);
 	if (link_success)
@@ -96,7 +97,7 @@ Shader Shader::create(const ShaderDesc& desc)
 		//handle = Storage<Shader>::create();
 		//shader = std::make_shared<Shader>();
 		//auto& shader = Storage<Shader>::get(handle);
-		shader.shader_id = program;
+		shader_id = program;
 	}
 	else
 	{
@@ -114,35 +115,16 @@ Shader Shader::create(const ShaderDesc& desc)
 	glDeleteShader(vs);
 	glDeleteShader(fs);
 
-	return shader;
+	return shader_id;
 }
 
-Shader::~Shader()
+int shader_uniform_loc(Id id, const char* name)
 {
-	if (shader_id > 0)
-	{
-		glDeleteProgram(static_cast<GLuint>(shader_id));
-	}
+	return glGetUniformLocation(static_cast<GLuint>(id), name);
 }
 
-Shader::Shader(Shader&& other)
+int shader_attribute_loc(Id id, const char* name)
 {
-	*this = std::move(other);
-}
-Shader& Shader::operator=(Shader&& other)
-{
-	shader_id = other.shader_id;
-	other.shader_id = 0;
-	return *this;
-}
-
-int Shader::uniform_loc(const char* name) const
-{
-	return glGetUniformLocation(static_cast<GLuint>(shader_id), name);
-}
-
-int Shader::attribute_loc(const char* name) const
-{
-	return glGetAttribLocation(static_cast<GLuint>(shader_id), name);
+	return glGetAttribLocation(static_cast<GLuint>(id), name);
 }
 

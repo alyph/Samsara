@@ -62,7 +62,7 @@ struct TabletScreenShaderCache
 class TabletStore
 {
 public:
-	Id add_tablet(int width, int height, Id texture, const Shader& shader, const Shader& screen_shader);
+	Id add_tablet(int width, int height, Id texture, Id shader, Id screen_shader);
 	const TabletCache& tablet_cache(Id tablet_id) const;
 	const TabletShaderCache& shader_cache(Id tablet_id) const;
 	const TabletScreenShaderCache& screen_shader_cache(Id tablet_id) const;
@@ -101,7 +101,7 @@ namespace renderer
 }
 
 // TODO: remove
-extern Id add_tablet(int width, int height, Id texture, const Shader& shader, const Shader& screen_shader);
+extern Id add_tablet(int width, int height, Id texture, Id shader, Id screen_shader);
 
 namespace elem
 {

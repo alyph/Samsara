@@ -38,7 +38,7 @@ struct MeshShaderCache
 class MeshStore
 {
 public:
-	Id add_mesh(Mesh&& mesh, const Shader& shader);
+	Id add_mesh(Mesh&& mesh, Id shader);
 	const MeshCache& mesh_cache(Id mesh_id) const;
 	const MeshShaderCache& shader_cache(Id mesh_id) const;
 	
@@ -76,7 +76,7 @@ namespace renderer
 	void draw(const MeshStore& store, const MeshDrawStream& stream);
 }
 
-extern Id add_mesh(Mesh&& mesh, const Shader& shader);
+extern Id add_mesh(Mesh&& mesh, Id shader);
 
 namespace elem
 {

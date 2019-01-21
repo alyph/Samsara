@@ -15,14 +15,14 @@ static constexpr const char* attribute_color = "VertexColor";
 
 static MeshStore global_mesh_store;
 
-Id MeshStore::add_mesh(Mesh&& mesh, const Shader& shader)
+Id MeshStore::add_mesh(Mesh&& mesh, Id shader)
 {
-	asserts(shader.id(), "mesh shader must be valid.");
+	asserts(shader, "mesh shader must be valid.");
 	asserts(!mesh.indices.empty(), "indices must not be empty.");
 	asserts(!mesh.vertices.empty(), "vertices must not be empty.");
 
 	// find or create a shader cache
-	const auto shader_id = shader.id();
+	const auto shader_id = shader;
 	size_t shader_cache_idx = -1;
 	for (size_t i = 0; i < shader_caches.size(); i++)
 	{
@@ -38,7 +38,7 @@ Id MeshStore::add_mesh(Mesh&& mesh, const Shader& shader)
 		shader_cache_idx = shader_caches.size();
 		auto& cache = shader_caches.emplace_back();
 		cache.shader_id = shader_id;
-		cache.param_mvp = shader.uniform_loc(uniform_mvp);
+		cache.param_mvp = shader_uniform_loc(shader, uniform_mvp);
 	}
 
 	const Id id = mesh_objects.size();
@@ -54,7 +54,7 @@ Id MeshStore::add_mesh(Mesh&& mesh, const Shader& shader)
 
 	// create and bind verts
 	GLuint vbo;
-	const auto vert_loc = shader.attribute_loc(attribute_pos);
+	const auto vert_loc = shader_attribute_loc(shader, attribute_pos);
 	if (vert_loc >= 0)
 	{
 		glGenBuffers(1, &vbo);
@@ -70,7 +70,7 @@ Id MeshStore::add_mesh(Mesh&& mesh, const Shader& shader)
 	}
 
 	// create and bind colors
-	const auto color_loc = shader.attribute_loc(attribute_color);
+	const auto color_loc = shader_attribute_loc(shader, attribute_color);
 	if (color_loc >= 0)
 	{
 		glGenBuffers(1, &vbo);
@@ -148,7 +148,7 @@ namespace renderer
 	}
 }
 
-Id add_mesh(Mesh&& mesh, const Shader& shader)
+Id add_mesh(Mesh&& mesh, Id shader)
 {
 	return global_mesh_store.add_mesh(std::move(mesh), shader);
 }
