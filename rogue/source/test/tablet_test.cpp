@@ -124,16 +124,16 @@ TabletTestApp::TabletTestApp(Window* window):
 	int width = 120;
 	int height = 80;
 
-	const auto id = add_tablet(width, height, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
+	// const auto id = add_tablet(width, height, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
 
-	const auto fixed_tablet_id = add_tablet(16, 16, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
+	// const auto fixed_tablet_id = add_tablet(16, 16, store.atlas_texture.id(), store.tablet_shader, store.tablet_screen_shader);
 
 	// create a item
 	model.cam_pose = make_lookat(Vec3{0, 0, -60}, Vec3{0, 0, 0}, Vec3{0, 1, 0});
 	model.tablets = 
 	{ 
-		{ id, Pose{}, width, height, {}, engine().buffer_store.allocate<GlyphData>(width * height) },
-		{ fixed_tablet_id, Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, engine().buffer_store.allocate<GlyphData>(16 * 16) },
+		{ Pose{}, width, height, {}, engine().buffer_store.allocate<GlyphData>(width * height) },
+		{ Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, engine().buffer_store.allocate<GlyphData>(16 * 16) },
 	};
 
 	randomize_tablet(model.tablets[0], 1.0);
@@ -211,7 +211,11 @@ void TabletTestApp::present(const Context& ctx)
 			//item.tablet_id = tablet_model.tablet_id;
 			_attr(attrs::transform, to_mat44(tablet_model.pose));
 			_attr(attrs::glyphs, tablet_model.glyphs);
-			_attr(attrs::tablet_id, tablet_model.tablet_id);
+			_attr(attrs::width, static_cast<double>(tablet_model.width));
+			_attr(attrs::height, static_cast<double>(tablet_model.height));			
+			_attr(attrs::texture, store.atlas_texture.id());
+			_attr(attrs::shader, store.tablet_shader);
+			_attr(attrs::quad_shader, store.tablet_screen_shader);
 		}
 	}
 }

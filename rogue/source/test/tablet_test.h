@@ -20,7 +20,7 @@ class TabletTestModel
 public:
 	struct TabletItem
 	{
-		Id tablet_id;
+		// Id tablet_id;
 		Pose pose;
 		int width;
 		int height;

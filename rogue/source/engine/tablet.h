@@ -8,13 +8,12 @@
 #include <vector>
 #include <memory>
 
-class Shader;
 struct GlyphData;
-struct Engine;
 
 namespace attrs
 {
-	extern Attribute<Id> tablet_id; // TODO: remove
+	// extern Attribute<Id> tablet_id; // TODO: remove
+	extern Attribute<Id> quad_shader;
 	extern Attribute<Buffer<GlyphData>> glyphs;
 }
 
@@ -28,80 +27,8 @@ struct GlyphData
 	uint8_t reserved;
 };
 
-struct TabletCache
-{
-	Id vao;
-	Id vao_screen;
-	Id coord_buffer;
-	Id glyph_buffer;
-	Id texture;
-	Id fbo;
-	Id rt_texture;
-	int width;
-	int height;
-	int max_num_glyphs;
-	int rt_width;
-	int rt_height;
-};
-
-struct TabletShaderCache
-{
-	Id shader_id;
-	int param_dims;
-};
-
-struct TabletScreenShaderCache
-{
-	Id shader_id;
-	int param_mvp;
-	int param_texture;
-	int param_vert;
-	int param_uv;
-};
-
-class TabletStore
-{
-public:
-	Id add_tablet(int width, int height, Id texture, Id shader, Id screen_shader);
-	const TabletCache& tablet_cache(Id tablet_id) const;
-	const TabletShaderCache& shader_cache(Id tablet_id) const;
-	const TabletScreenShaderCache& screen_shader_cache(Id tablet_id) const;
-
-private:
-	struct InternalTabletObject
-	{
-		TabletCache cache;
-		Id vert_buffer;
-		size_t shader_cache_idx{};
-		size_t screen_shader_cache_idx{};	
-	};
-
-	std::vector<InternalTabletObject> tablets;
-	std::vector<TabletShaderCache> shader_caches;
-	std::vector<TabletScreenShaderCache> screen_shader_caches;
-};
-
-struct TabletDrawItem
-{
-	Id tablet_id;
-	Mat44 mvp;
-	std::vector<IVec2> extra_coords;
-	std::vector<GlyphData> glyphs;
-};
-
-class TabletDrawStream
-{
-public:
-	std::vector<TabletDrawItem> items;
-};
-
-namespace renderer
-{
-	void draw(const TabletStore& store, const TabletDrawStream& stream);
-}
-
 // TODO: remove
-extern Id add_tablet(int width, int height, Id texture, Id shader, Id screen_shader);
+// extern Id add_tablet(int width, int height, Id texture, Id shader, Id screen_shader);
 
 namespace elem
 {
