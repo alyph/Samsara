@@ -15,7 +15,7 @@
 namespace attrs
 {
 	Attribute<Id> quad_shader{null_id};
-	Attribute<Buffer<GlyphData>> glyphs{Buffer<GlyphData>{}};
+	Attribute<SimpleArray<GlyphData>> glyphs{SimpleArray<GlyphData>{}};
 }
 
 static constexpr const char* uniform_mvp = "MVP";

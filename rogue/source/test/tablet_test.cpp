@@ -132,8 +132,8 @@ TabletTestApp::TabletTestApp(Window* window):
 	model.cam_pose = make_lookat(Vec3{0, 0, -60}, Vec3{0, 0, 0}, Vec3{0, 1, 0});
 	model.tablets = 
 	{ 
-		{ Pose{}, width, height, {}, engine().buffer_store.allocate<GlyphData>(width * height) },
-		{ Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, engine().buffer_store.allocate<GlyphData>(16 * 16) },
+		{ Pose{}, width, height, {}, alloc_simple_array<GlyphData>(width * height) },
+		{ Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, alloc_simple_array<GlyphData>(16 * 16) },
 	};
 
 	randomize_tablet(model.tablets[0], 1.0);

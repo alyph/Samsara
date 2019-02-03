@@ -7,7 +7,7 @@
 #include "engine/tablet.h"
 #include "engine/texture.h"
 #include "engine/window.h"
-#include "engine/buffer.h"
+#include "engine/array.h"
 #include "engine/engine.h"
 #include "engine/presenter.h"
 #include <vector>
@@ -26,7 +26,7 @@ public:
 		int height;
 
 		std::vector<IVec2> extra_coords;
-		Buffer<GlyphData> glyphs;
+		SimpleArray<GlyphData> glyphs;
 	};
 
 	Pose cam_pose;

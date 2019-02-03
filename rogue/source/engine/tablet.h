@@ -4,7 +4,7 @@
 #include "id.h"
 #include "math_types.h"
 #include "presenter.h"
-#include "buffer.h"
+#include "array.h"
 #include <vector>
 #include <memory>
 
@@ -14,7 +14,7 @@ namespace attrs
 {
 	// extern Attribute<Id> tablet_id; // TODO: remove
 	extern Attribute<Id> quad_shader;
-	extern Attribute<Buffer<GlyphData>> glyphs;
+	extern Attribute<SimpleArray<GlyphData>> glyphs;
 }
 
 struct GlyphData

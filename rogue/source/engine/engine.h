@@ -1,15 +1,16 @@
 #pragma once
 
-#include "buffer.h"
+// #include "buffer.h"
 #include "singleton.h"
 #include "assertion.h"
+#include "allocation.h"
 
 struct Engine
 {
 	// Engine() = default;
 	// Engine(const Engine&) = delete;
-	BufferStore buffer_store;
 	SingletonCollection singletons;
+	AllocatorGlobals allocators;
 };
 
 extern Engine* global_engine;
