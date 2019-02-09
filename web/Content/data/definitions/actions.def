@@ -1,0 +1,39 @@
+@import descriptors
+@import attributes
+
+@base Card
+@namespace action
+@using desc
+
+melee_attack:
+{
+	descriptor:
+	{
+		displayName: "Melee Attack"
+		smallPortrait: #sprite.action.melee_attack
+
+		triggers:
+		[
+			.Trigger_OnActivate
+			{
+				activations:
+				[
+					.ActionActivation
+					{
+						target:
+						{
+							rule: TargetRule.single
+							condition: .Func.HasTag
+							{
+								card: VarRef("target")
+								tags: [ #living, #hostile ]
+							}
+						}
+						effect: .move.melee_attack {}
+					}
+				]				
+			}
+		]
+	}
+}
+

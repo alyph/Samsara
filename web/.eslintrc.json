@@ -1,0 +1,41 @@
+{
+    "env": {
+        "browser": true,
+        "es6": true
+    },
+    "parserOptions": {
+        "ecmaVersion": 8,
+        "sourceType": "module"
+    },
+    "extends": "eslint:recommended",
+    "rules": {
+        "indent": [
+            "off",
+            "tab"
+        ],
+        "linebreak-style": [
+            "off",
+            "windows"
+        ],
+        "quotes": [
+            "off",
+            "double"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ],
+        "no-unused-vars": ["error", { "vars": "all", "args": "none" }],
+        "no-console": ["error", { "allow": ["warn", "error"] }],
+        "no-constant-condition": ["error", { "checkLoops": false }],
+        "eqeqeq": "error"
+    },
+    "globals": {
+        "Archive": false,
+        "Entity": false,
+        "Enum": false,
+        "MathEx": false,
+        "UI": false
+    }
+}
+
