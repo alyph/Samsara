@@ -73,3 +73,4 @@ inline void* AllocHandle::get(AllocatorGlobals& globals) const
 	}
 	return ptr;	
 }
+

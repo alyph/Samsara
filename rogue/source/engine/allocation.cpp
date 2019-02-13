@@ -108,3 +108,4 @@ void AllocHandle::refresh(AllocatorGlobals& globals)
 		header = 0;
 	}
 }
+
