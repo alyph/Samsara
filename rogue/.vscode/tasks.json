@@ -7,7 +7,7 @@
             "label": "build",
             "type": "shell",
             "command": "./build.bat",
-            "args": ["tablet_test"],
+            "args": ["string_test"],
             "group": {
                 "kind": "build",
                 "isDefault": true

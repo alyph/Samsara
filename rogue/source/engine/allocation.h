@@ -22,7 +22,7 @@ static const constexpr size_t num_allocators = static_cast<size_t>(Allocator::ma
 struct AllocHeader
 {
 	AllocId alloc_id{};
-	AllocId realloc_id{};
+	AllocId max_reg_id{};
 	size_t ptr{};
 	size_t size{};
 };
@@ -34,6 +34,8 @@ struct AllocHandle
 	uint32_t header{};
 
 	inline void* get(AllocatorGlobals& globals) const;
+	inline size_t capacity(AllocatorGlobals& globals) const;
+	inline void validate(AllocatorGlobals& globals) const;
 	void refresh(AllocatorGlobals& globals);
 };
 
@@ -48,29 +50,52 @@ struct AllocatorData
 	size_t capacity{};
 	size_t num_headers{};
 	size_t free_header{};
-
+	AllocId max_reg_id{};
 };
 
 struct AllocatorGlobals
 {
-	AllocId realloc_ids[num_allocators]{};
+	AllocId min_valid_ids[num_allocators]{};
 	AllocatorData allocators[num_allocators]{};
 	Allocator current_temp_allocator = Allocator::temp1;
 
 	AllocHandle allocate(Allocator allocator, size_t size);
+	void reallocate(AllocHandle& handle, size_t size);
+	void deallocate(AllocHandle& handle);
 };
 
-inline void* AllocHandle::get(AllocatorGlobals& globals) const
+inline const AllocHeader& access_alloc_header(const AllocatorGlobals& globals, uint32_t header_id)
+{
+	const size_t allocator = ((header_id >> 28) & 0x0000000F);
+	const uint32_t header_idx = (header_id & 0x0FFFFFFF);
+	asserts(allocator < num_allocators);
+	const auto& allocator_data = globals.allocators[allocator];
+	asserts(header_idx < allocator_data.num_headers);
+	return allocator_data.headers[header_idx];
+}
+
+inline void AllocHandle::validate(AllocatorGlobals& globals) const
 {
 	if (alloc_id != 0)
 	{
 		const size_t allocator = ((header >> 28) & 0x0000000F);
 		asserts(allocator < num_allocators);
-		if (alloc_id <= globals.realloc_ids[allocator])
+		if (alloc_id < globals.min_valid_ids[allocator])
 		{
 			const_cast<AllocHandle*>(this)->refresh(globals);
 		}
 	}
-	return ptr;	
+}
+
+inline void* AllocHandle::get(AllocatorGlobals& globals) const
+{
+	validate(globals);
+	return ptr;
+}
+
+inline size_t AllocHandle::capacity(AllocatorGlobals& globals) const
+{
+	validate(globals);
+	return (alloc_id != 0 ? access_alloc_header(globals, header).size : 0);
 }
 
