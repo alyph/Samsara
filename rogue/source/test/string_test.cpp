@@ -20,7 +20,7 @@ int main()
 	printf("second string: %s\n", str2.c_str());
 	printf("third string: %s\n", str3.c_str());
 
-	TempString temp_str = "temporary allocated string is awesome, am I right?";
+	TempString temp_str = "temporarily allocated string is awesome, am I right?";
 	printf("temp string: %s\n", temp_str.c_str());
 	asserts((temp_str.str_data.normal_data.alloc_handle.header >> 28) == 1);
 
@@ -29,6 +29,7 @@ int main()
 	printf("temp string is now: %s\n", temp_str.c_str());
 
 	temp_str = str3;
+	asserts(temp_str.str_data.is_normal());
 	printf("temp string is long now: %s\n", temp_str.c_str());
 	asserts((temp_str.str_data.normal_data.alloc_handle.header >> 28) == 1);
 
@@ -43,9 +44,50 @@ int main()
 		asserts(str3.str_data.header()->ref_count == 1);
 		asserts(str4.str_data.header()->ref_count == 2);
 		asserts(str2.str_data.header()->ref_count == 2);
+
+		str2 = "second string gets asigned to new one";
+		asserts(str4.str_data.header()->ref_count == 1);
+		asserts(str2.str_data.header()->ref_count == 1);
+		printf("second string now : %s\n", str2.c_str());
+		printf("forth string now : %s\n", str4.c_str());
 	}
 
 	asserts(str2.str_data.header()->ref_count == 1);
+
+	String reloc_str1 = "first long enough string to relocate actually";
+	asserts(reloc_str1.str_data.is_normal());
+
+	String reloc_str2 = "second really long string to relocate for sure, which blocks the first string";
+	
+	auto old_ptr2 = reloc_str2.str_data.normal_data.alloc_handle.get(engine().allocators);
+	auto old_len2 = reloc_str2.size();
+	reloc_str2 = "second really long string to relocate for sure, which blocks the first string + relocated portion";
+	auto new_ptr2 = reloc_str2.str_data.normal_data.alloc_handle.get(engine().allocators);
+	auto new_len2 = reloc_str2.size();
+	asserts(old_ptr2 == new_ptr2);
+
+	auto old_ptr1 = reloc_str1.str_data.normal_data.alloc_handle.get(engine().allocators);
+	auto old_len1 = reloc_str1.size();
+	reloc_str1 = "first long enough string to relocate actually -- need more";
+	auto new_ptr1 = reloc_str1.str_data.normal_data.alloc_handle.get(engine().allocators);
+	auto new_len1 = reloc_str1.size();
+
+	printf("relocated first string : %s\n", reloc_str1.c_str());
+	printf("relocated second string : %s\n", reloc_str2.c_str());
+
+	asserts(new_ptr1 == reinterpret_cast<uint8_t*>(new_ptr2) + reloc_str2.str_data.normal_data.alloc_handle.capacity(engine().allocators));
+	
+	old_ptr2 = new_ptr2;
+	reloc_str2 = "second really long string to relocate for sure, which blocks the first string + relocated portion and a little more";
+	new_ptr2 = reloc_str2.str_data.normal_data.alloc_handle.get(engine().allocators);
+	asserts(old_ptr2 == new_ptr2);
+	printf("relocated second string now : %s\n", reloc_str2.c_str());
+
+	reloc_str2 = "second really long string to relocate for sure, which blocks the first string + relocated portion and a little more double up: second really long string to relocate for sure, which blocks the first string + relocated portion and a little more";
+	new_ptr2 = reloc_str2.str_data.normal_data.alloc_handle.get(engine().allocators);
+	asserts(old_ptr2 != new_ptr2);
+	printf("relocated second string final : %s\n", reloc_str2.c_str());
+
 
 	std::system("pause");
 

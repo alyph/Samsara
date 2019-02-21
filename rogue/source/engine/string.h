@@ -178,6 +178,7 @@ inline void release_string_ref(StringData& str_data)
 	}
 }
 
+// TODO: we don't need this to be a function, put it back into the caller
 template<bool Temp>
 inline bool reuse_allocation_on_write(const StringData& str_data)
 {
@@ -235,6 +236,7 @@ inline StringBase<Temp>& StringBase<Temp>::operator=(StringBase<Temp>&& other)
 	std::swap(str_data, other.str_data);
 }
 
+// TODO: we should take both a const char* ptr and the length, so a string view can be assigned
 template<bool Temp>
 void StringBase<Temp>::assign(const char* str)
 {
@@ -253,6 +255,8 @@ void StringBase<Temp>::assign(const char* str)
 		if (len > str_data.normal_data.size && 
 			alloc_size > str_data.normal_data.alloc_handle.capacity(alloc_globals))
 		{
+			// TODO: this should be a unique reallocation as no other string or stringView would reference it 
+			// so an optimization would be the allocator does not need bump its min valid id nor giving out new reg id
 			const size_t new_size = std::min(alloc_size * string_grow_factor, alloc_size + string_max_grow);
 			alloc_globals.reallocate(str_data.normal_data.alloc_handle, new_size);
 		}
@@ -264,6 +268,8 @@ void StringBase<Temp>::assign(const char* str)
 	}
 	else
 	{
+		// TODO: maybe check if the str is the same, to avoid an extra copy
+
 		release_string_ref<Temp>(str_data);
 		size_t alloc_size = sizeof(StringHeader) + len + 1; // allocate strict size for the first time since majority of the time it will just get referenced around and not rewritten because of copy on write rule
 		AllocatorGlobals& alloc_globals = engine().allocators;

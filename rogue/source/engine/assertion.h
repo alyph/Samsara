@@ -7,7 +7,6 @@
 static inline void assertion_fail(const char* expr, const char* file, int line, const char* func)
 {
 	std::fprintf(stderr, "Assertion failed: '%s' in %s (%s:%d)\n", expr, func, file, line);
-	std::abort();
 }
 
 static inline void assertion_fail(const char* expr, const char* file, int line, const char* func, const char* message, ...)
@@ -20,7 +19,6 @@ static inline void assertion_fail(const char* expr, const char* file, int line, 
 	va_end(args);
 
 	std::fprintf(stderr, "\n");
-	std::abort();
 }
 
-#define asserts(expr, ...) { if (!(expr)) assertion_fail(#expr, __FILE__, __LINE__, __func__, __VA_ARGS__);  }
+#define asserts(expr, ...) { if (!(expr)) { assertion_fail(#expr, __FILE__, __LINE__, __func__, __VA_ARGS__); std::abort(); }  }
