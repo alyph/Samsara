@@ -12,8 +12,7 @@ int main()
 {
 	profiler::startListen();
 
-	Engine app_engine;
-	set_engine(app_engine);
+	scoped_engine_init();
 
 	WindowCreationParams params;
 	params.width = 1024;

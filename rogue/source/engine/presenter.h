@@ -7,6 +7,7 @@
 #include "math_types.h"
 #include "color.h"
 #include "buffer.h"
+#include "macros.h"
 #include <functional>
 
 struct InputEvent;
@@ -51,9 +52,6 @@ template<typename T> void set_elem_attr(const Context& context, const Attribute<
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count);
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count, uint64_t user_id);
 //extern Id get_working_elem(const Context& context);
-
-#define CONCAT_IMPL(a, b) a##b
-#define CONCAT(a, b) CONCAT_IMPL(a, b)
 
 #define _ctx create_scoped_context(ctx, __COUNTER__)
 #define _ctx_id(user_id) create_scoped_context(ctx, __COUNTER__, user_id)

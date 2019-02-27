@@ -4,8 +4,7 @@
 
 int main()
 {
-	Engine app_engine;
-	set_engine(app_engine);
+	scoped_engine_init();
 
 	String str1 = "good man whatever ok";
 	asserts(str1.str_data.is_short());

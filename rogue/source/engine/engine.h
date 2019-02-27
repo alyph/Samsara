@@ -4,6 +4,8 @@
 #include "singleton.h"
 #include "assertion.h"
 #include "allocation.h"
+#include "macros.h"
+#include <type_traits>
 
 struct Engine
 {
@@ -14,16 +16,26 @@ struct Engine
 };
 
 // TODO: use https://en.cppreference.com/w/cpp/types/aligned_storage
-extern Engine* global_engine;
+
+struct EngineStore
+{
+	~EngineStore();
+	std::aligned_storage_t<sizeof(Engine), alignof(Engine)> engine_buffer;
+	bool initialized = false;
+};
+
+extern EngineStore global_engine;
 
 static inline Engine& engine()
 {
-	asserts(global_engine);
-	return *global_engine;
+	asserts(global_engine.initialized);
+	return *reinterpret_cast<Engine*>(&global_engine.engine_buffer);
 }
 
-static inline void set_engine(Engine& in_engine)
+struct ScopedEngineInitializer
 {
-	asserts(!global_engine);
-	global_engine = &in_engine;
-}
+	ScopedEngineInitializer();
+	~ScopedEngineInitializer();
+};
+
+#define scoped_engine_init() ScopedEngineInitializer CONCAT(engine_, __COUNTER__){}
