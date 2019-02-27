@@ -97,6 +97,9 @@ struct SimpleArrayHeader
 	uint32_t capacity{};
 };
 
+// make sure it s pow of 2, so it will be at alignment boundary, and then see below alignment check
+// basically we can't have the header affect the alignment of the array items
+static_assert((sizeof(SimpleArrayHeader) & (sizeof(SimpleArrayHeader) - 1)) == 0);
 
 // custom allocated
 // trivially copyable and sharable
@@ -107,6 +110,7 @@ class SimpleArray
 {
 public:
 	static_assert(std::is_trivially_copyable_v <T>);
+	static_assert(alignof(T) <= sizeof(SimpleArrayHeader));
 
 	SimpleArrayHandle handle;
 

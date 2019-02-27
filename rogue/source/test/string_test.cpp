@@ -33,6 +33,7 @@ int main()
 	printf("temp string is long now: %s\n", temp_str.c_str());
 	asserts((temp_str.str_data.normal_data.alloc_handle.header >> 28) == 1);
 
+	StringData str4_data;
 	{
 		String str4 = str3;
 		printf("forth string is : %s\n", str4.c_str());
@@ -50,9 +51,15 @@ int main()
 		asserts(str2.str_data.header()->ref_count == 1);
 		printf("second string now : %s\n", str2.c_str());
 		printf("forth string now : %s\n", str4.c_str());
+
+		// str4 will be deallocated, however it is still safe to access its data
+		// since deallocation actually doesn't do anything until the allocator shrinks
+		str4_data = str4.str_data;
 	}
 
-	asserts(str2.str_data.header()->ref_count == 1);
+	// although we can still access this data, but we can confirm the ref count is now 0 
+	// and the memory can go away when the allocator shrinks
+	asserts(str4_data.header()->ref_count == 0);
 
 	String reloc_str1 = "first long enough string to relocate actually";
 	asserts(reloc_str1.str_data.is_normal());

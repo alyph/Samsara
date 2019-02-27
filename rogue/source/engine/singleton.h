@@ -5,7 +5,7 @@
 
 class ISingletonFactory;
 
-extern size_t register_singleton(size_t size, std::unique_ptr<ISingletonFactory>&& factory);
+extern size_t register_singleton(size_t size, size_t alignment, std::unique_ptr<ISingletonFactory>&& factory);
 
 template<typename T>
 class SingletonHandle
@@ -25,7 +25,7 @@ public:
 	inline T& get(const SingletonHandle<T>& handle);
 
 private:
-	std::vector<uint8_t> buffer;
+	uint8_t* buffer{};
 };
 
 class ISingletonFactory
@@ -53,11 +53,11 @@ private:
 template<typename T>
 inline SingletonHandle<T>::SingletonHandle()
 {
-	ptr = register_singleton(sizeof(T), std::make_unique<SingletonFactory<T>>());
+	ptr = register_singleton(sizeof(T), alignof(T), std::make_unique<SingletonFactory<T>>());
 }
 
 template<typename T>
 inline T& SingletonCollection::get(const SingletonHandle<T>& handle)
 {
-	return *reinterpret_cast<T*>(buffer.data() + handle.ptr);
+	return *reinterpret_cast<T*>(buffer + handle.ptr);
 }

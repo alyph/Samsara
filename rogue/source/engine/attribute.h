@@ -1,6 +1,7 @@
 #pragma once
 
 #include "id.h"
+#include "buffer.h"
 #include <type_traits>
 
 extern Id new_attr_id();
@@ -19,19 +20,30 @@ public:
 	{}
 };
 
+struct BufferBlock
+{
+	uint8_t* ptr{};
+	size_t size{};
+	operator bool() const { return ptr != nullptr; }
+};
+
 namespace attribute_serialization
 {
-	template<typename T, class BufferT>
-	std::enable_if_t<std::is_standard_layout_v<T> && std::is_trivially_copyable_v<T>, void>
-	load(const BufferT& buffer, const T*& out_val)
+	template<typename T>
+	::std::enable_if_t<::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>, void>
+	load(const BufferBlock& buffer, const T*& out_val)
 	{
-		out_val = reinterpret_cast<const T*>(buffer.peek_bytes(sizeof(T)));
+		asserts(sizeof(T) <= buffer.size);
+		out_val = reinterpret_cast<const T*>(buffer.ptr);
 	}
 
-	template<typename T, class BufferT>
-	std::enable_if_t<std::is_standard_layout_v<T> && std::is_trivially_copyable_v<T>, void>
-	store(BufferT& buffer, const T& val)
+	template<typename T>
+	::std::enable_if_t<::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>, void>
+	store(Buffer& buffer, const T& val)
 	{
-		buffer.write_bytes(reinterpret_cast<const void*>(&val), sizeof(T));
+		const auto ptr = buffer.size();
+		asserts(buffer.is_aligned(ptr));
+		buffer.resize(ptr + buffer.get_next_aligned(sizeof(T)));
+		std::memcpy(buffer.get(ptr), reinterpret_cast<const void*>(&val), sizeof(T));
 	}
 }

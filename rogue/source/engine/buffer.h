@@ -6,8 +6,36 @@
 #include <cstring>
 #include <type_traits>
 
-class BufferStore;
+class Buffer
+{
+public:
+	static const constexpr size_t alignment = alignof(std::max_align_t);
+	static const constexpr size_t alignment_mask = (alignment - 1);
 
+	Buffer() = default;
+	~Buffer();
+	inline Buffer(const Buffer& other);
+	inline Buffer(Buffer&& other);
+
+	inline Buffer& operator=(const Buffer& other);
+	inline Buffer& operator=(Buffer&& other);
+
+	inline uint8_t* get(size_t ptr) const;
+	inline size_t size() const { return buffer_size; }
+	inline void clear() { buffer_size = 0; }
+	inline void resize(size_t new_size) { resize(new_size, 0); }
+	void resize(size_t new_size, size_t min_grow_size);
+
+	inline static bool is_aligned(size_t ptr);
+	inline static size_t get_next_aligned(size_t ptr);
+
+private:
+	uint8_t* data{};
+	size_t buffer_size{};
+	size_t capacity{};
+};
+
+#if 0
 class BufferReader
 {
 public:
@@ -28,7 +56,50 @@ public:
 	operator bool() const { return {buffer != nullptr}; }
 	inline void write_bytes(const void* bytes, size_t size);
 };
+#endif
 
+inline Buffer::Buffer(const Buffer& other)
+{
+	*this = other;
+}
+
+inline Buffer::Buffer(Buffer&& other)
+{
+	*this = std::move(other);
+}
+
+inline Buffer& Buffer::operator=(const Buffer& other)
+{
+	resize(other.size());
+	std::memcpy(data, other.data, other.size());
+	return *this;
+}
+
+inline Buffer& Buffer::operator=(Buffer&& other)
+{
+	std::swap(data, other.data);
+	std::swap(buffer_size, other.buffer_size);
+	std::swap(capacity, other.capacity);
+	return *this;
+}
+
+inline uint8_t* Buffer::get(size_t ptr) const
+{
+	return (data + ptr);
+}
+
+inline bool Buffer::is_aligned(size_t ptr)
+{
+	return ((ptr & alignment_mask) == 0);
+}
+
+inline size_t Buffer::get_next_aligned(size_t ptr)
+{
+	return ((ptr + alignment_mask) & (~alignment_mask));
+}
+
+
+#if 0
 
 inline const void* BufferReader::peek_bytes(size_t size) const
 {
@@ -48,3 +119,5 @@ inline void BufferWriter::write_bytes(const void* bytes, size_t size)
 	}
 	std::memcpy(reinterpret_cast<void*>(buffer->data() + ptr), bytes, size);
 }
+
+#endif

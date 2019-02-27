@@ -13,6 +13,7 @@ struct Engine
 	AllocatorGlobals allocators;
 };
 
+// TODO: use https://en.cppreference.com/w/cpp/types/aligned_storage
 extern Engine* global_engine;
 
 static inline Engine& engine()

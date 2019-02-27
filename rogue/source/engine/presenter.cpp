@@ -48,15 +48,14 @@ Id register_elem_type(ElemTypeInitFunc init_func)
 	return id;
 }
 
-static BufferWriter init_attr_table_and_buffer(Id attr_id, uint32_t& table_index, uint16_t& num_attrs, std::vector<AttrTableEntry>& table, std::vector<uint8_t>& buffer)
+static Buffer& init_attr_table_and_buffer(Id attr_id, uint32_t& table_index, uint16_t& num_attrs, std::vector<AttrTableEntry>& table, Buffer& buffer)
 {
 	using attr_id_type = decltype(AttrTableEntry::attr_id);
 	using buffer_ptr_type = decltype(AttrTableEntry::buffer_ptr);
 	using table_index_type = std::remove_reference_t<decltype(table_index)>;
 
-	BufferWriter buffer_handle;
-	buffer_handle.buffer = &buffer;
-	buffer_handle.ptr = buffer.size();
+	const auto ptr = buffer.size();
+	asserts(buffer.is_aligned(ptr));
 
 	// find existing entry for the given attr and point it to the new buffer location
 	// TODO: right now we just keep adding new buffer for each set attr value
@@ -67,8 +66,8 @@ static BufferWriter init_attr_table_and_buffer(Id attr_id, uint32_t& table_index
 		auto& table_entry = table[table_index + i];
 		if (table_entry.attr_id == attr_id)
 		{
-			table_entry.buffer_ptr = static_cast<buffer_ptr_type>(buffer_handle.ptr);
-			return buffer_handle;
+			table_entry.buffer_ptr = static_cast<buffer_ptr_type>(ptr);
+			return buffer;
 		}
 	}
 
@@ -86,8 +85,8 @@ static BufferWriter init_attr_table_and_buffer(Id attr_id, uint32_t& table_index
 
 	auto& table_entry = table.emplace_back();
 	table_entry.attr_id = static_cast<attr_id_type>(attr_id);
-	table_entry.buffer_ptr = static_cast<buffer_ptr_type>(buffer_handle.ptr);
-	return buffer_handle;
+	table_entry.buffer_ptr = static_cast<buffer_ptr_type>(ptr);
+	return buffer;
 }
 
 void ElementTypeSetup::set_name(const char* name)
@@ -95,7 +94,7 @@ void ElementTypeSetup::set_name(const char* name)
 	type->name = name;
 }
 
-BufferWriter ElementTypeSetup::init_attr_buffer(Id attr_id)
+Buffer& ElementTypeSetup::init_attr_buffer(Id attr_id)
 {
 	return init_attr_table_and_buffer(attr_id, type->attr_table_index, type->num_attrs,
 		globals->elem_type_attr_table, globals->elem_type_attr_buffer);
@@ -158,36 +157,38 @@ Id get_next_sibling(const Frame& frame, Id elem_id)
 	return null_id;
 }
 
-static BufferReader get_attr_buffer_from_table(Id attr_id, uint32_t table_index, uint16_t num_attrs, const std::vector<AttrTableEntry>& table, const std::vector<uint8_t>& buffer)
+static BufferBlock get_attr_buffer_from_table(Id attr_id, uint32_t table_index, uint16_t num_attrs, const std::vector<AttrTableEntry>& table, const Buffer& buffer)
 {
-	BufferReader reader;
+	BufferBlock block;
 	for (uint16_t i = 0; i < num_attrs; i++)
 	{
 		auto& table_entry = table[table_index + i];
 		if (table_entry.attr_id == attr_id)
-		{			
-			reader.buffer = &buffer;
-			reader.ptr = table_entry.buffer_ptr;
+		{
+			asserts(buffer.is_aligned(table_entry.buffer_ptr));
+			const uint32_t next_idx = (table_index + i + 1);
+			block.ptr = buffer.get(table_entry.buffer_ptr);
+			block.size = (next_idx < table.size() ? (table[next_idx].buffer_ptr - table_entry.buffer_ptr) : (buffer.size() - table_entry.buffer_ptr));
 			break;
 		}
 	}	
-	return reader;
+	return block;
 }
 
-BufferReader get_elem_attr_buffer(const Frame& frame, Id elem_id, Id attr_id)
+BufferBlock get_elem_attr_buffer(const Frame& frame, Id elem_id, Id attr_id)
 {
 	const auto& elem = frame.elements[id_to_index(elem_id)];
-	auto reader = get_attr_buffer_from_table(attr_id, elem.attr_table_index, elem.num_attrs, frame.attr_table, frame.attr_buffer);
-	if (!reader && elem.type)
+	auto buffer = get_attr_buffer_from_table(attr_id, elem.attr_table_index, elem.num_attrs, frame.attr_table, frame.attr_buffer);
+	if (!buffer && elem.type)
 	{
 		const auto& globals = *frame.globals;
 		const auto& elem_type = globals.elem_types[id_to_index(elem.type)];
-		reader = get_attr_buffer_from_table(attr_id, elem_type.attr_table_index, elem_type.num_attrs, globals.elem_type_attr_table, globals.elem_type_attr_buffer);
+		buffer = get_attr_buffer_from_table(attr_id, elem_type.attr_table_index, elem_type.num_attrs, globals.elem_type_attr_table, globals.elem_type_attr_buffer);
 	}
-	return reader;
+	return buffer;
 }
 
-BufferWriter init_elem_attr_buffer(const Context& context, Id attr_id)
+Buffer& init_elem_attr_buffer(const Context& context, Id attr_id)
 {
 	auto frame = context.frame;
 	auto worker = context.worker;

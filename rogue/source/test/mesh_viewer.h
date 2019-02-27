@@ -29,7 +29,7 @@ public:
 class MeshViewerStore
 {
 public:
-	Shader mesh_shader;
+	Id mesh_shader;
 	MeshStore mesh_store;
 };
 

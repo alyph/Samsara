@@ -1,6 +1,7 @@
 #pragma once
 
 #include "assertion.h"
+#include "buffer.h"
 #include <cstdint>
 #include <vector>
 
@@ -41,13 +42,8 @@ struct AllocHandle
 
 struct AllocatorData
 {
-	AllocatorData() = default;
-	~AllocatorData();
-
-	uint8_t* data{};
+	Buffer buffer;
 	std::vector<AllocHeader> headers;
-	size_t used_bytes{};
-	size_t capacity{};
 	size_t num_headers{};
 	size_t free_header{};
 	AllocId max_reg_id{};

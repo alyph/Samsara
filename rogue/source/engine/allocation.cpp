@@ -5,37 +5,22 @@
 static const constexpr size_t alloc_page_size = (1024 * 1024);
 static const constexpr size_t header_page_size = 1024;
 
-AllocatorData::~AllocatorData()
+static size_t allocate_bytes(AllocatorData& allocator_data, AllocId& min_valid_id, size_t size)
 {
-	std::free(data);
-}
+	auto& buffer = allocator_data.buffer;
+	auto old_data = buffer.get(0);
+	const auto old_size = buffer.size();
+	asserts(buffer.is_aligned(old_size));
+	const auto new_size = buffer.get_next_aligned(old_size + size);
+	buffer.resize(new_size, alloc_page_size);
+	auto new_data = buffer.get(0);
 
-static void expand_allocator_to_fit(AllocatorData& allocator_data, AllocId& min_valid_id, size_t size)
-{
-	if (allocator_data.used_bytes + size > allocator_data.capacity)
+	if (new_data != old_data)
 	{
-		const size_t num_pages_needed = 
-			(allocator_data.used_bytes + size - allocator_data.capacity - 1) / alloc_page_size + 1;
-		const size_t expand_size = alloc_page_size * num_pages_needed;
-		if (allocator_data.data == nullptr)
-		{
-			allocator_data.data = reinterpret_cast<uint8_t*>(std::malloc(expand_size));
-		}
-		else
-		{
-			// TODO: should probably cache a max alloc/realloc id whenever alloc/realloc/refresh occurs
-			// AllocId max_reg_id = 0;
-			// for (size_t i = 0; i < allocator_data.num_headers; i++)
-			// {
-			// 	max_reg_id = std::max(max_reg_id, allocator_data.headers[i].max_reg_id);
-			// }
-			min_valid_id = std::max(allocator_data.max_reg_id + 1, min_valid_id); // TODO: probably doesn't need to + 1, anything <= realloc_id will be refreshed
-			auto new_data = std::realloc(allocator_data.data, allocator_data.capacity + expand_size);
-			asserts(new_data);
-			allocator_data.data = reinterpret_cast<uint8_t*>(new_data);
-		}
-		allocator_data.capacity += expand_size;
+		min_valid_id = std::max(allocator_data.max_reg_id + 1, min_valid_id);
 	}
+
+	return (new_size - old_size);
 }
 
 AllocHandle AllocatorGlobals::allocate(Allocator allocator, size_t size)
@@ -44,12 +29,10 @@ AllocHandle AllocatorGlobals::allocate(Allocator allocator, size_t size)
 	asserts(allocator_idx < num_allocators);
 	auto& allocator_data = allocators[allocator_idx];
 
-	expand_allocator_to_fit(allocator_data, min_valid_ids[allocator_idx], size);
-	size_t ptr = allocator_data.used_bytes;	
-	allocator_data.used_bytes += size;
+	size_t ptr = allocator_data.buffer.size();
+	size_t alloc_size = allocate_bytes(allocator_data, min_valid_ids[allocator_idx], size);
 
 	// TODO: should we memzero the allocated memory?
-	
 
 	size_t header_idx{};
 	if (allocator_data.num_headers < allocator_data.headers.size())
@@ -76,10 +59,10 @@ AllocHandle AllocatorGlobals::allocate(Allocator allocator, size_t size)
 	header.alloc_id = new_alloc_id;
 	header.max_reg_id = new_alloc_id;
 	header.ptr = ptr;
-	header.size = size;
+	header.size = alloc_size;
 
 	AllocHandle handle;
-	handle.ptr = (allocator_data.data + ptr);
+	handle.ptr = allocator_data.buffer.get(ptr);
 	handle.alloc_id = new_alloc_id;
 	handle.header = ((static_cast<uint32_t>(allocator_idx) << 28) | static_cast<uint32_t>(header_idx));
 	return handle;
@@ -98,24 +81,21 @@ void AllocatorGlobals::reallocate(AllocHandle& handle, size_t size)
 	auto& header = allocator_data.headers[header_idx];
 	asserts(header.size < size); // no point resizing if the block is already large enough
 
-	if (header.ptr + header.size == allocator_data.used_bytes)
+	if (header.ptr + header.size == allocator_data.buffer.size())
 	{
 		// this memory block is at the end of all allocations, so just need grow it
 		size_t grow_size = (size - header.size);
-		expand_allocator_to_fit(allocator_data, min_valid_ids[allocator], grow_size);
-		allocator_data.used_bytes += grow_size;
-		header.size = size;
+		header.size += allocate_bytes(allocator_data, min_valid_ids[allocator], grow_size);
 		// handle and everything else remains the same
 	}
 	else
 	{
 		// this memory block is in the middle, move everything to a new block, mark old block free
-		expand_allocator_to_fit(allocator_data, min_valid_ids[allocator], size);
-		size_t ptr = allocator_data.used_bytes;	
-		allocator_data.used_bytes += size;
-
+		size_t ptr = allocator_data.buffer.size();
+		size_t alloc_size = allocate_bytes(allocator_data, min_valid_ids[allocator], size);
+		
 		// copy old data to new location
-		std::memcpy(allocator_data.data + ptr, allocator_data.data + header.ptr, header.size);
+		std::memcpy(allocator_data.buffer.get(ptr), allocator_data.buffer.get(header.ptr), header.size);
 
 		// update header and handle
 		const AllocId new_reg_id = std::max(min_valid_ids[allocator], header.max_reg_id + 1);
@@ -124,9 +104,9 @@ void AllocatorGlobals::reallocate(AllocHandle& handle, size_t size)
 
 		header.max_reg_id = new_reg_id;
 		header.ptr = ptr;
-		header.size = size;
+		header.size = alloc_size;
 
-		handle.ptr = (allocator_data.data + ptr);
+		handle.ptr = allocator_data.buffer.get(ptr);
 		handle.alloc_id = new_reg_id;
 
 		// TODO: mark old block free
@@ -169,7 +149,7 @@ void AllocHandle::refresh(AllocatorGlobals& globals)
 			// min_valid_id should be <= max_reg_id already
 			asserts(allocator_data.max_reg_id >= alloc_header.max_reg_id);
 		}
-		ptr = (allocator_data.data + alloc_header.ptr);
+		ptr = allocator_data.buffer.get(alloc_header.ptr);
 		alloc_id = alloc_header.max_reg_id;
 	}
 	else

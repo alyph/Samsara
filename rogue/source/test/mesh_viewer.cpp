@@ -118,7 +118,7 @@ MeshViewerApp::MeshViewerApp()
 	ShaderDesc desc;
 	desc.vs_path = "../../data/test/simple_vs.gls";
 	desc.fs_path = "../../data/test/simple_fs.gls";
-	store.mesh_shader = Shader::create(desc);
+	store.mesh_shader = create_shader(desc);
 
 	const auto id = add_mesh(std::move(mesh), store.mesh_shader);
 

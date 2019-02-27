@@ -41,8 +41,8 @@ extern Id register_elem_type(ElemTypeInitFunc init_func);
 extern Id make_element(const Context& context, Id type_id);
 extern Id get_first_child(const Frame& frame, Id elem_id);
 extern Id get_next_sibling(const Frame& frame, Id elem_id);
-extern BufferReader get_elem_attr_buffer(const Frame& frame, Id elem_id, Id attr_id);
-extern BufferWriter init_elem_attr_buffer(const Context& context, Id attr_id);
+extern BufferBlock get_elem_attr_buffer(const Frame& frame, Id elem_id, Id attr_id);
+extern Buffer& init_elem_attr_buffer(const Context& context, Id attr_id);
 template<typename T> const T& get_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T* get_defined_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T& get_defined_elem_attr_asserted(const Frame& frame, Id elem_id, const Attribute<T>& attr);
@@ -71,7 +71,7 @@ struct PresentGlobals
 {
 	std::vector<ElementType> elem_types;
 	std::vector<AttrTableEntry> elem_type_attr_table;
-	std::vector<uint8_t> elem_type_attr_buffer;
+	Buffer elem_type_attr_buffer;
 };
 
 struct Element
@@ -98,7 +98,7 @@ struct ElementTypeSetup
 
 	void set_name(const char* name);
 	template<typename T> void set_attr(const Attribute<T>& attr, const T& value);
-	BufferWriter init_attr_buffer(Id attr_id);
+	Buffer& init_attr_buffer(Id attr_id);
 
 };
 
@@ -120,7 +120,7 @@ struct Frame
 	const PresentGlobals* globals{};
 	std::vector<Element> elements;
 	std::vector<AttrTableEntry> attr_table;
-	std::vector<uint8_t> attr_buffer;
+	Buffer attr_buffer;
 };
 
 struct ScopedChildrenBlock
@@ -198,7 +198,7 @@ void Presenter::set_present_object(T* obj)
 
 template<typename T> void ElementTypeSetup::set_attr(const Attribute<T>& attr, const T& value)
 {
-	auto buffer = init_attr_buffer(attr.id);
+	Buffer& buffer = init_attr_buffer(attr.id);
 	attribute_serialization::store(buffer, value);
 }
 
@@ -240,6 +240,6 @@ const T& get_defined_elem_attr_asserted(const Frame& frame, Id elem_id, const At
 template<typename T> 
 void set_elem_attr(const Context& context, const Attribute<T>& attr, const T& val)
 {
-	auto buffer = init_elem_attr_buffer(context, attr.id);
+	Buffer& buffer = init_elem_attr_buffer(context, attr.id);
 	attribute_serialization::store(buffer, val);
 }
