@@ -41,6 +41,7 @@ namespace attribute_serialization
 	::std::enable_if_t<::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>, void>
 	store(Buffer& buffer, const T& val)
 	{
+		static_assert(alignof(T) <= Buffer::alignment);
 		const auto ptr = buffer.size();
 		asserts(buffer.is_aligned(ptr));
 		buffer.resize(ptr + buffer.get_next_aligned(sizeof(T)));

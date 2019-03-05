@@ -15,8 +15,6 @@ struct Engine
 	AllocatorGlobals allocators;
 };
 
-// TODO: use https://en.cppreference.com/w/cpp/types/aligned_storage
-
 struct EngineStore
 {
 	~EngineStore();
@@ -38,4 +36,4 @@ struct ScopedEngineInitializer
 	~ScopedEngineInitializer();
 };
 
-#define scoped_engine_init() ScopedEngineInitializer CONCAT(engine_, __COUNTER__){}
+#define scoped_engine_init() ScopedEngineInitializer CONCAT(_engine_init_, __COUNTER__){}

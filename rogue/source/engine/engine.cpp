@@ -4,7 +4,7 @@ EngineStore global_engine{};
 
 EngineStore::~EngineStore()
 {
-	asserts(!initialized, "term_engine() must be called before shutdown");
+	asserts(!initialized, "incorrect engine init calls occured. call scoped_engine_init() in main()");
 }
 
 ScopedEngineInitializer::ScopedEngineInitializer()
