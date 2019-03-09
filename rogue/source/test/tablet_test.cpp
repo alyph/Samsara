@@ -206,8 +206,6 @@ void TabletTestApp::present(const Context& ctx)
 		{
 			auto& tablet_model = model.tablets[i];
 			tablet(_ctx_id(i));
-			// shouldn't need tablet id, will create GPU buffers at runtime
-			//item.tablet_id = tablet_model.tablet_id;
 			_attr(attrs::transform, to_mat44(tablet_model.pose));
 			_attr(attrs::glyphs, tablet_model.glyphs);
 			_attr(attrs::width, static_cast<double>(tablet_model.width));

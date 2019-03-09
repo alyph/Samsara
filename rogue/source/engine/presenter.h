@@ -8,6 +8,7 @@
 #include "color.h"
 #include "buffer.h"
 #include "macros.h"
+#include "string.h"
 #include <functional>
 
 struct InputEvent;
@@ -34,6 +35,7 @@ namespace attrs
 	extern Attribute<Color> background_color;
 	extern Attribute<Id> texture;
 	extern Attribute<Id> shader;
+	extern Attribute<StringView> text;
 }
 
 extern Id register_elem_type(ElemTypeInitFunc init_func);
@@ -47,7 +49,7 @@ extern Buffer& init_elem_attr_buffer(const Context& context, Id attr_id);
 template<typename T> const T& get_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T* get_defined_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T& get_defined_elem_attr_asserted(const Frame& frame, Id elem_id, const Attribute<T>& attr);
-template<typename T> void set_elem_attr(const Context& context, const Attribute<T>& attr, const T& val);
+template<typename T, typename ValT> void set_elem_attr(const Context& context, const Attribute<T>& attr, const ValT& val);
 
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count);
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count, uint64_t user_id);
@@ -235,8 +237,8 @@ const T& get_defined_elem_attr_asserted(const Frame& frame, Id elem_id, const At
 	return *val;
 }
 
-template<typename T> 
-void set_elem_attr(const Context& context, const Attribute<T>& attr, const T& val)
+template<typename T, typename ValT> 
+void set_elem_attr(const Context& context, const Attribute<T>& attr, const ValT& val)
 {
 	Buffer& buffer = init_elem_attr_buffer(context, attr.id);
 	attribute_serialization::store(buffer, val);

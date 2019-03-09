@@ -22,8 +22,9 @@ namespace attrs
 	Attribute<double> height{0.0};
 	Attribute<Mat44> transform{Mat44::identity()};
 	Attribute<Color> background_color{Color{}};
-	extern Attribute<Id> texture{null_id};
-	extern Attribute<Id> shader{null_id};
+	Attribute<Id> texture{null_id};
+	Attribute<Id> shader{null_id};
+	Attribute<StringView> text{StringView{}};
 }
 
 // struct GlobalPresenterData

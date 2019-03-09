@@ -71,8 +71,17 @@ struct StringData
 	inline StringHeader* header() const;
 };
 
+class StringView final
+{
+public:
+	StringData str_data;
+
+	inline const char* c_str() const { return str_data.c_str(); }
+	inline size_t size() const { return str_data.size(); }	
+};
+
 template<bool Temp>
-class StringBase
+class StringBase final
 {
 public:
 	StringData str_data;
@@ -90,6 +99,8 @@ public:
 	inline StringBase& operator=(const StringBase<Temp>& other);
 	inline StringBase& operator=(const StringBase<!Temp>& other);
 	inline StringBase& operator=(StringBase<Temp>&& other);
+
+	inline operator const StringView&() const;
 
 	inline const char* c_str() const { return str_data.c_str(); }
 	inline size_t size() const { return str_data.size(); }	
@@ -234,6 +245,12 @@ template<bool Temp>
 inline StringBase<Temp>& StringBase<Temp>::operator=(StringBase<Temp>&& other)
 {
 	std::swap(str_data, other.str_data);
+}
+
+template<bool Temp>
+inline StringBase<Temp>::operator const StringView&() const
+{
+	return *reinterpret_cast<const StringView*>(this);
 }
 
 // TODO: we should take both a const char* ptr and the length, so a string view can be assigned

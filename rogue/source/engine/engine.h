@@ -7,12 +7,16 @@
 #include "macros.h"
 #include <type_traits>
 
+class Window;
+
 struct Engine
 {
 	// Engine() = default;
 	// Engine(const Engine&) = delete;
 	SingletonCollection singletons;
 	AllocatorGlobals allocators;
+
+	Window* window{};
 };
 
 struct EngineStore
