@@ -31,7 +31,8 @@ void main(){
 	// gl_Position =  MVP * vec4(pos, 1);
 	// to clip space directly
 	// TODO: add z
-	gl_Position = vec4((vec2(VertexPos + Coordinates) * 2.0 / vec2(Dims)) - vec2(1, 1), 0, 1);
+	vec2 coords_flipped = vec2(Coordinates.x, Dims.y - Coordinates.y - 1);
+	gl_Position = vec4((vec2(VertexPos + coords_flipped) * 2.0 / vec2(Dims)) - vec2(1, 1), 0, 1);
 	
 	// inColor1 = vec4(VertexPos.xy, 0, 1);
 	inColor1 = Color1;

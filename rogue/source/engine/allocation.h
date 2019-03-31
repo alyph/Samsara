@@ -58,6 +58,7 @@ struct AllocatorGlobals
 	AllocHandle allocate(Allocator allocator, size_t size);
 	void reallocate(AllocHandle& handle, size_t size);
 	void deallocate(AllocHandle& handle);
+	void regular_cleanup();
 };
 
 inline const AllocHeader& access_alloc_header(const AllocatorGlobals& globals, uint32_t header_id)

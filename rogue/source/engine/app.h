@@ -19,7 +19,7 @@ int run_app()
 	auto window = Window::create(params);
 	engine().window = window.get();
 
-	AppT app();
+	AppT app;
 	Presenter presenter;
 	presenter.set_present_object(&app);
 
@@ -42,6 +42,9 @@ int run_app()
 
 		// present
 		window->present();
+
+		// clean up allocators (deallocate memory when needed)
+		engine().allocators.regular_cleanup();
 
 		// TODO: reuse this code
 		frame_count++;

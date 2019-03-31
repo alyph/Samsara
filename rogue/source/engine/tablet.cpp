@@ -443,7 +443,6 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 
 	// const TabletStore& store = engine().singletons.get(tablet_globals).store;
 	// const auto tablet_id = get_elem_attr(frame, elem_id, attrs::tablet_id);
-	const auto& glyphs = get_elem_attr(frame, elem_id, attrs::glyphs);
 	const auto width = std::lround(get_elem_attr(frame, elem_id, attrs::width));
 	const auto height = std::lround(get_elem_attr(frame, elem_id, attrs::height));
 	const auto& texture = get_elem_attr(frame, elem_id, attrs::texture);
@@ -487,9 +486,33 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 
 	glBindVertexArray(static_cast<GLuint>(tablet_cache.vao));
 
-	asserts(tablet_cache.width * tablet_cache.height == glyphs.size());
-	const auto num_glyphs = std::min(static_cast<size_t>(tablet_cache.max_num_glyphs), glyphs.size());
+	SimpleArray<GlyphData> glyphs;
 	const auto num_fixed_glyphs = (tablet_cache.width * tablet_cache.height);
+	
+	auto defined_glyphs = get_defined_elem_attr(frame, elem_id, attrs::glyphs);
+	if (defined_glyphs)
+	{
+		glyphs = *defined_glyphs;
+		asserts(num_fixed_glyphs == glyphs.size());
+	}
+	else
+	{
+		const auto& text = get_elem_attr(frame, elem_id, attrs::text);
+		const auto len = text.size();
+		glyphs = alloc_simple_array<GlyphData>(len, true);
+		auto c_str = text.c_str();
+		for (size_t i = 0; i < len; i++)
+		{
+			auto& glyph = glyphs[i];
+			glyph.code = *(c_str + i);
+
+			// TODO: colors
+			glyph.color1 = Color32{0, 0, 0, 255};
+			glyph.color2 = Color32{0, 255, 0, 255};			
+		}
+	}
+
+	const auto num_glyphs = std::min(static_cast<size_t>(tablet_cache.max_num_glyphs), glyphs.size());
 
 	// copy in extra coordinates
 	// if (!item.extra_coords.empty())			

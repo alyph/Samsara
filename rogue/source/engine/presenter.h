@@ -241,5 +241,5 @@ template<typename T, typename ValT>
 void set_elem_attr(const Context& context, const Attribute<T>& attr, const ValT& val)
 {
 	Buffer& buffer = init_elem_attr_buffer(context, attr.id);
-	attribute_serialization::store(buffer, val);
+	attribute_serialization::store<T>(buffer, val);
 }

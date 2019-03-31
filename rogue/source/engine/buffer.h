@@ -22,6 +22,7 @@ public:
 
 	inline uint8_t* get(size_t ptr) const;
 	inline size_t size() const { return buffer_size; }
+	inline bool empty() const { return size() == 0; }
 	inline void clear() { buffer_size = 0; }
 	inline void resize(size_t new_size) { resize(new_size, 0); }
 	void resize(size_t new_size, size_t min_grow_size);

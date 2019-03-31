@@ -2,9 +2,10 @@
 #include "tablet_ui.h"
 #include "engine/app.h"
 #include "engine/viewport.h"
-#include "engine/math_utils.h"
 #include "engine/tablet.h"
-
+#include "engine/shader.h"
+#include "engine/math_utils.h"
+#include "engine/image_utils.h"
 
 int main()
 {
@@ -13,6 +14,20 @@ int main()
 
 TabletUIApp::TabletUIApp()
 {
+	// create a shader
+	ShaderDesc desc;
+	desc.vs_path = "../../data/shaders/tablet_vs.gls";
+	desc.fs_path = "../../data/shaders/tablet_fs.gls";
+	tablet_shader = create_shader(desc);
+
+	desc.vs_path = "../../data/shaders/basic_textured_vs.gls";
+	desc.fs_path = "../../data/shaders/basic_textured_fs.gls";
+	tablet_screen_shader = create_shader(desc);
+
+	// TODO: the atlas texture should probably use nearest filter 
+	// since we are drawing into pixel perfect render buffer
+	auto tex_desc = load_texture("../../data/fonts/cp437_20x20.png");
+	atlas_texture = Texture::create(tex_desc);
 }
 
 void TabletUIApp::update()
@@ -42,13 +57,13 @@ void TabletUIApp::present(const Context& ctx)
 
 		TempString str = "Dream Park is a futuristic amusement park using holograms and other advanced technologies to entertain customers, including live-action role-players. Dream Park, The Barsoom Project and The California Voodoo Game follow security chief Alex Griffin as he attempts to solve various mysteries set in the park. The other stories in this series have only a peripheral connection. Saturn's Race is a prequel to Achilles' Choice; both involve young adults technologically \"upgrading\" their bodies in an effort to join the world's ruling elite.";
 
-		_attr(attrs::transform, to_mat44(tablet_model.pose));
+		_attr(attrs::transform, Mat44::identity());
 		_attr(attrs::text, str);
-		_attr(attrs::width, static_cast<double>(tablet_model.width));
-		_attr(attrs::height, static_cast<double>(tablet_model.height));			
-		_attr(attrs::texture, store.atlas_texture.id());
-		_attr(attrs::shader, store.tablet_shader);
-		_attr(attrs::quad_shader, store.tablet_screen_shader);
+		_attr(attrs::width, static_cast<double>(60));
+		_attr(attrs::height, static_cast<double>(40));
+		_attr(attrs::texture, atlas_texture.id());
+		_attr(attrs::shader, tablet_shader);
+		_attr(attrs::quad_shader, tablet_screen_shader);
 	}
 
 	// auto vp = []() { static Id my_root_id = presenter.new_id(); return viewport(presenter, my_root_id); }();

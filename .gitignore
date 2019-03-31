@@ -38,6 +38,7 @@ sysinfo.txt
 /rogue/bin/
 rogue/external/easy_profiler/bin/easy_profiler_stream.cache
 
+*/.vscode/ipch/
 
 #############
 ## Sublime

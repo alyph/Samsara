@@ -128,6 +128,25 @@ void AllocatorGlobals::deallocate(AllocHandle& handle)
 	// min_valid_id only need update if the ptr is no longer valid for access
 }
 
+static void flush_temp_allocator(AllocatorGlobals& globals, Allocator allocator)
+{
+	const auto allocator_idx = static_cast<size_t>(allocator);
+	auto& allocator_data = globals.allocators[allocator_idx];
+	if (!allocator_data.buffer.empty() || allocator_data.num_headers > 0)
+	{
+		auto& min_valid_id = globals.min_valid_ids[allocator_idx];
+		min_valid_id = std::max(allocator_data.max_reg_id + 1, min_valid_id);
+		allocator_data.buffer.clear();
+		allocator_data.num_headers = 0;
+	}
+}
+
+void AllocatorGlobals::regular_cleanup()
+{
+	// TODO: temp1 and temp2 should be cleaned in an alternate fashion (welp rethink multi threaded situation when needed)
+	flush_temp_allocator(*this, Allocator::temp1);
+	flush_temp_allocator(*this, Allocator::temp2);
+}
 
 void AllocHandle::refresh(AllocatorGlobals& globals)
 {
