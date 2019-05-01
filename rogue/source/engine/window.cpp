@@ -104,6 +104,11 @@ int Window::height() const
 	return height;
 }
 
+void Window::set_title(const String& title)
+{
+	glfwSetWindowTitle(glfw, title.c_str());
+}
+
 void Window::key_callback(GLFWwindow* glfw, int key, int scancode, int action, int mods)
 {
 	auto window = static_cast<Window*>(glfwGetWindowUserPointer(glfw));

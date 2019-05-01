@@ -2,6 +2,7 @@
 
 #include "window.h"
 #include "input.h"
+#include "os.h"
 #include "easy/profiler.h"
 #include <chrono>
 
@@ -9,13 +10,13 @@ template<class AppT>
 int run_app()
 {
 	profiler::startListen();
-
 	scoped_engine_init();
 
 	WindowCreationParams params;
 	params.width = 1024;
 	params.height = 768;
-	params.title = "Tablet Test";
+	params.title = get_executable_name();
+	StringStore title = params.title;
 	auto window = Window::create(params);
 	engine().window = window.get();
 
@@ -51,7 +52,11 @@ int run_app()
 		auto now = std::chrono::system_clock::now();
 		if ((now - start_time) >= std::chrono::duration<double>(1.0))
 		{
-			printf("-- fps: %f\n", frame_count / (std::chrono::duration_cast<std::chrono::duration<double>>(now - start_time).count()));
+			// TODO: use String's function for concatenating or formating strings
+			std::string title_and_fps = title.c_str();
+			title_and_fps += "  fps: ";
+			title_and_fps += std::to_string(frame_count / (std::chrono::duration_cast<std::chrono::duration<double>>(now - start_time).count()));
+			window->set_title(String{title_and_fps.data(), title_and_fps.length()});
 			start_time = now;
 			frame_count = 0;
 		}

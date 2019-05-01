@@ -6,6 +6,8 @@
 #include "engine/shader.h"
 #include "engine/math_utils.h"
 #include "engine/image_utils.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 int main()
 {
@@ -28,6 +30,33 @@ TabletUIApp::TabletUIApp()
 	// since we are drawing into pixel perfect render buffer
 	auto tex_desc = load_texture("../../data/fonts/cp437_20x20.png");
 	atlas_texture = Texture::create(tex_desc);
+
+	FT_Library  ft_lib;
+	FT_Error error = FT_Init_FreeType(&ft_lib);
+	if (!error)
+	{
+		FT_Face font_face;
+		error = FT_New_Face(ft_lib, "../../data/fonts/DejaVuSansMono.ttf", 0, &font_face);
+		if (!error)
+		{
+			printf("font loaded.\n");
+			printf("- num glyphs: %d\n", font_face->num_glyphs);
+			printf("- bbox: x: %d ~ %d, y: %d ~ %d\n", font_face->bbox.xMin, font_face->bbox.xMax, font_face->bbox.yMin, font_face->bbox.yMax);
+			printf("- height: %d\n", font_face->height);
+			printf("- max advances: %d, %d\n", font_face->max_advance_width, font_face->max_advance_height);
+			FT_Set_Pixel_Sizes(font_face, 0, 48);
+		}
+		else
+		{
+			printf("failed to load the font!\n");
+		}
+	}
+	else
+	{
+		printf("freetype failed to init!\n");
+	}
+	
+
 }
 
 void TabletUIApp::update()
@@ -55,7 +84,7 @@ void TabletUIApp::present(const Context& ctx)
 	{
 		tablet(_ctx);
 
-		TempString str = "Dream Park is a futuristic amusement park using holograms and other advanced technologies to entertain customers, including live-action role-players. Dream Park, The Barsoom Project and The California Voodoo Game follow security chief Alex Griffin as he attempts to solve various mysteries set in the park. The other stories in this series have only a peripheral connection. Saturn's Race is a prequel to Achilles' Choice; both involve young adults technologically \"upgrading\" their bodies in an effort to join the world's ruling elite.";
+		String str = "Dream Park is a futuristic amusement park using holograms and other advanced technologies to entertain customers, including live-action role-players. Dream Park, The Barsoom Project and The California Voodoo Game follow security chief Alex Griffin as he attempts to solve various mysteries set in the park. The other stories in this series have only a peripheral connection. Saturn's Race is a prequel to Achilles' Choice; both involve young adults technologically \"upgrading\" their bodies in an effort to join the world's ruling elite.";
 
 		_attr(attrs::transform, Mat44::identity());
 		_attr(attrs::text, str);

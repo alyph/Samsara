@@ -30,21 +30,33 @@ struct BufferBlock
 namespace attribute_serialization
 {
 	template<typename T>
-	::std::enable_if_t<::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>, void>
-	load(const BufferBlock& buffer, const T*& out_val)
+	inline void trivial_load(const BufferBlock& buffer, const T*& out_val)
 	{
 		asserts(sizeof(T) <= buffer.size);
 		out_val = reinterpret_cast<const T*>(buffer.ptr);
 	}
 
 	template<typename T>
-	::std::enable_if_t<::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>, void>
-	store(Buffer& buffer, const T& val)
+	inline void trivial_store(Buffer& buffer, const T& val)
 	{
 		static_assert(alignof(T) <= Buffer::alignment);
 		const auto ptr = buffer.size();
 		asserts(buffer.is_aligned(ptr));
 		buffer.resize(ptr + buffer.get_next_aligned(sizeof(T)));
 		std::memcpy(buffer.get(ptr), reinterpret_cast<const void*>(&val), sizeof(T));
+	}
+
+	template<typename T>
+	inline ::std::enable_if_t<::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>, void>
+	load(const BufferBlock& buffer, const T*& out_val)
+	{
+		trivial_load(buffer, out_val);
+	}
+
+	template<typename T>
+	inline ::std::enable_if_t<::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>, void>
+	store(Buffer& buffer, const T& val)
+	{
+		trivial_store(buffer, val);
 	}
 }

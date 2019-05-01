@@ -5,6 +5,19 @@
 #include <cstdint>
 #include <vector>
 
+
+// basic allocator functions
+
+// ------------------------------------------------------------------------------------------------------------------------------------
+//  function     | effect                      | new ptr                     | handle                | ptr            
+// ------------------------------------------------------------------------------------------------------------------------------------
+//  allocate     | alloc new memory            | new block                   | N/A                   | N/A
+//  deallocate   | mark memory reclaimable     | null                        | valid until reclaimed | valid until reclaimed
+//  reallocate   | move memory to fit new size | same if fit, diff otherwise | valid                 | not valid if moved, retrievable
+//  reuse-alloc  | alloc memory over the old   | same if fit, diff otherwise | not valid             | not valid, not retrievable 
+// ------------------------------------------------------------------------------------------------------------------------------------
+
+
 struct AllocatorGlobals;
 
 using AllocId = uint32_t;
@@ -34,6 +47,7 @@ struct AllocHandle
 	AllocId alloc_id{};
 	uint32_t header{};
 
+	inline Allocator allocator_type() const;
 	inline void* get(AllocatorGlobals& globals) const;
 	inline size_t capacity(AllocatorGlobals& globals) const;
 	inline void validate(AllocatorGlobals& globals) const;
@@ -69,6 +83,12 @@ inline const AllocHeader& access_alloc_header(const AllocatorGlobals& globals, u
 	const auto& allocator_data = globals.allocators[allocator];
 	asserts(header_idx < allocator_data.num_headers);
 	return allocator_data.headers[header_idx];
+}
+
+inline Allocator AllocHandle::allocator_type() const
+{
+	const size_t allocator_idx = ((header >> 28) & 0x0000000F);
+	return static_cast<Allocator>(allocator_idx);
 }
 
 inline void AllocHandle::validate(AllocatorGlobals& globals) const

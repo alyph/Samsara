@@ -24,7 +24,7 @@ namespace attrs
 	Attribute<Color> background_color{Color{}};
 	Attribute<Id> texture{null_id};
 	Attribute<Id> shader{null_id};
-	Attribute<StringView> text{StringView{}};
+	Attribute<String> text{String{}};
 }
 
 // struct GlobalPresenterData

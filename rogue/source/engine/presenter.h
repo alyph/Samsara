@@ -35,7 +35,7 @@ namespace attrs
 	extern Attribute<Color> background_color;
 	extern Attribute<Id> texture;
 	extern Attribute<Id> shader;
-	extern Attribute<StringView> text;
+	extern Attribute<String> text;
 }
 
 extern Id register_elem_type(ElemTypeInitFunc init_func);
@@ -241,5 +241,6 @@ template<typename T, typename ValT>
 void set_elem_attr(const Context& context, const Attribute<T>& attr, const ValT& val)
 {
 	Buffer& buffer = init_elem_attr_buffer(context, attr.id);
-	attribute_serialization::store<T>(buffer, val);
+	const T& store_val = val;	
+	attribute_serialization::store(buffer, store_val);
 }

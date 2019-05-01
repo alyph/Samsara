@@ -21,4 +21,4 @@ static inline void assertion_fail(const char* expr, const char* file, int line, 
 	std::fprintf(stderr, "\n");
 }
 
-#define asserts(expr, ...) { if (!(expr)) { assertion_fail(#expr, __FILE__, __LINE__, __func__, __VA_ARGS__); std::abort(); }  }
+#define asserts(expr, ...) do{ if (!(expr)) { assertion_fail(#expr, __FILE__, __LINE__, __func__, __VA_ARGS__); std::abort(); }  }while(false)

@@ -1,5 +1,6 @@
 #pragma once
 #include "input.h"
+#include "string.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -9,7 +10,7 @@ struct InputEvent;
 
 struct WindowCreationParams
 {
-	std::string title;
+	String title;
 	int width{};
 	int height{};
 };
@@ -27,6 +28,7 @@ public:
 	float aspect() const;
 	int width() const;
 	int height() const;
+	void set_title(const String& title);
 
 private:
 	static void key_callback(GLFWwindow* glfw, int key, int scancode, int action, int mods);
