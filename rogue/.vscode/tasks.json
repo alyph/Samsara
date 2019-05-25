@@ -7,7 +7,7 @@
             "label": "build",
             "type": "shell",
             "command": "./build.bat",
-            "args": ["all"],
+            "args": ["tablet_ui"],
             "group": {
                 "kind": "build",
                 "isDefault": true

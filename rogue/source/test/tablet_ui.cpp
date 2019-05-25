@@ -8,6 +8,7 @@
 #include "engine/image_utils.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
+//#include FT_GLYPH_H
 
 int main()
 {
@@ -44,7 +45,52 @@ TabletUIApp::TabletUIApp()
 			printf("- bbox: x: %d ~ %d, y: %d ~ %d\n", font_face->bbox.xMin, font_face->bbox.xMax, font_face->bbox.yMin, font_face->bbox.yMax);
 			printf("- height: %d\n", font_face->height);
 			printf("- max advances: %d, %d\n", font_face->max_advance_width, font_face->max_advance_height);
-			FT_Set_Pixel_Sizes(font_face, 0, 48);
+			FT_Set_Pixel_Sizes(font_face, 0, 24);
+
+			printf("- advance (width): %d\n", font_face->size->metrics.max_advance >> 6);
+			printf("- line spacing (height): %d\n", font_face->size->metrics.height >> 6);
+			printf("- ascender: %d\n", font_face->size->metrics.ascender >> 6);
+			printf("- descender: %d\n", font_face->size->metrics.descender >> 6);
+
+			auto scaled_ascend = FT_MulFix(font_face->ascender, font_face->size->metrics.y_scale);
+			auto scaled_descend = FT_MulFix(font_face->descender, font_face->size->metrics.y_scale);
+			auto scaled_height = FT_MulFix(font_face->height, font_face->size->metrics.y_scale);
+			auto scaled_block_ascend = FT_MulFix(1921, font_face->size->metrics.y_scale);
+
+			printf("- scaled ascender: %d . %d\n", scaled_ascend / 64, scaled_ascend % 64);
+			printf("- scaled descender: %d . %d\n", scaled_descend / 64, scaled_descend % 64);
+			printf("- scaled height: %d . %d\n", scaled_height / 64, scaled_height % 64);
+			printf("- scaled block ascender: %d . %d\n", scaled_block_ascend >> 6, scaled_block_ascend & 63);
+
+			uint32_t char_codes[] = { 33, 0x2587, 0x2588, 0x2589, 0x254B };
+			for (size_t i = 0; i < 5; i++)
+			{
+				uint32_t char_code = char_codes[i];
+				FT_Load_Char(font_face, char_code, FT_LOAD_RENDER);
+
+				// FT_BBox bbox;
+				// FT_Glyph_Get_CBox(font_face->glyph, FT_GLYPH_BBOX_PIXELS, bbox);
+				printf("-- loaded %d\n", char_code);
+				printf("- width: %d, height: %d\n", font_face->glyph->metrics.width >> 6, font_face->glyph->metrics.height >> 6);
+				printf("- advance horiz: %d, vert: %d\n", font_face->glyph->metrics.horiAdvance >> 6, font_face->glyph->metrics.vertAdvance >> 6);
+				printf("- horiz bearing x: %d, y: %d\n", font_face->glyph->metrics.horiBearingX >> 6, font_face->glyph->metrics.horiBearingY >> 6);
+				printf("- vert bearing x: %d, y: %d\n", font_face->glyph->metrics.vertBearingX >> 6, font_face->glyph->metrics.vertBearingY >> 6);
+				printf("- advance: %d, %d\n", font_face->glyph->advance.x >> 6, font_face->glyph->advance.y >> 6);
+				printf("- bitmap: width: %d, rows: %d\n", font_face->glyph->bitmap.width, font_face->glyph->bitmap.rows);
+				printf("- bitmap: left: %d, top: %d\n", font_face->glyph->bitmap_left, font_face->glyph->bitmap_top);
+			// ▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▉
+			// ▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▉▉▉
+
+				Image image;
+				image.format = TextureFormat::Mono;
+				image.width = font_face->glyph->bitmap.width;
+				image.height = font_face->glyph->bitmap.rows;
+				size_t size = (image.width * image.height);
+				image.data.resize(size);
+				std::copy(font_face->glyph->bitmap.buffer, font_face->glyph->bitmap.buffer + size, image.data.data());
+
+				save_image((std::string("d:/test/font_glyph_") + std::to_string(i) + ".png").c_str(), image);
+			}
 		}
 		else
 		{
@@ -84,7 +130,8 @@ void TabletUIApp::present(const Context& ctx)
 	{
 		tablet(_ctx);
 
-		String str = "Dream Park is a futuristic amusement park using holograms and other advanced technologies to entertain customers, including live-action role-players. Dream Park, The Barsoom Project and The California Voodoo Game follow security chief Alex Griffin as he attempts to solve various mysteries set in the park. The other stories in this series have only a peripheral connection. Saturn's Race is a prequel to Achilles' Choice; both involve young adults technologically \"upgrading\" their bodies in an effort to join the world's ruling elite.";
+		//String str = "Dream Park is a futuristic amusement park using holograms and other advanced technologies to entertain customers, including live-action role-players. Dream Park, The Barsoom Project and The California Voodoo Game follow security chief Alex Griffin as he attempts to solve various mysteries set in the park. The other stories in this series have only a peripheral connection. Saturn's Race is a prequel to Achilles' Choice; both involve young adults technologically \"upgrading\" their bodies in an effort to join the world's ruling elite.";
+		String str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~!@#$%^&*()_+-*/={}'\"?<>|\\[]:,.";
 
 		_attr(attrs::transform, Mat44::identity());
 		_attr(attrs::text, str);

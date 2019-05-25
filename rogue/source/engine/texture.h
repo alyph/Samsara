@@ -5,6 +5,7 @@
 
 enum class TextureFormat
 {
+	Mono,
 	RGB,
 	RGBA,
 };
