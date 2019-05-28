@@ -9,10 +9,17 @@ Texture Texture::create(const TextureDesc& desc)
 	GLenum format;
 	switch (desc.format)
 	{
+		case TextureFormat::Mono: format = GL_RED; break;
 		case TextureFormat::RGB: format = GL_RGB; break;
 		case TextureFormat::RGBA: format = GL_RGBA; break;
 		default: asserts(false, "unsupported texture format");
 	}
+
+	// for one channel texture, may want to swizzle
+	// https://stackoverflow.com/questions/37027551/why-do-i-need-to-specify-image-format-as-gl-red-instead-of-gl-alpha-when-loading
+	// https://www.khronos.org/opengl/wiki/Texture#Swizzle_mask
+	// GLint swizzleMask[] = {GL_ZERO, GL_ZERO, GL_ZERO, GL_RED};
+	// glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 
 	GLuint id;
 	glGenTextures(1, &id);

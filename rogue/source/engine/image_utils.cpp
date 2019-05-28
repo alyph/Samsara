@@ -54,6 +54,8 @@ TextureDesc load_texture(const char* filename)
 
 bool save_image(const char* filename, const Image& image, bool vertical_flip)
 {
+	stbi_flip_vertically_on_write(vertical_flip);
+
 	int w = image.width;
 	int h = image.height;
 	int n = 0;

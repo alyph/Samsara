@@ -86,6 +86,8 @@ inline Buffer& Buffer::operator=(Buffer&& other)
 
 inline uint8_t* Buffer::get(size_t ptr) const
 {
+	// TODO: bounds check? or is it overkill?
+	//asserts(ptr < size());
 	return (data + ptr);
 }
 

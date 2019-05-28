@@ -15,6 +15,11 @@ int main()
 	return run_app<TabletUIApp>();
 }
 
+static int round_fixed26_6_to_pixel(FT_Long fixed_pixels)
+{
+	return static_cast<int>(std::lround(static_cast<double>(fixed_pixels) / 64.0));
+}
+
 TabletUIApp::TabletUIApp()
 {
 	// create a shader
@@ -40,12 +45,16 @@ TabletUIApp::TabletUIApp()
 		error = FT_New_Face(ft_lib, "../../data/fonts/DejaVuSansMono.ttf", 0, &font_face);
 		if (!error)
 		{
+			FT_Set_Pixel_Sizes(font_face, 0, 36);
+			
+			
 			printf("font loaded.\n");
 			printf("- num glyphs: %d\n", font_face->num_glyphs);
+
+#if 0
 			printf("- bbox: x: %d ~ %d, y: %d ~ %d\n", font_face->bbox.xMin, font_face->bbox.xMax, font_face->bbox.yMin, font_face->bbox.yMax);
 			printf("- height: %d\n", font_face->height);
 			printf("- max advances: %d, %d\n", font_face->max_advance_width, font_face->max_advance_height);
-			FT_Set_Pixel_Sizes(font_face, 0, 24);
 
 			printf("- advance (width): %d\n", font_face->size->metrics.max_advance >> 6);
 			printf("- line spacing (height): %d\n", font_face->size->metrics.height >> 6);
@@ -91,6 +100,79 @@ TabletUIApp::TabletUIApp()
 
 				save_image((std::string("d:/test/font_glyph_") + std::to_string(i) + ".png").c_str(), image);
 			}
+
+#endif
+
+			const int glyph_width = (font_face->size->metrics.max_advance >> 6);
+			const int glyph_height = round_fixed26_6_to_pixel(FT_MulFix(font_face->height, font_face->size->metrics.y_scale));
+			const int glyph_left = 0;
+			const int glyph_right = glyph_left + glyph_width - 1;
+			const int glyph_top = round_fixed26_6_to_pixel(FT_MulFix(font_face->ascender, font_face->size->metrics.y_scale));
+			const int glyph_bottom = glyph_top - glyph_height + 1;
+
+			printf("width: %d, height: %d, left: %d top: %d\n", glyph_width, glyph_height, glyph_left, glyph_top);
+
+
+			const int num_glyphs = 256;
+			const int sheet_width = 16;	
+			const int sheet_height = (num_glyphs / sheet_width);
+			asserts(num_glyphs % sheet_width == 0);
+			const int pixels_per_row = (sheet_width * glyph_width);	
+			const int pixel_height = (sheet_height * glyph_height);
+			auto bitmap = alloc_simple_array<uint8_t>(pixels_per_row * pixel_height, true);
+
+			memset(bitmap.data(), 0, bitmap.size());
+
+			uint32_t spec_char_codes[] = { 0x2587, 0x2588, 0x2589, 0x254B };
+
+			for (int i = 0; i < num_glyphs; i++)
+			{
+				uint32_t char_code = i;
+
+				if (i < 4)
+				{
+					char_code = spec_char_codes[i];
+				}
+
+				FT_Load_Char(font_face, char_code, FT_LOAD_RENDER);
+
+				int clipped_left = std::clamp(font_face->glyph->bitmap_left, glyph_left, glyph_right);
+				int clipped_right = std::clamp(font_face->glyph->bitmap_left + (int)font_face->glyph->bitmap.width - 1, glyph_left, glyph_right);
+				int clipped_top = std::clamp(font_face->glyph->bitmap_top, glyph_bottom, glyph_top);
+				int clipped_bottom = std::clamp(font_face->glyph->bitmap_top - (int)font_face->glyph->bitmap.rows + 1, glyph_bottom, glyph_top);
+				int clipped_width = (clipped_right - clipped_left + 1);
+				int clipped_height = (clipped_top - clipped_bottom + 1);
+
+				int x = ((i % sheet_width) * glyph_width) + clipped_left - glyph_left;
+				int y = ((i / sheet_width) * glyph_height) + glyph_top - clipped_top;
+
+				for (int row = 0; row < clipped_height; row++)
+				{
+					void* dst = bitmap.data() + pixels_per_row * (pixel_height - 1 - (y + row)) + x;
+					void* src = font_face->glyph->bitmap.buffer + 
+						font_face->glyph->bitmap.width * (row + font_face->glyph->bitmap_top - clipped_top) +
+						(clipped_left - font_face->glyph->bitmap_left);
+					memcpy(dst, src, clipped_width);
+				}
+			}
+
+			Image image;
+			image.format = TextureFormat::Mono;
+			image.width = pixels_per_row;
+			image.height = pixel_height;
+			size_t size = (image.width * image.height);
+			image.data.resize(size);
+			memcpy(image.data.data(), bitmap.data(), size);
+
+			save_image("./test/font_texture.png", image, true);
+
+			TextureDesc tex_desc;
+			tex_desc.width = image.width;
+			tex_desc.height = image.height;
+			tex_desc.format = image.format;
+			tex_desc.data = std::move(image.data);
+
+			atlas_texture = Texture::create(tex_desc);
 		}
 		else
 		{
@@ -172,3 +254,4 @@ bool TabletUIApp::ended()
 }
 
 
+	  

@@ -212,6 +212,12 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glUseProgram(0);
 
+	// TODO: probably need a better texture inteface to read these values
+	GLint tex_w{}, tex_h{};
+	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tex_w);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &tex_h);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// create vao for screen
 	GLuint vao_screen;
@@ -223,7 +229,8 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 	if (cache.param_vert >= 0)
 	{
 		const float scale = 1.f;
-		const float half_w = width * scale * 0.5f;
+		const float aspect = (float)tex_w / tex_h;
+		const float half_w = width * scale * 0.5f * aspect; // TODO: maybe maintain width at 1.0? and use vertical aspect ratio?
 		const float half_h = height * scale * 0.5f;
 		Vec3 verts[] = 
 		{ 
@@ -277,8 +284,8 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
 	// TODO: rt texture size can become really big if width, height were set to real large?
-	int glyph_w = 20; // TODO: read glyph pixel size from data (or based on texture size)
-	int glyph_h = 20;
+	int glyph_w = tex_w / 16; // TODO: hard coded 16 x 16 page size here
+	int glyph_h = tex_h / 16;
 	int rt_w = width * glyph_w;
 	int rt_h = height * glyph_h;
 
