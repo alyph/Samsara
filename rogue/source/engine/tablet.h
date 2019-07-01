@@ -30,6 +30,8 @@ struct GlyphData
 // TODO: remove
 // extern Id add_tablet(int width, int height, Id texture, Id shader, Id screen_shader);
 
+extern Vec2 calc_tablet_size(int width, int height, Id texture);
+
 namespace elem
 {
 	extern Id tablet(const Context ctx);

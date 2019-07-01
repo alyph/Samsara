@@ -66,6 +66,19 @@ struct TabletGlobals
 
 SingletonHandle<TabletGlobals> tablet_globals;
 
+
+Vec2 calc_tablet_size(int width, int height, Id texture)
+{
+	// TODO: probably need a better texture inteface to read these values
+	GLint tex_w{}, tex_h{};
+	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tex_w);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &tex_h);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	return Vec2{ (float)width, (float)height * tex_h / tex_w };
+}
+
 // Id add_tablet(int width, int height, Id texture, Id shader, Id screen_shader)
 // {
 // 	return engine().singletons.get(tablet_globals).store.add_tablet(width, height, texture, shader, screen_shader);
@@ -228,10 +241,9 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 	
 	if (cache.param_vert >= 0)
 	{
-		const float scale = 1.f;
-		const float aspect = (float)tex_w / tex_h;
-		const float half_w = width * scale * 0.5f * aspect; // TODO: maybe maintain width at 1.0? and use vertical aspect ratio?
-		const float half_h = height * scale * 0.5f;
+		const auto tablet_size = calc_tablet_size(width, height, texture);
+		const float half_w = tablet_size.x / 2;
+		const float half_h = tablet_size.y / 2;
 		Vec3 verts[] = 
 		{ 
 			{ -half_w, -half_h, 0 }, { half_w, -half_h, 0 }, 

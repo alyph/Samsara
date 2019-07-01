@@ -39,6 +39,19 @@ inline Mat44 make_perspective(float fovx, float aspect, float near, float far)
 	return m;
 }
 
+inline Mat44 make_orthographic(float scalex, float aspect, float near, float far)
+{
+	// http://www.songho.ca/opengl/gl_projectionmatrix.html#ortho
+	Mat44 m;
+	const float one_over_r = 1.f / scalex;	
+	m[0][0] = one_over_r;
+	m[1][1] = one_over_r * aspect;
+	m[2][2] = 2.f / (far - near);
+	m[3][2] = (far + near) / (near - far);
+	m[3][3] = 1.f;
+	return m;
+}
+
 inline Mat44 calc_mat_vp(const Viewpoint& vp)
 {
 	// TODO: right handed

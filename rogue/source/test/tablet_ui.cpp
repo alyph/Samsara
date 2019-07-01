@@ -197,10 +197,19 @@ void TabletUIApp::present(const Context& ctx)
 
 	auto window = engine().window;
 
+	const float aspect = window->aspect();
+
+	const int tablet_width = 160;
+	const int tablet_height = 80;
+	const Vec2 tablet_size = calc_tablet_size(tablet_width, tablet_height, atlas_texture.id());
+
+	const float vp_width = (float)tablet_width;
+	const float vp_height = vp_width / aspect;
+
 	// TODO: use othographic projection
 	Viewpoint vp;
-	vp.projection = make_perspective(to_rad(60.f), window->aspect(), 0.1f, 100.f);
-	vp.pose = make_lookat(Vec3{0, 0, -60}, Vec3{0, 0, 0}, Vec3{0, 1, 0});
+	vp.projection = make_orthographic(vp_width / 2, aspect, 0.f, 100.f);
+	vp.pose.pos.y = ((float)tablet_size.y - vp_height) / 2;
 
 	viewport(_ctx);
 	_attr(attrs::width, static_cast<double>(window->width()));
@@ -216,8 +225,8 @@ void TabletUIApp::present(const Context& ctx)
 
 		_attr(attrs::transform, Mat44::identity());
 		_attr(attrs::text, str);
-		_attr(attrs::width, static_cast<double>(60));
-		_attr(attrs::height, static_cast<double>(40));
+		_attr(attrs::width, tablet_width);
+		_attr(attrs::height, tablet_height);
 		_attr(attrs::texture, atlas_texture.id());
 		_attr(attrs::shader, tablet_shader);
 		_attr(attrs::quad_shader, tablet_screen_shader);
