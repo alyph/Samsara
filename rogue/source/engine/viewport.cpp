@@ -15,18 +15,18 @@ static void render_viewport(const Frame& frame, Id elem_id)
 {
 	EASY_FUNCTION();
 
-	const auto width = std::lround(get_defined_elem_attr_asserted(frame, elem_id, attrs::width));
-	const auto height = std::lround(get_defined_elem_attr_asserted(frame, elem_id, attrs::height));
+	const auto width = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::width));
+	const auto height = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::height));
 	glViewport(0, 0, width, height);
 
-	const auto color = get_elem_attr(frame, elem_id, attrs::background_color);
+	const auto color = get_elem_attr_or_default(frame, elem_id, attrs::background_color);
 	glClearColor(color.r, color.g, color.b, color.a);
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	
 	const auto first_child = get_first_child(frame, elem_id);
 	if (first_child)
 	{
-		const auto vp = get_elem_attr(frame, elem_id, attrs::viewpoint);
+		const auto vp = get_elem_attr_or_default(frame, elem_id, attrs::viewpoint);
 		const auto mat_vp = calc_mat_vp(vp);
 
 		std::vector<Id> elem_stack;
@@ -44,7 +44,7 @@ static void render_viewport(const Frame& frame, Id elem_id)
 			Id curr_elem_id = elem_stack.back();
 
 			// render
-			auto renderer = get_elem_attr(frame, curr_elem_id, attrs::renderer_3d);
+			auto renderer = get_elem_attr_or_default(frame, curr_elem_id, attrs::renderer_3d);
 			bool sub_tree_processed = false;
 			if (renderer)
 			{
@@ -58,7 +58,7 @@ static void render_viewport(const Frame& frame, Id elem_id)
 			const Id child = (sub_tree_processed ? null_id : get_first_child(frame, curr_elem_id));
 			if (child)
 			{
-				const auto tf = get_elem_attr(frame, curr_elem_id, attrs::transform);
+				const auto tf = get_elem_attr_or_default(frame, curr_elem_id, attrs::transform);
 				elem_stack.push_back(child);
 				tf_stack.push_back(tf_stack.back() * tf);
 			}

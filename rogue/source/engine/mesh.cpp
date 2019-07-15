@@ -155,7 +155,7 @@ Id add_mesh(Mesh&& mesh, Id shader)
 
 static Render3dType render_mesh(const Frame& frame, Id elem_id, const Mat44& transform)
 {
-	const Id mesh_id = get_elem_attr(frame, elem_id, attrs::mesh_id);
+	const Id mesh_id = get_elem_attr_or_assert(frame, elem_id, attrs::mesh_id);
 
 	const auto& mesh_cache = global_mesh_store.mesh_cache(mesh_id);
 	const auto& shader_cache = global_mesh_store.shader_cache(mesh_id);
@@ -164,7 +164,7 @@ static Render3dType render_mesh(const Frame& frame, Id elem_id, const Mat44& tra
 	glUseProgram(static_cast<GLuint>(shader_cache.shader_id));
 	
 	// set mvp
-	const auto& mesh_tf = get_elem_attr(frame, elem_id, attrs::transform);
+	const auto& mesh_tf = get_elem_attr_or_default(frame, elem_id, attrs::transform);
 	const auto& mvp = transform * mesh_tf;
 	glUniformMatrix4fv(shader_cache.param_mvp, 1, GL_FALSE, mvp.data());
  

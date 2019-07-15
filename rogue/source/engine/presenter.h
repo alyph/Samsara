@@ -16,6 +16,7 @@ struct Frame;
 struct Context;
 struct ScopedChildrenBlock;
 struct PresentWorker;
+struct Element;
 struct ElementType;
 struct ElementTypeSetup;
 
@@ -44,34 +45,26 @@ extern Id register_elem_type(ElemTypeInitFunc init_func);
 extern Id make_element(const Context& context, Id type_id);
 extern Id get_first_child(const Frame& frame, Id elem_id);
 extern Id get_next_sibling(const Frame& frame, Id elem_id);
-extern BufferBlock get_elem_attr_buffer(const Frame& frame, Id elem_id, Id attr_id);
-extern Buffer& init_elem_attr_buffer(const Context& context, Id attr_id);
-template<typename T> const T& get_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
-template<typename T> const T* get_defined_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
-template<typename T> const T& get_defined_elem_attr_asserted(const Frame& frame, Id elem_id, const Attribute<T>& attr);
-template<typename T, typename ValT> void set_elem_attr(const Context& context, const Attribute<T>& attr, const ValT& val);
+
+template<typename T> const T* get_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
+template<typename T> const T& get_elem_attr_or_default(const Frame& frame, Id elem_id, const Attribute<T>& attr);
+template<typename T> const T& get_elem_attr_or_assert(const Frame& frame, Id elem_id, const Attribute<T>& attr);
+template<typename T> const T* get_elem_defined_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
+template<typename T, typename ValT> void set_elem_instance_attr(const Context& context, const Attribute<T>& attr, const ValT& val);
 
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count);
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count, uint64_t user_id);
-//extern Id get_working_elem(const Context& context);
+extern Element& get_working_elem(const Context& context);
 
 #define _ctx create_scoped_context(ctx, __COUNTER__)
 #define _ctx_id(user_id) create_scoped_context(ctx, __COUNTER__, user_id)
-#define _attr(attr, val) set_elem_attr(ctx, attr, val)
+#define _attr(attr, val) set_elem_instance_attr(ctx, attr, val)
 #define _children if (const ScopedChildrenBlock CONCAT(children_block_, __COUNTER__){ctx}; true)
-
-
-struct AttrTableEntry
-{
-	uint16_t attr_id{};
-	uint32_t buffer_ptr{};
-};
 
 struct PresentGlobals
 {
 	std::vector<ElementType> elem_types;
-	std::vector<AttrTableEntry> elem_type_attr_table;
-	Buffer elem_type_attr_buffer;
+	AttrTable elem_type_attr_table;
 };
 
 struct Element
@@ -79,16 +72,15 @@ struct Element
 	uint16_t type{};
 	uint16_t depth{};
 	uint32_t sibling_offset{};
-	uint32_t attr_table_index{};
-	uint16_t num_attrs{};
+	AttrListHandle inst_attrs;
+	AttrListHandle post_attrs;
 };
 
 struct ElementType
 {
 	Id id{};
 	std::string name;
-	uint32_t attr_table_index{};
-	uint16_t num_attrs{};
+	AttrListHandle type_attrs;
 };
 
 struct ElementTypeSetup
@@ -98,8 +90,6 @@ struct ElementTypeSetup
 
 	void set_name(const char* name);
 	template<typename T> void set_attr(const Attribute<T>& attr, const T& value);
-	Buffer& init_attr_buffer(Id attr_id);
-
 };
 
 struct Context
@@ -119,8 +109,8 @@ struct Frame
 	Id frame_id{};
 	const PresentGlobals* globals{};
 	std::vector<Element> elements;
-	std::vector<AttrTableEntry> attr_table;
-	Buffer attr_buffer;
+	AttrTable inst_attr_table;
+	AttrTable post_attr_table;
 };
 
 struct ScopedChildrenBlock
@@ -198,49 +188,52 @@ void Presenter::set_present_object(T* obj)
 
 template<typename T> void ElementTypeSetup::set_attr(const Attribute<T>& attr, const T& value)
 {
-	Buffer& buffer = init_attr_buffer(attr.id);
-	attribute_serialization::store(buffer, value);
+	globals->elem_type_attr_table.set_attr(type->type_attrs, attr, value);
 }
 
 template<typename T> 
-const T& get_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr)
+const T* get_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr)
 {
-	// TODO: call get_defined_elem_attr() first instead
-	const auto buffer = get_elem_attr_buffer(frame, elem_id, attr.id);
-	if (buffer)
-	{
-		const T* val{};
-		attribute_serialization::load(buffer, val);
-		return *val;
-	}
-	return attr.default_value;
+	const auto& elem = frame.elements[id_to_index(elem_id)];
+	const T* val = frame.post_attr_table.get_attr(elem.post_attrs, attr);
+	return val ? val : get_elem_defined_attr(frame, elem_id, attr);
 }
 
 template<typename T> 
-const T* get_defined_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr)
+const T& get_elem_attr_or_default(const Frame& frame, Id elem_id, const Attribute<T>& attr)
 {
-	const auto buffer = get_elem_attr_buffer(frame, elem_id, attr.id);
-	if (buffer)
-	{
-		const T* val{};
-		attribute_serialization::load(buffer, val);
-		return val;
-	}
-	return nullptr;
+	const T* val = get_elem_attr(frame, elem_id, attr);
+	return val ? *val : attr.default_value;
 }
 
 template<typename T> 
-const T& get_defined_elem_attr_asserted(const Frame& frame, Id elem_id, const Attribute<T>& attr)
+const T& get_elem_attr_or_assert(const Frame& frame, Id elem_id, const Attribute<T>& attr)
 {
-	auto val = get_defined_elem_attr(frame, elem_id, attr);
+	const T* val = get_elem_attr(frame, elem_id, attr);
 	asserts(val);
 	return *val;
 }
 
-template<typename T, typename ValT> 
-void set_elem_attr(const Context& context, const Attribute<T>& attr, const ValT& val)
+template<typename T> 
+const T* get_elem_defined_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr)
 {
-	Buffer& buffer = init_elem_attr_buffer(context, attr.id);
-	const T& store_val = val;	
-	attribute_serialization::store(buffer, store_val);
+	const auto& elem = frame.elements[id_to_index(elem_id)];
+	const T* val = frame.inst_attr_table.get_attr(elem.inst_attrs, attr);
+	if (val) return val;
+
+	if (elem.type)
+	{
+		const auto& globals = *frame.globals;
+		const auto& elem_type = globals.elem_types[id_to_index(elem.type)];
+		return globals.elem_type_attr_table.get_attr(elem_type.type_attrs, attr);
+	}
+
+	return nullptr;
+}
+
+template<typename T, typename ValT> 
+void set_elem_instance_attr(const Context& context, const Attribute<T>& attr, const ValT& val)
+{
+	Element& elem = get_working_elem(context);
+	context.frame->inst_attr_table.set_attr(elem.inst_attrs, attr, val);
 }

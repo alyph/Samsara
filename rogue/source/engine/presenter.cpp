@@ -49,6 +49,7 @@ Id register_elem_type(ElemTypeInitFunc init_func)
 	return id;
 }
 
+#if 0
 static Buffer& init_attr_table_and_buffer(Id attr_id, uint32_t& table_index, uint16_t& num_attrs, std::vector<AttrTableEntry>& table, Buffer& buffer)
 {
 	using attr_id_type = decltype(AttrTableEntry::attr_id);
@@ -90,15 +91,16 @@ static Buffer& init_attr_table_and_buffer(Id attr_id, uint32_t& table_index, uin
 	return buffer;
 }
 
-void ElementTypeSetup::set_name(const char* name)
-{
-	type->name = name;
-}
-
 Buffer& ElementTypeSetup::init_attr_buffer(Id attr_id)
 {
 	return init_attr_table_and_buffer(attr_id, type->attr_table_index, type->num_attrs,
 		globals->elem_type_attr_table, globals->elem_type_attr_buffer);
+}
+#endif
+
+void ElementTypeSetup::set_name(const char* name)
+{
+	type->name = name;
 }
 
 Id make_element(const Context& context, Id type_id)
@@ -158,6 +160,7 @@ Id get_next_sibling(const Frame& frame, Id elem_id)
 	return null_id;
 }
 
+#if 0
 static BufferBlock get_attr_buffer_from_table(Id attr_id, uint32_t table_index, uint16_t num_attrs, const std::vector<AttrTableEntry>& table, const Buffer& buffer)
 {
 	BufferBlock block;
@@ -206,6 +209,8 @@ Buffer& init_elem_attr_buffer(const Context& context, Id attr_id)
 	return init_attr_table_and_buffer(attr_id, elem.attr_table_index, elem.num_attrs, frame->attr_table, frame->attr_buffer);
 }
 
+#endif
+
 Context create_scoped_context(const Context& parent_scope_context, uint64_t count)
 {
 	Context context;
@@ -226,10 +231,18 @@ Context create_scoped_context(const Context& parent_scope_context, uint64_t coun
 	return context;
 }
 
-// static Id get_working_elem(const Context& context)
-// {
+Element& get_working_elem(const Context& context)
+{
+	auto frame = context.frame;
+	auto worker = context.worker;
 
-// }
+	// right now we are just getting the current working element
+	// TODO: we may want to check the current scope make sure we are not setting attr of 
+	// the elements that are created in previously called functions
+	auto& elem_worker = worker->elem_worker_stack.back();
+	asserts(elem_worker.elem_id);
+	return frame->elements[id_to_index(elem_worker.elem_id)];
+}
 
 ScopedChildrenBlock::ScopedChildrenBlock(const Context& context):
 	worker(context.worker)
@@ -325,8 +338,8 @@ void Presenter::present()
 
 	curr_frame.frame_id++;
 	curr_frame.elements.clear();
-	curr_frame.attr_table.clear();
-	curr_frame.attr_buffer.clear();
+	curr_frame.inst_attr_table.clear();
+	curr_frame.post_attr_table.clear();
 
 	// call present func to present
 	PresentWorker worker;
@@ -356,8 +369,8 @@ void Presenter::render(const Frame& frame)
 		{
 			const auto elem_idx = id_to_index(elem_id);
 			const auto& elem = frame.elements[elem_idx];
-			auto renderer = get_elem_attr(frame, elem_id, attrs::renderer);
-			asserts(renderer);
+			auto renderer = get_elem_attr_or_assert(frame, elem_id, attrs::renderer);
+			asserts(renderer); // still need assert since the assigned value may be null
 
 			// this renders entire sub tree
 			renderer(frame, elem_id);

@@ -462,11 +462,11 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 
 	// const TabletStore& store = engine().singletons.get(tablet_globals).store;
 	// const auto tablet_id = get_elem_attr(frame, elem_id, attrs::tablet_id);
-	const auto width = std::lround(get_elem_attr(frame, elem_id, attrs::width));
-	const auto height = std::lround(get_elem_attr(frame, elem_id, attrs::height));
-	const auto& texture = get_elem_attr(frame, elem_id, attrs::texture);
-	const auto& shader = get_elem_attr(frame, elem_id, attrs::shader);
-	const auto& quad_shader = get_elem_attr(frame, elem_id, attrs::quad_shader);
+	const auto width = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::width));
+	const auto height = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::height));
+	const auto& texture = get_elem_attr_or_assert(frame, elem_id, attrs::texture);
+	const auto& shader = get_elem_attr_or_assert(frame, elem_id, attrs::shader);
+	const auto& quad_shader = get_elem_attr_or_assert(frame, elem_id, attrs::quad_shader);
 
 	const auto cache_index = globals.next_tablet_index++;
 	if (cache_index >= globals.tablet_caches.size())
@@ -508,7 +508,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	SimpleArray<GlyphData> glyphs;
 	const auto num_fixed_glyphs = (tablet_cache.width * tablet_cache.height);
 	
-	auto defined_glyphs = get_defined_elem_attr(frame, elem_id, attrs::glyphs);
+	auto defined_glyphs = get_elem_defined_attr(frame, elem_id, attrs::glyphs);
 	if (defined_glyphs)
 	{
 		glyphs = *defined_glyphs;
@@ -516,7 +516,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	}
 	else
 	{
-		const auto& text = get_elem_attr(frame, elem_id, attrs::text);
+		const auto& text = get_elem_attr_or_default(frame, elem_id, attrs::text);
 		const auto len = text.size();
 		glyphs = alloc_simple_array<GlyphData>(len, true);
 		auto c_str = text.c_str();
@@ -568,7 +568,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	glUseProgram(static_cast<GLuint>(tablet_cache.quad_shader_id));
 	
 	// set mvp
-	const auto& tablet_tf = get_elem_attr(frame, elem_id, attrs::transform);
+	const auto& tablet_tf = get_elem_attr_or_default(frame, elem_id, attrs::transform);
 	const auto& mvp = transform * tablet_tf;
 	glUniformMatrix4fv(tablet_cache.param_mvp, 1, GL_FALSE, mvp.data());
 

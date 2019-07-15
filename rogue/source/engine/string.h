@@ -535,9 +535,9 @@ inline StringStore& StringStore::operator=(StringStore&& other)
 
 namespace attribute_serialization
 {
-	inline void load(const BufferBlock& buffer, const String*& out_val)
+	inline void load(const Buffer& buffer, size_t ptr, const String*& out_val)
 	{
-		trivial_load(buffer, out_val);
+		trivial_load(buffer, ptr, out_val);
 	}
 
 	inline void store(Buffer& buffer, const String& val)
