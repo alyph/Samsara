@@ -16,6 +16,7 @@ namespace attrs
 {
 	Attribute<Id> quad_shader{null_id};
 	Attribute<SimpleArray<GlyphData>> glyphs{SimpleArray<GlyphData>{}};
+	Attribute<TabletLayout> tablet_layout{TabletLayout{}};
 }
 
 static constexpr const char* uniform_mvp = "MVP";
@@ -445,6 +446,221 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 // 	}
 // }
 
+static int compute_elem_self_height(const Frame& frame, Id elem_id, int width)
+{
+	int height = -1;
+
+	// if text attribute is set, use it to determine height
+	auto text = get_elem_defined_attr(frame, elem_id, attrs::text);
+	if (text)
+	{
+		if (width > 0)
+		{
+			// TODO: utf8
+			// TODO: text wrap
+			height = ((int)text->size() + width - 1) / width;
+		}
+		else
+		{
+			height = 0; // if width is 0, no text can render so just make height 0 as well
+		}
+	}
+
+
+	// TODO: image?
+	// TODO: height should be determined by max of all factors
+
+	return height;
+}
+
+
+static void postprocess_tablet(Frame& frame, Id elem_id)
+{
+	EASY_FUNCTION();
+
+	struct WorkItem
+	{
+		size_t parent_idx{};
+		int width = -1, height = -1, left{}, top{};
+	};
+
+	size_t num_items = get_last_in_subtree(frame, elem_id) - elem_id + 1;
+	std::vector<WorkItem> items{num_items};
+
+	auto& root_item = items[0];
+	root_item.width = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::width));
+	root_item.height = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::height));
+
+	// first pass
+	// cache parent idx
+	// set any defined attributes
+	for (size_t i = 0; i < num_items; i++)
+	{
+		Id child_elem_id = get_first_child(frame, elem_id + i);
+		while (child_elem_id)
+		{
+			items[child_elem_id - elem_id].parent_idx = i;
+			child_elem_id = get_next_sibling(frame, child_elem_id);
+		}
+	}
+
+	// backwards to init all that can be computed
+	// and width based on children
+	for (size_t i = num_items - 1; i > 0; i--) // skip the root as it has been "computed"
+	{
+		const auto curr_elem_id = elem_id + i;
+
+		// set width if attr exists
+		auto width = get_elem_defined_attr(frame, curr_elem_id, attrs::width);
+		if (width)
+		{
+			items[i].width = std::max(std::lround(*width), 0l); // silent fail on negative width, clamp to 0
+		}
+		else // otherwise if any children has width set then take the max?
+		{
+			// TODO: some attr can determine width (e.g. image)
+
+			int max_children_width = -1; // if nothing set, then set to -1 as if nothing happened
+			Id child_elem_id = get_first_child(frame, curr_elem_id);
+			while (child_elem_id)
+			{
+				max_children_width = std::max(items[child_elem_id - elem_id].width, max_children_width);
+				child_elem_id = get_next_sibling(frame, child_elem_id);
+			}
+
+			items[i].width = max_children_width;
+		}
+		
+		// TODO: margin, left, right offset etc. for this we need an outer size
+	}
+
+	// forward to compute all width
+	for (size_t i = 1; i < num_items; i++) // again skip the root
+	{
+		// if still not set at this point, match size with the parent
+		auto& item = items[i];
+		if (item.width < 0)
+		{
+			item.width = items[item.parent_idx].width;
+		}
+		// TODO: margin, left, right offset etc.
+		// TODO: % width		
+	}
+
+	// backwards to compute self height and height based on children
+	for (size_t i = num_items - 1; i > 0; i--)
+	{
+		const auto curr_elem_id = elem_id + i;
+		auto& item = items[i];
+
+		// set height if attr exists
+		auto height = get_elem_defined_attr(frame, curr_elem_id, attrs::height);
+		if (height)
+		{
+			item.height = std::max(std::lround(*height), 0l); // silent fail on negative height, clamp to 0
+		}
+		else
+		{
+			item.height = compute_elem_self_height(frame, curr_elem_id, item.width);
+			if (item.height < 0)
+			{
+				Id child_elem_id = get_first_child(frame, curr_elem_id);
+				if (child_elem_id)
+				{
+					int total_children_height = 0;
+					while (child_elem_id)
+					{
+						int child_height = items[child_elem_id - elem_id].height;
+						if (child_height < 0)
+						{
+							total_children_height = -1;
+							break;
+						}
+						total_children_height += child_height;
+						child_elem_id = get_next_sibling(frame, child_elem_id);
+					}
+					item.height = total_children_height;
+				}
+			}
+		}
+
+		// TODO: margin, left, right offset etc.
+		// TODO: % height
+	}
+
+	// forward to fill in all heights
+	for (size_t i = 0; i < num_items; i++)
+	{
+		const auto curr_elem_id = elem_id + i;
+		int num_children_undef_height = 0;
+		int total_children_def_height = 0;
+		Id child_elem_id = get_first_child(frame, curr_elem_id);
+		while (child_elem_id)
+		{
+			const int child_height = items[child_elem_id - elem_id].height;
+			if (child_height < 0) 
+			{
+				num_children_undef_height++;
+			}
+			else
+			{
+				total_children_def_height += child_height;
+			}			
+			child_elem_id = get_next_sibling(frame, child_elem_id);
+		}
+
+		if (num_children_undef_height > 0)
+		{
+			int remaining_height = std::max(items[curr_elem_id - elem_id].height - total_children_def_height, 0);
+			int distr_child_height = (remaining_height / num_children_undef_height);
+			int idx = 0;
+			child_elem_id = get_first_child(frame, curr_elem_id);
+			while (child_elem_id)
+			{
+				auto& child_item = items[child_elem_id - elem_id];
+				if (child_item.height < 0) 
+				{
+					child_item.height = distr_child_height;
+					if (idx == (num_children_undef_height - 1))
+					{
+						child_item.height += (remaining_height % num_children_undef_height);
+					}
+					idx++;
+				}
+				child_elem_id = get_next_sibling(frame, child_elem_id);
+			}
+		}
+	}
+
+	// pass to determine left, top
+	for (size_t i = 0; i < num_items; i++)
+	{
+		const auto curr_elem_id = elem_id + i;
+		const auto& parent_item = items[i];
+		int top = parent_item.top;
+		Id child_elem_id = get_first_child(frame, curr_elem_id);
+		while (child_elem_id)
+		{
+			auto& child_item = items[child_elem_id - elem_id];
+			child_item.left = parent_item.left; // TODO: padding, margin, left, right
+			child_item.top = top;
+			top += child_item.height;
+			child_elem_id = get_next_sibling(frame, child_elem_id);
+		}
+	}
+
+	// set the layout attribute
+	for (size_t i = 0; i < num_items; i++)
+	{
+		const auto& item = items[i];
+		TabletLayout layout;
+		layout.left = item.left;
+		layout.top = item.top;
+		layout.width = item.width;
+		layout.height = item.height;
+		set_elem_post_attr(frame, elem_id + i, attrs::tablet_layout, layout);
+	}
+}
 
 static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& transform)
 {
@@ -460,14 +676,17 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		globals.last_rendered_frame = frame.frame_id;
 	}
 
-	// const TabletStore& store = engine().singletons.get(tablet_globals).store;
-	// const auto tablet_id = get_elem_attr(frame, elem_id, attrs::tablet_id);
-	const auto width = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::width));
-	const auto height = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::height));
+	const auto& root_layout = get_elem_attr_or_assert(frame, elem_id, attrs::tablet_layout);
+
+	const int width = root_layout.width;
+	const int height = root_layout.height;
+
 	const auto& texture = get_elem_attr_or_assert(frame, elem_id, attrs::texture);
 	const auto& shader = get_elem_attr_or_assert(frame, elem_id, attrs::shader);
 	const auto& quad_shader = get_elem_attr_or_assert(frame, elem_id, attrs::quad_shader);
 
+	// create cache for the given tablet
+	// TODO: match uuid of the element (not the elem_id since that's per frame)
 	const auto cache_index = globals.next_tablet_index++;
 	if (cache_index >= globals.tablet_caches.size())
 	{
@@ -485,52 +704,82 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 
 	// render the tablet to texture
 	glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(tablet_cache.fbo));
-
 	glViewport(0, 0, tablet_cache.rt_width, tablet_cache.rt_height);
-
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// glEnable(GL_DEPTH_TEST);
 	// glDepthFunc(GL_LESS);
-
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.texture));
+	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.texture)); // texture for glyph atlas
+	glUseProgram(static_cast<GLuint>(tablet_cache.shader_id)); // glyph shader;
+	glUniform2i(tablet_cache.param_dims, tablet_cache.width, tablet_cache.height); // dimensions uniform
+	glBindVertexArray(static_cast<GLuint>(tablet_cache.vao)); // tablet glyph vao
 
-	// use shader
-	glUseProgram(static_cast<GLuint>(tablet_cache.shader_id));
-	
-	// set mvp
-	//glUniformMatrix4fv(shader_cache.param_mvp, 1, GL_FALSE, item.mvp.data());
-	glUniform2i(tablet_cache.param_dims, tablet_cache.width, tablet_cache.height);
-
-	glBindVertexArray(static_cast<GLuint>(tablet_cache.vao));
-
-	SimpleArray<GlyphData> glyphs;
+	// construct glyph data and upload
 	const auto num_fixed_glyphs = (tablet_cache.width * tablet_cache.height);
-	
-	auto defined_glyphs = get_elem_defined_attr(frame, elem_id, attrs::glyphs);
-	if (defined_glyphs)
+	SimpleArray<GlyphData> glyphs = alloc_simple_array<GlyphData>(num_fixed_glyphs, true);
+	glyphs.zero();
+	const Id last_elem_id = get_last_in_subtree(frame, elem_id);
+	for (Id id = elem_id; id <= last_elem_id; id++)
 	{
-		glyphs = *defined_glyphs;
-		asserts(num_fixed_glyphs == glyphs.size());
-	}
-	else
-	{
-		const auto& text = get_elem_attr_or_default(frame, elem_id, attrs::text);
-		const auto len = text.size();
-		glyphs = alloc_simple_array<GlyphData>(len, true);
-		auto c_str = text.c_str();
-		for (size_t i = 0; i < len; i++)
-		{
-			auto& glyph = glyphs[i];
-			glyph.code = *(c_str + i);
+		const auto& layout = get_elem_attr_or_assert(frame, id, attrs::tablet_layout);
+		// TODO: background color
 
-			// TODO: colors
-			glyph.color1 = Color32{0, 0, 0, 255};
-			glyph.color2 = Color32{0, 255, 0, 255};			
+		if (auto defined_glyphs = get_elem_defined_attr(frame, id, attrs::glyphs))
+		{
+			int src_x{0}, src_y{0}, dst_x{layout.left}, dst_y{layout.top};
+			int w{layout.width}, h{layout.height};
+
+			if (dst_x < 0) { int delta = -dst_x; src_x += delta; w -= delta; dst_x = 0; }
+			if (dst_x + w > width) { w = width - dst_x;	}
+			if (dst_y < 0) { int delta = -dst_y; src_y += delta; h -= delta; dst_y = 0; }
+			if (dst_y + h > height) { h = height - dst_y; }
+
+			if (w > 0 && h > 0)
+			{
+				const size_t num_glyphs = defined_glyphs->size();
+				for (int y = 0; y < h; y++)
+				{
+					int src_start = y * layout.width + src_x;
+					int dst_start = (dst_y + y) * width + dst_x;
+					if (src_start + w <= num_glyphs)
+					{
+						memcpy(glyphs.data() + dst_start, defined_glyphs->data() + src_start, w);
+					}
+					else
+					{
+						if (src_start < num_glyphs)
+						{
+							memcpy(glyphs.data() + dst_start, defined_glyphs->data() + src_start, num_glyphs - src_start);
+						}
+						break;
+					}					
+				}
+			}
+		}
+		else if (auto text = get_elem_defined_attr(frame, id, attrs::text))
+		{
+			const auto len = text->size();
+			auto c_str = text->c_str();
+			for (size_t i = 0; i < len; i++)
+			{
+				int line = (int)(i / layout.width); // TODO: tab, new line, text wrap, utf8
+				int x = layout.left + (i % layout.width);
+				int y = layout.top + line;
+
+				if (x >= 0 && y >= 0 && x < width && y < height)
+				{
+					auto& glyph = glyphs[x + width * y];
+					glyph.code = *(c_str + i);
+
+					// TODO: colors
+					glyph.color1 = Color32{0, 0, 0, 255};
+					glyph.color2 = Color32{0, 255, 0, 255};	
+				}		
+			}
 		}
 	}
-
+	
 	const auto num_glyphs = std::min(static_cast<size_t>(tablet_cache.max_num_glyphs), glyphs.size());
 
 	// copy in extra coordinates
@@ -541,8 +790,9 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	// }
 
 	// copy in the glyph data
+	// TODO: do we need the optimization of only uploading data that changed?
 	glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.glyph_buffer));
-	glBufferSubData(GL_ARRAY_BUFFER, 0, glyphs.size() * sizeof(GlyphData), glyphs.data());
+	glBufferSubData(GL_ARRAY_BUFFER, 0, num_glyphs * sizeof(GlyphData), glyphs.data());
 
 	// Draw all glyphs instanced
 	// TODO: another way to draw this is to draw a quad, and have the pixel shader 
@@ -585,10 +835,12 @@ static const Id tablet_elem_type = register_elem_type([](ElementTypeSetup& setup
 {
 	setup.set_name("tablet");
 	setup.set_attr(attrs::renderer_3d, &render_tablet);
+	setup.set_attr(attrs::postprocessor, &postprocess_tablet);
 });
 
 namespace elem
 {
+	// TODO: maybe make this inline and extern the tablet_elem_type
 	Id tablet(const Context ctx)
 	{
 		return make_element(ctx, tablet_elem_type);

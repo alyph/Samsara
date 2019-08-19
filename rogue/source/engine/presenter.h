@@ -21,11 +21,13 @@ struct ElementType;
 struct ElementTypeSetup;
 
 using RendererFunc = void(*)(const Frame& frame, Id elem_id);
+using PostProcessorFunc = void(*)(Frame& frame, Id elem_id);
 using ElemTypeInitFunc = std::function<void(ElementTypeSetup&)>;
 
 namespace attrs
 {
 	extern Attribute<RendererFunc> renderer;
+	extern Attribute<PostProcessorFunc> postprocessor;
 	extern Attribute<double> top;
 	extern Attribute<double> bottom;
 	extern Attribute<double> left;
@@ -45,13 +47,16 @@ extern Id register_elem_type(ElemTypeInitFunc init_func);
 extern Id make_element(const Context& context, Id type_id);
 extern Id get_first_child(const Frame& frame, Id elem_id);
 extern Id get_next_sibling(const Frame& frame, Id elem_id);
+inline Id get_last_in_subtree(const Frame& frame, Id root_elem_id); // TODO: rename to get_last_descendant()??
 
 template<typename T> const T* get_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T& get_elem_attr_or_default(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T& get_elem_attr_or_assert(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T* get_elem_defined_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T, typename ValT> void set_elem_instance_attr(const Context& context, const Attribute<T>& attr, const ValT& val);
+template<typename T, typename ValT> void set_elem_post_attr(Frame& frame, Id elem_id, const Attribute<T>& attr, const ValT& val);
 
+// TODO: can maybe inline these context functions
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count);
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count, uint64_t user_id);
 extern Element& get_working_elem(const Context& context);
@@ -191,6 +196,28 @@ template<typename T> void ElementTypeSetup::set_attr(const Attribute<T>& attr, c
 	globals->elem_type_attr_table.set_attr(type->type_attrs, attr, value);
 }
 
+inline Id get_last_in_subtree(const Frame& frame, Id root_elem_id)
+{
+	const Id sibling = get_next_sibling(frame, root_elem_id);
+	if (sibling)
+	{
+		return (sibling - 1);
+	}
+	else
+	{
+		// TODO: maybe store the next subtree start offset in the sibling offset as well
+		// use positive as its own sibling but negative as the non-sibling subtree?
+		const auto root_elem_idx = id_to_index(root_elem_id);
+		const auto depth = frame.elements[root_elem_idx].depth;
+		size_t elem_idx = root_elem_idx + 1;
+		for (; elem_idx < frame.elements.size(); elem_idx++)
+		{
+			if (frame.elements[elem_idx].depth <= depth) break;
+		}
+		return index_to_id(elem_idx - 1);
+	}
+}
+
 template<typename T> 
 const T* get_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr)
 {
@@ -236,4 +263,20 @@ void set_elem_instance_attr(const Context& context, const Attribute<T>& attr, co
 {
 	Element& elem = get_working_elem(context);
 	context.frame->inst_attr_table.set_attr(elem.inst_attrs, attr, val);
+}
+
+template<typename T, typename ValT> 
+void set_elem_post_attr(Frame& frame, Id elem_id, const Attribute<T>& attr, const ValT& val)
+{
+	Element& elem = frame.elements[id_to_index(elem_id)];
+	frame.post_attr_table.set_attr(elem.post_attrs, attr, val);
+}
+
+namespace elem
+{
+	// generic element in the presented tree
+	inline Id node(const Context ctx)
+	{
+		return make_element(ctx, null_id);
+	}
 }

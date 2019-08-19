@@ -99,6 +99,7 @@ static const Id viewport_elem_type = register_elem_type([](ElementTypeSetup& set
 
 namespace elem
 {
+	// TODO: maybe make this inline and extern the viewport_elem_type
 	Id viewport(const Context ctx)
 	{
 		return make_element(ctx, viewport_elem_type);

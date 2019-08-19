@@ -1,5 +1,5 @@
 
-- [ ] multiple text nodes (requires layout??)
+- [x] multiple text nodes (requires layout??)
 - [ ] buttons
 - [ ] text wrap?
 

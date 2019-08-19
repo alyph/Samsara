@@ -184,6 +184,7 @@ static const Id mesh_elem_type = register_elem_type([](ElementTypeSetup& setup)
 
 namespace elem
 {
+	// TODO: maybe make this inline and extern the mesh_elem_type
 	Id mesh(const Context ctx)
 	{
 		return make_element(ctx, mesh_elem_type);

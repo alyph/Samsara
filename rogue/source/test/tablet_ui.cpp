@@ -221,15 +221,29 @@ void TabletUIApp::present(const Context& ctx)
 	{
 		tablet(_ctx);
 
-		String str = "Dream Park is a futuristic amusement park using holograms and other advanced technologies to entertain customers, including live-action role-players. Dream Park, The Barsoom Project and The California Voodoo Game follow security chief Alex Griffin as he attempts to solve various mysteries set in the park. The other stories in this series have only a peripheral connection. Saturn's Race is a prequel to Achilles' Choice; both involve young adults technologically \"upgrading\" their bodies in an effort to join the world's ruling elite.                                                                              abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~!@#$%^&*()_+-*/={}'\"?<>|\\[]:,.";
-
+		
 		_attr(attrs::transform, Mat44::identity());
-		_attr(attrs::text, str);
 		_attr(attrs::width, tablet_width);
 		_attr(attrs::height, tablet_height);
 		_attr(attrs::texture, atlas_texture.id());
 		_attr(attrs::shader, tablet_shader);
 		_attr(attrs::quad_shader, tablet_screen_shader);
+
+		_children
+		{
+			node(_ctx);
+			String str = "Dream Park is a futuristic amusement park using holograms and other advanced technologies to entertain customers, including live-action role-players. Dream Park, The Barsoom Project and The California Voodoo Game follow security chief Alex Griffin as he attempts to solve various mysteries set in the park. The other stories in this series have only a peripheral connection. Saturn's Race is a prequel to Achilles' Choice; both involve young adults technologically \"upgrading\" their bodies in an effort to join the world's ruling elite.";
+			_attr(attrs::text, str);
+
+			node(_ctx);
+			str = "---------------------------------------------------------------------";
+			_attr(attrs::text, str);
+
+
+			node(_ctx);
+			str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~!@#$%^&*()_+-*/={}'\"?<>|\\[]:,.";
+			_attr(attrs::text, str);
+		}
 	}
 
 	// auto vp = []() { static Id my_root_id = presenter.new_id(); return viewport(presenter, my_root_id); }();

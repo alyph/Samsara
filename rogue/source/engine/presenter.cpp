@@ -14,6 +14,7 @@ struct PresentWorker
 namespace attrs
 {
 	Attribute<RendererFunc> renderer{nullptr};
+	Attribute<PostProcessorFunc> postprocessor{nullptr};
 	Attribute<double> top{0.0};
 	Attribute<double> bottom{0.0};
 	Attribute<double> left{0.0};
@@ -354,6 +355,18 @@ void Presenter::present()
 	present_func(std::move(context), present_func_param);
 
 	// may perform any necessary post processing
+	// TODO: if an element gets processed more than once (since some may process the whole sub tree)
+	// then we may run into issue where the element's attribute list is no longer contiguous
+	for (size_t elem_idx = 0; elem_idx < curr_frame.elements.size(); elem_idx++)
+	{
+		const Id elem_id = index_to_id(elem_idx);
+		auto postprocessor = get_elem_attr_or_default(curr_frame, elem_id, attrs::postprocessor);
+		if (postprocessor)
+		{
+			postprocessor(curr_frame, elem_id);
+		}
+	}
+	
 	// now new frame is stored in curr_frame
 }
 
@@ -368,7 +381,6 @@ void Presenter::render(const Frame& frame)
 		while (elem_id)
 		{
 			const auto elem_idx = id_to_index(elem_id);
-			const auto& elem = frame.elements[elem_idx];
 			auto renderer = get_elem_attr_or_assert(frame, elem_id, attrs::renderer);
 			asserts(renderer); // still need assert since the assigned value may be null
 

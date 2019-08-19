@@ -116,6 +116,7 @@ public:
 
 	bool empty() const { return size() == 0; }
 	inline size_t size() const;
+	inline void zero();
 	inline T& operator[](size_t idx) { return at(idx); }
 	inline const T& operator[](size_t idx) const { return at(idx); }
 	inline T* data() { return data_impl(); }
@@ -166,6 +167,13 @@ inline size_t SimpleArray<T>::size() const
 {
 	const auto header = reinterpret_cast<SimpleArrayHeader*>(handle.alloc_handle.get(engine().allocators));
 	return header ? header->size : 0;
+}
+
+template<typename T> 
+inline void SimpleArray<T>::zero()
+{
+	// TODO: safe null pointer when size is also 0?
+	memset(data(), 0, sizeof(T) * size());
 }
 
 template<typename T> 

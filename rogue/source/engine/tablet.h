@@ -10,11 +10,17 @@
 
 struct GlyphData;
 
+struct TabletLayout
+{
+	int left{}, top{}, width{}, height{};
+};
+
 namespace attrs
 {
 	// extern Attribute<Id> tablet_id; // TODO: remove
 	extern Attribute<Id> quad_shader;
 	extern Attribute<SimpleArray<GlyphData>> glyphs;
+	extern Attribute<TabletLayout> tablet_layout;
 }
 
 struct GlyphData
