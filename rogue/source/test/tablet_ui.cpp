@@ -232,17 +232,24 @@ void TabletUIApp::present(const Context& ctx)
 		_children
 		{
 			node(_ctx);
+			_attr(attrs::height, 2);
+
+			node(_ctx);
 			String str = "Dream Park is a futuristic amusement park using holograms and other advanced technologies to entertain customers, including live-action role-players. Dream Park, The Barsoom Project and The California Voodoo Game follow security chief Alex Griffin as he attempts to solve various mysteries set in the park. The other stories in this series have only a peripheral connection. Saturn's Race is a prequel to Achilles' Choice; both involve young adults technologically \"upgrading\" their bodies in an effort to join the world's ruling elite.";
 			_attr(attrs::text, str);
+			_attr(attrs::foreground_color, (Color{0.8f, 0.1f, 0.5f, 1.f}));
 
 			node(_ctx);
 			str = "---------------------------------------------------------------------";
 			_attr(attrs::text, str);
+			_attr(attrs::foreground_color, (Color{0.8f, 0.8f, 0.8f, 1.f}));
 
 
 			node(_ctx);
 			str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~!@#$%^&*()_+-*/={}'\"?<>|\\[]:,.";
 			_attr(attrs::text, str);
+			_attr(attrs::foreground_color, (Color{0.2f, 0.9f, 0.7f, 1.f}));
+			_attr(attrs::width, 50);
 		}
 	}
 

@@ -771,10 +771,8 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 				{
 					auto& glyph = glyphs[x + width * y];
 					glyph.code = *(c_str + i);
-
-					// TODO: colors
-					glyph.color1 = Color32{0, 0, 0, 255};
-					glyph.color2 = Color32{0, 255, 0, 255};	
+					glyph.color1 = to_color32(get_elem_attr_or_default(frame, id, attrs::background_color));
+					glyph.color2 = to_color32(get_elem_attr_or_default(frame, id, attrs::foreground_color));
 				}		
 			}
 		}

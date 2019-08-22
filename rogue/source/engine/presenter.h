@@ -36,6 +36,7 @@ namespace attrs
 	extern Attribute<double> height;
 	extern Attribute<Mat44> transform;
 	extern Attribute<Color> background_color;
+	extern Attribute<Color> foreground_color;
 	extern Attribute<Id> texture;
 	extern Attribute<Id> shader;
 	extern Attribute<String> text;

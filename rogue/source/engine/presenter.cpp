@@ -22,7 +22,8 @@ namespace attrs
 	Attribute<double> width{0.0};
 	Attribute<double> height{0.0};
 	Attribute<Mat44> transform{Mat44::identity()};
-	Attribute<Color> background_color{Color{}};
+	Attribute<Color> background_color{Color{0.f, 0.f, 0.f, 0.f}};
+	Attribute<Color> foreground_color{Color{1.f, 1.f, 1.f, 1.f}};
 	Attribute<Id> texture{null_id};
 	Attribute<Id> shader{null_id};
 	Attribute<String> text{String{}};
