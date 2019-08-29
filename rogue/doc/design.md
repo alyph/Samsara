@@ -73,7 +73,9 @@ Events are basically actions. The difference is events emerge without player ins
 
 Examples of events:
 - Border conflicts and frictions
-- Rebellion, unrest
+- Rebellion, unrest, secession
 - Trade dispute
 - Diplomatic actions initiated by other factions
 - External threat: alien invasions, sudden rise of power
+- Emerge of religious or political power
+- Cultural or political movement
