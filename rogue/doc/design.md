@@ -59,9 +59,9 @@ Examples of actions:
 - Expeditions/quests - based on the discoveries of survey missions, character requests/interactions, events etc.
 - Found orgnizations: corporations, agencies, cults, religions
 - Upgrade fleet/army equipment
-- Expand military force
-- Pass policies and laws
-- Political actions, coup, assasinations, change of government
+- Expand military force, create new fleet
+- Enact policies and laws
+- Political actions, coup, assasinations, overthrow government
 - Diplomatic actions, meetings, incidents, war preparations
 - Military campaigns
 
@@ -69,13 +69,13 @@ Examples of actions:
 
 Events are basically actions. The difference is events emerge without player instigation and they are not subject to the action slot limit
 - There are a lot of events going on in the worlds at any given time, but most of them are small or mundane and those are represented by traits. Only the prominent events that require deeper player involvement and attention will be represented by the events here. However smaller events may evolve into bigger ones if not taken care of properly
-- Events may evolve to something just like actions and those will be played out like actions. e.g. when a conflict escalated into all out war or other factions declare war, the events will simply turn into a military campaign
+- Events may evolve into something just like actions and those will be played out like actions. e.g. when a conflict escalated into all out war or other factions declare war, the events will simply turn into a military campaign (in practice, this may be a switch from one event to another)
 
 Examples of events:
 - Border conflicts and frictions
 - Rebellion, unrest, secession
 - Trade dispute
-- Diplomatic actions initiated by other factions
+- Diplomatic actions initiated by non-player factions
 - External threat: alien invasions, sudden rise of power
 - Emerge of religious or political power
 - Cultural or political movement
