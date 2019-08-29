@@ -16,7 +16,7 @@
 - Small and mundane buildings, structures and infrastructures should be developed based on simulation without direct control but may be indirectly influenced
 
 ### Politics
-- Manage relationship and conflicts between spices, races, nations, factions, organizations, classes and demographic groups
+- Manage relationship and conflicts between species, races, nations, factions, organizations, classes and demographic groups
 - Political ideas and social, cultural phenomenon will emerge by simulation. Events, decisions, debates, crisis and policies can take place accordingly
 - Covert actions, espionage, secret dealings, secret societies
 
