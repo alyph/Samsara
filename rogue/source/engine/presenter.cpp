@@ -8,13 +8,20 @@ struct PresentWorker
 		Id elem_id{};
 	};
 
+	struct ScopeWorkerEntry
+	{
+		size_t scope_idx{};
+	};
+
 	std::vector<ElementWorkerEntry> elem_worker_stack;
+	std::vector<ScopeWorkerEntry> scope_worker_stack;
 };
 
 namespace attrs
 {
 	Attribute<RendererFunc> renderer{nullptr};
 	Attribute<PostProcessorFunc> postprocessor{nullptr};
+	Attribute<RaycasterFunc> raycaster{nullptr};
 	Attribute<double> top{0.0};
 	Attribute<double> bottom{0.0};
 	Attribute<double> left{0.0};
@@ -28,14 +35,6 @@ namespace attrs
 	Attribute<Id> shader{null_id};
 	Attribute<String> text{String{}};
 }
-
-// struct GlobalPresenterData
-// {
-// 	std::vector<ElementType> elem_types;
-// 	std::vector<AttrTableEntry> elem_type_attr_table;
-// 	std::vector<uint8_t> elem_type_attr_buffer;
-// };
-// static GlobalPresenterData global_data;
 
 static std::vector<ElemTypeInitFunc>& registered_elem_type_funcs()
 {
@@ -51,55 +50,6 @@ Id register_elem_type(ElemTypeInitFunc init_func)
 	return id;
 }
 
-#if 0
-static Buffer& init_attr_table_and_buffer(Id attr_id, uint32_t& table_index, uint16_t& num_attrs, std::vector<AttrTableEntry>& table, Buffer& buffer)
-{
-	using attr_id_type = decltype(AttrTableEntry::attr_id);
-	using buffer_ptr_type = decltype(AttrTableEntry::buffer_ptr);
-	using table_index_type = std::remove_reference_t<decltype(table_index)>;
-
-	const auto ptr = buffer.size();
-	asserts(buffer.is_aligned(ptr));
-
-	// find existing entry for the given attr and point it to the new buffer location
-	// TODO: right now we just keep adding new buffer for each set attr value
-	// but the buffer may contain multiple values for the same attr, even though
-	// it still functions, the values other than the last one are not used and wasting space
-	for (uint16_t i = 0; i < num_attrs; i++)
-	{
-		auto& table_entry = table[table_index + i];
-		if (table_entry.attr_id == attr_id)
-		{
-			table_entry.buffer_ptr = static_cast<buffer_ptr_type>(ptr);
-			return buffer;
-		}
-	}
-
-	if (num_attrs == 0)
-	{
-		table_index = static_cast<table_index_type>(table.size());
-		num_attrs = 1;
-	}
-	else
-	{
-		// make sure the table for each element is continguous
-		asserts((table_index + num_attrs) == table.size());
-		num_attrs++;
-	}
-
-	auto& table_entry = table.emplace_back();
-	table_entry.attr_id = static_cast<attr_id_type>(attr_id);
-	table_entry.buffer_ptr = static_cast<buffer_ptr_type>(ptr);
-	return buffer;
-}
-
-Buffer& ElementTypeSetup::init_attr_buffer(Id attr_id)
-{
-	return init_attr_table_and_buffer(attr_id, type->attr_table_index, type->num_attrs,
-		globals->elem_type_attr_table, globals->elem_type_attr_buffer);
-}
-#endif
-
 void ElementTypeSetup::set_name(const char* name)
 {
 	type->name = name;
@@ -111,16 +61,20 @@ Id make_element(const Context& context, Id type_id)
 
 	auto frame = context.frame;
 	auto worker = context.worker;
+	auto globals = frame->globals;
 
 	size_t new_elem_idx = frame->elements.size();
 	auto& elem_worker = worker->elem_worker_stack.back();
+	const auto depth = (worker->elem_worker_stack.size() - 1);
 	if (elem_worker.elem_id)
 	{
 		// siblings of current element
 		auto prev_sibling_idx = id_to_index(elem_worker.elem_id);
 		auto& prev_sibling_elem = frame->elements[prev_sibling_idx];
+		// TODO: replace this with a next tree offset
 		prev_sibling_elem.sibling_offset = static_cast<sibling_offset_type>(new_elem_idx - prev_sibling_idx);
 	}
+	// NOTE: commented out since this is kinda already checked in ScopedChildrenBlock::ScopedChildrenBlock
 	// else
 	// {
 	// 	// first child element of the parent
@@ -131,7 +85,21 @@ Id make_element(const Context& context, Id type_id)
 	// 			== (new_elem_idx - 1)));
 	// }
 
+	auto& scope = globals->scopes[context.scope_idx];
+	if (!scope.elem_guid)
+	{
+		// create a new global element
+		scope.elem_guid = index_to_id(globals->global_elems.size());
+		auto& global_elem = globals->global_elems.emplace_back();		
+		if (depth > 0)
+		{
+			const Id parent_id = worker->elem_worker_stack[depth - 1].elem_id;
+			global_elem.parent = frame->elements[id_to_index(parent_id)].guid;
+		}
+	}
+
 	auto& new_elem = frame->elements.emplace_back();
+	new_elem.guid = scope.elem_guid;
 	new_elem.type = static_cast<decltype(new_elem.type)>(type_id);
 	new_elem.depth = static_cast<decltype(new_elem.depth)>(worker->elem_worker_stack.size() - 1);
 
@@ -162,75 +130,109 @@ Id get_next_sibling(const Frame& frame, Id elem_id)
 	return null_id;
 }
 
-#if 0
-static BufferBlock get_attr_buffer_from_table(Id attr_id, uint32_t table_index, uint16_t num_attrs, const std::vector<AttrTableEntry>& table, const Buffer& buffer)
-{
-	BufferBlock block;
-	for (uint16_t i = 0; i < num_attrs; i++)
-	{
-		auto& table_entry = table[table_index + i];
-		if (table_entry.attr_id == attr_id)
-		{
-			asserts(buffer.is_aligned(table_entry.buffer_ptr));
-			const uint32_t next_idx = (table_index + i + 1);
-			block.ptr = buffer.get(table_entry.buffer_ptr);
-			block.size = (next_idx < table.size() ? (table[next_idx].buffer_ptr - table_entry.buffer_ptr) : (buffer.size() - table_entry.buffer_ptr));
-			break;
-		}
-	}	
-	return block;
-}
-
-BufferBlock get_elem_attr_buffer(const Frame& frame, Id elem_id, Id attr_id)
-{
-	const auto& elem = frame.elements[id_to_index(elem_id)];
-	auto buffer = get_attr_buffer_from_table(attr_id, elem.attr_table_index, elem.num_attrs, frame.attr_table, frame.attr_buffer);
-	if (!buffer && elem.type)
-	{
-		const auto& globals = *frame.globals;
-		const auto& elem_type = globals.elem_types[id_to_index(elem.type)];
-		buffer = get_attr_buffer_from_table(attr_id, elem_type.attr_table_index, elem_type.num_attrs, globals.elem_type_attr_table, globals.elem_type_attr_buffer);
-	}
-	return buffer;
-}
-
-Buffer& init_elem_attr_buffer(const Context& context, Id attr_id)
-{
-	auto frame = context.frame;
-	auto worker = context.worker;
-
-	// right now we are just getting the current working element
-	// TODO: we may want to check the current scope make sure we are not setting attr of 
-	// the elements that are created in previously called functions
-	auto& elem_worker = worker->elem_worker_stack.back();
-	asserts(elem_worker.elem_id);
-	auto& elem = frame->elements[id_to_index(elem_worker.elem_id)];
-
-	// NOTE: this will assert if the attr table is no longer continguous for the given element
-	// meaning you have called _attr after _children block
-	return init_attr_table_and_buffer(attr_id, elem.attr_table_index, elem.num_attrs, frame->attr_table, frame->attr_buffer);
-}
-
-#endif
-
 Context create_scoped_context(const Context& parent_scope_context, uint64_t count)
 {
+	auto frame = parent_scope_context.frame;
+	auto worker = parent_scope_context.worker;
+	auto globals = frame->globals;
+	
 	Context context;
-	context.frame = parent_scope_context.frame;
-	context.worker = parent_scope_context.worker;
-	// TODO: scope id
+	context.frame = frame;
+	context.worker = worker;
 
+	const auto parent_scope_idx = parent_scope_context.scope_idx;
+	const auto& parent_scope = globals->scopes[parent_scope_idx];
+	const auto new_depth = (parent_scope.depth + 1);
+	const Id new_id = count;
+
+	// scope stack size always matches the new context's scope depth 
+	// note the root scope (depth 0) is not in the stack
+	// stack must be at least the same size as the parent's depth, 
+	// if we are rewinding then it could be larger, in that case
+	// we could discard the rewound portion of the scope stack
+	// regardless in which case, we will now make the stack match 
+	// the new depth
+	asserts(worker->scope_worker_stack.size() >= (new_depth - 1)); 
+	worker->scope_worker_stack.resize(new_depth);
+	auto& scope_worker = worker->scope_worker_stack.back();
+	
+	size_t last_visit = scope_worker.scope_idx ? scope_worker.scope_idx : (parent_scope_idx + 1);
+	size_t parent_scope_end = (parent_scope_idx + parent_scope.next_offset);
+	size_t insert = parent_scope_end;
+
+	// NOTE: scope local ids are sorted (smaller to bigger) among siblings
+	for (size_t idx = last_visit; idx < parent_scope_end;)
+	{
+		const auto& scope = globals->scopes[idx];
+		if (new_id == scope.local_id)
+		{
+			context.scope_idx = idx;
+			break;
+		}
+		else if (new_id < scope.local_id)
+		{
+			insert = idx;
+			break;
+		}
+		idx += scope.next_offset;
+	}
+
+	// if the new scope local id is smaller than the last visit, 
+	// then we still need search for the first half
+	// TODO: since the loop body is essentially the same, maybe just merge with the above loop somehow
+	if (insert == last_visit)
+	{
+		for (size_t idx = (parent_scope_idx + 1); idx < last_visit;)
+		{
+			const auto& scope = globals->scopes[idx];
+			if (new_id == scope.local_id)
+			{
+				context.scope_idx = idx;
+				break;
+			}
+			else if (new_id < scope.local_id)
+			{
+				insert = idx;
+				break;
+			}
+			idx += scope.next_offset;
+		}
+	}
+
+	if (!context.scope_idx)
+	{
+		// insert a new scope at the found insert position
+		ScopeEntry new_scope;
+		new_scope.local_id = new_id;
+		new_scope.next_offset = 1;
+		new_scope.depth = new_depth;
+		globals->scopes.insert(globals->scopes.begin()+insert, new_scope);
+		context.scope_idx = insert;
+
+		// and increment offset of all ancestors
+		// note can always loop over the entire global scope list to find the ancestors
+		// by comparing the next offset with the insert position (if >=) and depth (if <)
+		// but since we have the stack here, can just loop over that conveniently
+		globals->scopes[0].next_offset++;
+		for (size_t i = 0; i < new_depth-1; i++)
+		{
+			const size_t idx = worker->scope_worker_stack[i].scope_idx;
+			globals->scopes[idx].next_offset++;
+		}
+	}
+
+	scope_worker.scope_idx = context.scope_idx;
 	return context;
 }
 
 Context create_scoped_context(const Context& parent_scope_context, uint64_t count, uint64_t user_id)
 {
-	Context context;
-	context.frame = parent_scope_context.frame;
-	context.worker = parent_scope_context.worker;
-	// TODO: scope id
-
-	return context;
+	// TODO: verify below is valid
+	// just two create_scoped_context with a single count each?
+	// TODO: if there are a lot of these user id items, maybe we could optimize it 
+	// such that it doesn't require to have a distinctive scope per each user id
+	Context intermediate_context = create_scoped_context(parent_scope_context, count);
+	return create_scoped_context(intermediate_context, user_id);
 }
 
 Element& get_working_elem(const Context& context)
@@ -277,6 +279,14 @@ static PresentGlobals make_globals()
 		setup.type = &elem_type;
 		elem_type_funcs[i](setup);
 	}
+
+	// The root scope is never used by any actual elements
+	// it is here so the root context can point to some scope
+	// and conveniently scope index 0 can be treated as invalid index
+	// since any actual scope must have index > 0
+	ScopeEntry& root_scope = globals.scopes.emplace_back();
+	root_scope.next_offset = 1; // this coincides with the total number of the scopes including this one
+	root_scope.depth = 0; // just to be explicit
 
 	return globals;
 }
@@ -381,7 +391,6 @@ void Presenter::render(const Frame& frame)
 		Id elem_id = index_to_id(0);
 		while (elem_id)
 		{
-			const auto elem_idx = id_to_index(elem_id);
 			auto renderer = get_elem_attr_or_assert(frame, elem_id, attrs::renderer);
 			asserts(renderer); // still need assert since the assigned value may be null
 
@@ -392,6 +401,32 @@ void Presenter::render(const Frame& frame)
 			elem_id = get_next_sibling(frame, elem_id);
 		}
 	}
+}
+
+Id Presenter::raycast(const Frame& frame, double x, double y, double& out_z)
+{
+	Id closest_hit_elem{};
+	double closest_z = 2.0; // z is between [0, 1], so 2 will be farther than the farthest
+
+	Id elem_id = frame.elements.empty() ? null_id : index_to_id(0);
+	while (elem_id)
+	{
+		auto raycaster = get_elem_attr_or_assert(frame, elem_id, attrs::raycaster);
+		asserts(raycaster); // still need assert since the assigned value may be null
+
+		double z{};
+		Id hit_elem = raycaster(frame, elem_id, x, y, z);
+		if (hit_elem && z < closest_z)
+		{
+			closest_hit_elem = hit_elem;
+			closest_z = z;
+		}
+
+		// now moves to next sibling
+		elem_id = get_next_sibling(frame, elem_id);
+	}
+
+	return closest_hit_elem;
 }
 
 

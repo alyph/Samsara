@@ -829,11 +829,63 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	return Render3dType::sub_tree;
 }
 
+static Id raycast_tablet(const Frame& frame, Id elem_id, const Mat44& transform, double x, double y, double& out_z)
+{
+	const auto& root_layout = get_elem_attr_or_assert(frame, elem_id, attrs::tablet_layout);
+	const int width = root_layout.width;
+	const int height = root_layout.height;
+	const auto& texture = get_elem_attr_or_assert(frame, elem_id, attrs::texture);
+
+	const auto tablet_size = calc_tablet_size(width, height, texture);
+	const float half_w = tablet_size.x / 2;
+	const float half_h = tablet_size.y / 2;
+	const Vec3 verts[] = 
+	{
+		{ -half_w, -half_h, 0 }, { half_w, -half_h, 0 },
+		{ half_w, half_h, 0 }, { -half_w, half_h, 0 }
+	};
+	const uint32_t indices[] = { 0, 1, 2, 0, 2, 3 };
+	const Vec2 uvs[] = { {0.f, 1.f}, {1.f, 1.f}, {1.f, 0.f}, {0.f, 0.f} };
+
+	const auto& result = raycast_triangles(2, verts, indices, transform, x, y);
+	if (result.hit)
+	{
+		out_z = result.z;
+
+		const uint32_t i0 = indices[result.hit_triangle_idx*3];
+		const uint32_t i1 = indices[result.hit_triangle_idx*3 + 1];
+		const uint32_t i2 = indices[result.hit_triangle_idx*3 + 2];
+
+		const Vec2 uv = uvs[i0] * result.w0 + uvs[i1] * result.w1 + uvs[i2] * result.w2;
+
+		const int cx = std::clamp((int)std::floor(uv.x * width), 0, width-1);
+		const int cy = std::clamp((int)std::floor(uv.y * height), 0, height-1);
+
+		// loop backwards to find the deepest hit descendent
+		// TODO: may want to optimize such that we can skip the whole sub tree
+		const Id last_elem_id = get_last_in_subtree(frame, elem_id);
+		for (Id id = last_elem_id; id > elem_id; id--)
+		{
+			const auto& layout = get_elem_attr_or_assert(frame, id, attrs::tablet_layout);
+			if (cx >= layout.left && cx < layout.left + layout.width &&
+				cy >= layout.top && cy < layout.top + layout.height)
+			{
+				return id;
+			}
+		}
+		return elem_id; // if no child hit, tablet itself is hit
+	}
+
+	// if no hit
+	return null_id;
+}
+
 static const Id tablet_elem_type = register_elem_type([](ElementTypeSetup& setup)
 {
 	setup.set_name("tablet");
 	setup.set_attr(attrs::renderer_3d, &render_tablet);
 	setup.set_attr(attrs::postprocessor, &postprocess_tablet);
+	setup.set_attr(attrs::raycaster_3d, &raycast_tablet);
 });
 
 namespace elem

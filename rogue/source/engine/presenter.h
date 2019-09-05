@@ -22,12 +22,15 @@ struct ElementTypeSetup;
 
 using RendererFunc = void(*)(const Frame& frame, Id elem_id);
 using PostProcessorFunc = void(*)(Frame& frame, Id elem_id);
+// x, y in screen space (in pixels), out_z in NDC space (-1, 1)
+using RaycasterFunc = Id(*)(const Frame& frame, Id elem_id, double x, double y, double& out_z);
 using ElemTypeInitFunc = std::function<void(ElementTypeSetup&)>;
 
 namespace attrs
 {
 	extern Attribute<RendererFunc> renderer;
 	extern Attribute<PostProcessorFunc> postprocessor;
+	extern Attribute<RaycasterFunc> raycaster;
 	extern Attribute<double> top;
 	extern Attribute<double> bottom;
 	extern Attribute<double> left;
@@ -67,17 +70,37 @@ extern Element& get_working_elem(const Context& context);
 #define _attr(attr, val) set_elem_instance_attr(ctx, attr, val)
 #define _children if (const ScopedChildrenBlock CONCAT(children_block_, __COUNTER__){ctx}; true)
 
+struct ScopeEntry
+{
+	Id local_id{};
+	Id elem_guid{};
+	uint32_t next_offset{};
+	uint16_t depth{};
+};
+
+struct GlobalElemEntry
+{
+	Id parent{};
+};
+
 struct PresentGlobals
 {
 	std::vector<ElementType> elem_types;
 	AttrTable elem_type_attr_table;
+
+	// TODO: technically these do not belong the global of everything
+	// should be actually tied to a present function, each different present
+	// function may create an entirely differenet set of scopes and global elements
+	std::vector<ScopeEntry> scopes;
+	std::vector<GlobalElemEntry> global_elems;
 };
 
 struct Element
 {
+	Id guid{};
 	uint16_t type{};
 	uint16_t depth{};
-	uint32_t sibling_offset{};
+	uint32_t sibling_offset{}; // TODO: change this to be a tree offset
 	AttrListHandle inst_attrs;
 	AttrListHandle post_attrs;
 };
@@ -102,7 +125,7 @@ struct Context
 {
 	Frame* frame{};
 	PresentWorker* worker{};
-	Id scope{};
+	size_t scope_idx{};
 
 	Context() = default;
 	Context(const Context& other) = delete;
@@ -110,13 +133,26 @@ struct Context
 	Context& operator=(const Context& other) = delete;
 };
 
+struct InputState
+{
+	double mouse_x{}, mouse_y{};
+	Id down_elems[3]{}; //guid, for left/mid/right mouse button down
+	Id hover_elem{}; //guid
+	uint64_t key_down[4]{};
+	uint8_t mouse_down{};
+
+	// TODO: click & double click
+};
+
 struct Frame
 {
 	Id frame_id{};
-	const PresentGlobals* globals{};
+	PresentGlobals* globals{};
 	std::vector<Element> elements;
 	AttrTable inst_attr_table;
 	AttrTable post_attr_table;
+	InputState curr_input;
+	InputState prev_input;
 };
 
 struct ScopedChildrenBlock
@@ -144,6 +180,7 @@ public:
 private:
 	void present();
 	static void render(const Frame& frame);
+	static Id raycast(const Frame& frame, double x, double y, double& out_z);
 
 	PresentGlobals globals;
 	double time{};

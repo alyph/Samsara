@@ -9,6 +9,7 @@ namespace attrs
 {
 	Attribute<Viewpoint> viewpoint{Viewpoint{}};
 	Attribute<Renderer3dFunc> renderer_3d{nullptr};
+	Attribute<Raycaster3dFunc> raycaster_3d{nullptr};
 }
 
 static void render_viewport(const Frame& frame, Id elem_id)
@@ -82,6 +83,27 @@ static void render_viewport(const Frame& frame, Id elem_id)
 	}
 }
 
+static Id raycast_viewport(const Frame& frame, Id elem_id, double x, double y, double& out_z)
+{
+	const auto width = get_elem_attr_or_assert(frame, elem_id, attrs::width);
+	const auto height = get_elem_attr_or_assert(frame, elem_id, attrs::height);
+	const auto& vp = get_elem_attr_or_default(frame, elem_id, attrs::viewpoint);
+
+	if (x > width || y > height)
+	{
+		return null_id; // outside of the viewport
+	}
+
+	// find out ndc for x, y
+	
+
+
+	// loop through all sub elements and do raycast if provided, push in model view transform
+	// TODO: for now all raycasters handle the whole sub tree
+
+	return null_id;
+}
+
 // static Id register_viewport_elem_type()
 // {
 // 	Id type_id = register_elem_type("viewport");
@@ -95,6 +117,7 @@ static const Id viewport_elem_type = register_elem_type([](ElementTypeSetup& set
 {
 	setup.set_name("viewport");
 	setup.set_attr(attrs::renderer, &render_viewport);
+	setup.set_attr(attrs::raycaster, &raycast_viewport);
 });
 
 namespace elem
@@ -104,4 +127,13 @@ namespace elem
 	{
 		return make_element(ctx, viewport_elem_type);
 	}
+}
+
+
+TriangleRaycastResult raycast_triangles(size_t num_triangles, const Vec3* verts, const uint32_t* indices, const Mat44& transform, double x, double y)
+{
+	// https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
+
+	// this will be as if we are rasterizing the triangle, except only for 1 point defined by x, y
+	return {};
 }

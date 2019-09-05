@@ -1,5 +1,6 @@
 #pragma once
 
+#include "assertion.h"
 #include <cmath>
 #include <cstdint>
 
@@ -23,6 +24,7 @@ struct Vec4
 
 	inline float& operator[](int i);
 	inline float operator[](int i) const;
+	inline float* data();
 	inline const float* data() const;
 };
 
@@ -56,6 +58,7 @@ struct Mat44
 
 	inline Vec4& operator[](int col);
 	inline const Vec4& operator[](int col) const;
+	inline float* data();
 	inline const float* data() const;
 	static inline Mat44 identity();
 };
@@ -71,6 +74,9 @@ struct Pose
 	Quat rot;
 };
 
+// Vec2
+inline Vec2 operator+(const Vec2& v0, const Vec2& v1);
+inline Vec2 operator*(const Vec2& v, float s);
 
 // Vec3
 inline Vec3 operator-(const Vec3& v);
@@ -93,6 +99,7 @@ inline Quat to_quat(const Mat33& m);
 // Mat44
 inline Vec4 operator*(const Mat44& m, const Vec4& v);
 inline Mat44 operator*(const Mat44& m0, const Mat44& m1);
+inline Mat44 inverse(const Mat44& m);
 
 // Quat
 inline Quat make_quat_angle_axis(float angle, const Vec3& axis);
@@ -109,6 +116,21 @@ inline Mat33 to_mat33(const Quat& quat);
 inline Pose inverse(const Pose& pose);
 inline Mat44 to_mat44(const Pose& pose);
 
+
+
+
+
+// Vec2 Impl
+
+inline Vec2 operator+(const Vec2& v0, const Vec2& v1)
+{
+	return { v0.x + v1.x, v0.y + v1.y };
+}
+
+inline Vec2 operator*(const Vec2& v, float s)
+{
+	return { v.x * s, v.y * s };
+}
 
 // Vec3 Impl
 
@@ -184,6 +206,11 @@ inline float& Vec4::operator[](int i)
 inline float Vec4::operator[](int i) const
 {
 	return reinterpret_cast<const float*>(&x)[i];
+}
+
+inline float* Vec4::data()
+{
+	return reinterpret_cast<float*>(&x);
 }
 
 inline const float* Vec4::data() const
@@ -272,6 +299,11 @@ inline const Vec4& Mat44::operator[](int col) const
 	return cols[col];
 }
 
+inline float* Mat44::data()
+{
+	return cols[0].data();
+}
+
 inline const float* Mat44::data() const
 {
 	return cols[0].data();
@@ -300,6 +332,89 @@ inline Mat44 operator*(const Mat44& m0, const Mat44& m1)
 	m[2] = m0 * m1[2];
 	m[3] = m0 * m1[3];
 	return m;
+}
+
+template<int N>
+bool inverse_matrix(const float* m, float* out_inv)
+{
+	// TODO: not tested
+
+	static_assert(N >= 2);
+
+	// Gauss-Jordan elimination method
+	// https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/matrix-inverse
+
+	// augment matrix N x 2N with identity on the right
+	float aug[N*2][N]; // [col][row]
+	memcpy(&aug[0][0], m, N*N*sizeof(float));
+	memset(&aug[N][0], 0, N*N*sizeof(float));
+	for (int n = 0; n < N; n++)
+	{
+		aug[N+n][n] = 1.f;
+	}
+	
+	const float eps = 1e-8f;
+	for (int n = 0; n < N; n++)
+	{
+		// find biggest row
+		float p = aug[n][n];
+		int p_row = n;
+		for (int row = n+1; row < N; row++)
+		{
+			if (aug[n][row] > p)
+			{
+				p = aug[n][row];
+				p_row = row;
+			}
+		}
+
+		if (p < eps) { return false; } // not invertible
+		const float inv_p = (1.f / p);
+		if (p_row != n)
+		{
+			// swap and set to 1
+			// everything before n are 0s, so skip them
+			for (int col = n; col < 2*N; col++)
+			{
+				const float temp = aug[col][n];
+				aug[col][n] = aug[col][p_row] * inv_p;
+				aug[col][p_row] = temp;
+			}
+		}
+		else // set to 1
+		{
+			for (int col = n; col < 2*N; col++)
+			{
+				aug[col][n] *= inv_p;
+			}
+		}
+
+		// elimate
+		for (int row = 0; row < N; row++)
+		{
+			if (row != n)
+			{
+				const float coff = aug[n][row];
+				aug[n][row] = 0.f;
+
+				for (int col = n+1; col < 2*N; col++)
+				{
+					aug[col][row] -= aug[col][n] * coff;
+				}
+			}
+		}
+	}
+
+	memcpy(out_inv, &aug[N][0], N*N*sizeof(float));
+	return true;
+}
+
+inline Mat44 inverse(const Mat44& m)
+{
+	Mat44 inv;
+	const bool invertible = inverse_matrix<4>(m.data(), inv.data());
+	asserts(invertible);
+	return inv;
 }
 
 
