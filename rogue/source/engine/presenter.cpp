@@ -1,4 +1,5 @@
 #include "presenter.h"
+#include "input.h"
 #include "easy/profiler.h"
 
 struct PresentWorker
@@ -13,8 +14,38 @@ struct PresentWorker
 		size_t scope_idx{};
 	};
 
+	struct MouseInteractElemEntry
+	{
+		Id curr_elem_guid{};
+		Id prev_elem_guid{};
+	};
+
+	struct MouseInteractEntry
+	{
+		MouseInteractElemEntry interacts[(size_t)MouseInteraction::max]{};
+	};
+
 	std::vector<ElementWorkerEntry> elem_worker_stack;
 	std::vector<ScopeWorkerEntry> scope_worker_stack;
+	std::vector<MouseInteractEntry> mouse_interact_per_depth;
+	uint16_t num_mouse_interact_depth[(size_t)MouseInteraction::max * 2]{};
+
+	inline bool is_mouse_currently(MouseInteraction interaction, const Element& elem)
+	{
+		return (elem.depth < num_mouse_interact_depth[(size_t)interaction * 2]) && 
+			(mouse_interact_per_depth[elem.depth].interacts[(size_t)interaction].curr_elem_guid == elem.guid);
+	}
+
+	inline bool is_mouse_currently_not(MouseInteraction interaction)
+	{
+		return num_mouse_interact_depth[(size_t)interaction * 2] == 0;
+	}
+
+	inline bool was_mouse_previously(MouseInteraction interaction, const Element& elem)
+	{
+		return (elem.depth < num_mouse_interact_depth[(size_t)interaction * 2 + 1]) && 
+			(mouse_interact_per_depth[elem.depth].interacts[(size_t)interaction].prev_elem_guid == elem.guid);
+	}
 };
 
 namespace attrs
@@ -94,7 +125,9 @@ Id make_element(const Context& context, Id type_id)
 		if (depth > 0)
 		{
 			const Id parent_id = worker->elem_worker_stack[depth - 1].elem_id;
-			global_elem.parent = frame->elements[id_to_index(parent_id)].guid;
+			const Id parent_guid = frame->elements[id_to_index(parent_id)].guid;
+			asserts(parent_guid <= 0xffffffff);
+			global_elem.parent = static_cast<uint32_t>(parent_guid);
 		}
 	}
 
@@ -102,6 +135,7 @@ Id make_element(const Context& context, Id type_id)
 	new_elem.guid = scope.elem_guid;
 	new_elem.type = static_cast<decltype(new_elem.type)>(type_id);
 	new_elem.depth = static_cast<decltype(new_elem.depth)>(worker->elem_worker_stack.size() - 1);
+	// TODO: if we store the depth in global element, we should assert the global and local elements' depth match
 
 	return (elem_worker.elem_id = index_to_id(new_elem_idx));
 }
@@ -248,6 +282,47 @@ Element& get_working_elem(const Context& context)
 	return frame->elements[id_to_index(elem_worker.elem_id)];
 }
 
+bool is_elem_hover(const Context& context)
+{
+	const auto& elem = get_working_elem(context);
+	auto worker = context.worker;
+	return worker->is_mouse_currently(MouseInteraction::hover, elem);
+}
+
+bool is_elem_down(const Context& context)
+{
+	const auto& elem = get_working_elem(context);
+	auto worker = context.worker;
+	return worker->is_mouse_currently(MouseInteraction::left_down, elem);
+}
+
+bool was_elem_clicked(const Context& context)
+{
+	const auto& elem = get_working_elem(context);
+	auto worker = context.worker;
+
+	// now up
+	// previously down
+	// now hover (releasing on a different element is a miss click)
+	return 
+		worker->is_mouse_currently_not(MouseInteraction::left_down) &&
+		worker->was_mouse_previously(MouseInteraction::left_down, elem) &&
+		worker->is_mouse_currently(MouseInteraction::hover, elem);
+}
+
+bool was_elem_pressed(const Context& context)
+{
+	const auto& elem = get_working_elem(context);
+	auto worker = context.worker;
+
+	// previously not down on this elem: up or down on other elem (can happen, if we missed a mouse up event)
+	// now down on this elem
+	return
+		!worker->was_mouse_previously(MouseInteraction::left_down, elem) &&
+		worker->is_mouse_currently(MouseInteraction::left_down, elem);
+}
+
+
 ScopedChildrenBlock::ScopedChildrenBlock(const Context& context):
 	worker(context.worker)
 {
@@ -306,19 +381,74 @@ void Presenter::set_present_func(PresentFunc func, void* param)
 
 void Presenter::process_control(const std::vector<InputEvent>& events)
 {
-	// maybe do an initial present first (in case state changed)
+	// If we have never presented, present once so the input can test against the initial content
+	// TODO: do we always need a present first? (in case state changed)
+	if (curr_frame.frame_id == 0) { present(); }
 
-	// per each input event, do the following
-	// 1. process to find the new state of the UI, which includes:
-	// - pressed mouse buttons and keys
-	// - mouse pos
-	// - pressed down item (lowest one)
-	// - hovered item (lowest one)
-	// - click (most importantly last clicks and timing, for checking double click)
+	for (const auto& event : events)
+	{
+		// per each input event, do the following:
 
-	// 2. call do_present()
+		// 1. process to find the new state of the UI, which includes:
+		// - pressed mouse buttons and keys
+		// - mouse pos
+		// - pressed down item (lowest one)
+		// - hovered item (lowest one)
+		// - click (most importantly last clicks and timing, for checking double click)
 
-	// 3. [probably not needed] present again (call process_view?) since the state may have changed? (or maybe only do that for the last input)
+		if (event.type == InputEventType::mouse_move)
+		{
+			latest_input.mouse_x = event.x;
+			latest_input.mouse_y = event.y;
+		}
+		else
+		{
+			int idx{}, bit{};
+			if (event.type == InputEventType::key)
+			{
+				const int idx = (int)event.key / 64;
+				const int bit = (int)event.key % 64;
+			}
+			else if (event.type == InputEventType::mouse_button)
+			{
+				static_assert((int)Keys::max <= (256-8));
+				static_assert((int)MouseButtons::max <= 8);
+
+				const int idx = 3;
+				const int bit = 56 + (int)event.button;
+			}
+			else
+			{
+				asserts(false); // unknown events
+				continue;
+			}
+
+			uint64_t mask = (((uint64_t)1ull) << bit);
+			if (event.down) { latest_input.key_button_down[idx] |= mask; }
+			else { latest_input.key_button_down[idx] &= (~mask); }
+		}		
+
+		// always check mouse hover target
+		const Id hover_elem = raycast(curr_frame, latest_input.mouse_x, latest_input.mouse_y);
+		latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover] = hover_elem;
+
+		// TODO: static assert MouseInteraction::left_down == MouseButtons::left
+		// and same for right and middle
+		if (event.type == InputEventType::mouse_button && (int)event.button < 3)
+		{
+			latest_input.mouse_interact_elems[(int)event.button] = (event.down ? hover_elem : null_id);
+		}
+
+		// TODO: clicks
+		// clicks may be a derived state, maybe process that in the present() function 
+		// when it has access to both previous and current input?
+
+		// 2. call present()
+		present();
+
+		// TODO: verify if we actually need this
+		// 3. [probably not needed] present again (call process_view?) since the state may have changed? (or maybe only do that for the last input)
+	}
 }
 
 void Presenter::step_frame(double dt)
@@ -346,21 +476,58 @@ void Presenter::present()
 	// keep the data of previous frame and previous UI state (the state when previous frame was presented)
 
 	// prepare the data for the new frame
-	// use the current UI state
-
 	curr_frame.frame_id++;
 	curr_frame.elements.clear();
 	curr_frame.inst_attr_table.clear();
 	curr_frame.post_attr_table.clear();
+	curr_frame.prev_input = curr_frame.curr_input;
+	curr_frame.curr_input = latest_input;
 
+	// TODO: to avoid extra allocation, maybe just keep a worker around and clear everything every frame
 	// call present func to present
 	PresentWorker worker;
 	// make an empty entry in elem stack for the top level elements (the stack can never be empty)
+	// the scope stack however will be empty at the beginning
 	worker.elem_worker_stack.emplace_back();
 
 	Context context;
 	context.frame = &curr_frame;
 	context.worker = &worker;
+
+	// setup the mouse interaction cache
+	for (int interact = 0; interact < (int)MouseInteraction::max; interact++)
+	{
+		for (int prev = 0; prev < 2; prev++)
+		{
+			const Id leaf_elem = (prev ? 
+				curr_frame.prev_input.mouse_interact_elems[interact] : 
+				curr_frame.curr_input.mouse_interact_elems[interact]);
+
+			uint16_t num_depth = 0;
+			Id elem_guid = leaf_elem;
+			while (elem_guid)
+			{
+				num_depth++;
+				elem_guid = globals.global_elems[elem_guid].parent;
+			}
+
+			worker.num_mouse_interact_depth[interact*2+prev] = num_depth;
+
+			if (worker.mouse_interact_per_depth.size() < num_depth)
+				worker.mouse_interact_per_depth.resize(num_depth);
+
+			elem_guid = leaf_elem;
+			for (int depth = num_depth - 1; depth >= 0; depth--)
+			{
+				Id& interact_elem = (prev ? 
+					worker.mouse_interact_per_depth[depth].interacts[interact].prev_elem_guid:
+					worker.mouse_interact_per_depth[depth].interacts[interact].curr_elem_guid);
+				interact_elem = elem_guid;
+				elem_guid = globals.global_elems[elem_guid].parent;
+			}
+		}
+	}
+
 
 	asserts(present_func);
 	present_func(std::move(context), present_func_param);
@@ -403,7 +570,7 @@ void Presenter::render(const Frame& frame)
 	}
 }
 
-Id Presenter::raycast(const Frame& frame, double x, double y, double& out_z)
+Id Presenter::raycast(const Frame& frame, double x, double y)
 {
 	Id closest_hit_elem{};
 	double closest_z = 2.0; // z is between [0, 1], so 2 will be farther than the farthest
@@ -426,7 +593,7 @@ Id Presenter::raycast(const Frame& frame, double x, double y, double& out_z)
 		elem_id = get_next_sibling(frame, elem_id);
 	}
 
-	return closest_hit_elem;
+	return closest_hit_elem ? frame.elements[closest_hit_elem].guid : null_id;
 }
 
 

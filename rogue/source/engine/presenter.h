@@ -65,10 +65,21 @@ extern Context create_scoped_context(const Context& parent_scope_context, uint64
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count, uint64_t user_id);
 extern Element& get_working_elem(const Context& context);
 
+// input related
+extern bool is_elem_hover(const Context& context);
+extern bool is_elem_down(const Context& context);
+extern bool was_elem_clicked(const Context& context);
+extern bool was_elem_pressed(const Context& context);
+
 #define _ctx create_scoped_context(ctx, __COUNTER__)
 #define _ctx_id(user_id) create_scoped_context(ctx, __COUNTER__, user_id)
 #define _attr(attr, val) set_elem_instance_attr(ctx, attr, val)
 #define _children if (const ScopedChildrenBlock CONCAT(children_block_, __COUNTER__){ctx}; true)
+#define _hover (is_elem_hover(ctx))
+#define _down (is_elem_down(ctx))
+#define _clicked (was_elem_clicked(ctx))
+#define _pressed (was_elem_pressed(ctx))
+
 
 struct ScopeEntry
 {
@@ -78,9 +89,10 @@ struct ScopeEntry
 	uint16_t depth{};
 };
 
-struct GlobalElemEntry
+struct GlobalElement
 {
-	Id parent{};
+	uint32_t parent{};
+	//uint16_t depth{};
 };
 
 struct PresentGlobals
@@ -92,7 +104,7 @@ struct PresentGlobals
 	// should be actually tied to a present function, each different present
 	// function may create an entirely differenet set of scopes and global elements
 	std::vector<ScopeEntry> scopes;
-	std::vector<GlobalElemEntry> global_elems;
+	std::vector<GlobalElement> global_elems;
 };
 
 struct Element
@@ -133,13 +145,20 @@ struct Context
 	Context& operator=(const Context& other) = delete;
 };
 
+enum class MouseInteraction
+{
+	left_down,
+	right_down,
+	mid_down,
+	hover,
+	max
+};
+
 struct InputState
 {
 	double mouse_x{}, mouse_y{};
-	Id down_elems[3]{}; //guid, for left/mid/right mouse button down
-	Id hover_elem{}; //guid
-	uint64_t key_down[4]{};
-	uint8_t mouse_down{};
+	Id mouse_interact_elems[(size_t)MouseInteraction::max]{}; //guid
+	uint64_t key_button_down[4]{}; // merged key or mouse button down state (mouse occupy highest byte)
 
 	// TODO: click & double click
 };
@@ -180,11 +199,12 @@ public:
 private:
 	void present();
 	static void render(const Frame& frame);
-	static Id raycast(const Frame& frame, double x, double y, double& out_z);
+	static Id raycast(const Frame& frame, double x, double y); // return guid
 
 	PresentGlobals globals;
 	double time{};
 	Frame curr_frame;
+	InputState latest_input;
 	PresentFunc present_func;
 	void* present_func_param;
 

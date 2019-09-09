@@ -357,19 +357,20 @@ bool inverse_matrix(const float* m, float* out_inv)
 	for (int n = 0; n < N; n++)
 	{
 		// find biggest row
-		float p = aug[n][n];
+		float p = std::abs(aug[n][n]);
 		int p_row = n;
 		for (int row = n+1; row < N; row++)
 		{
-			if (aug[n][row] > p)
+			const auto test_p = std::abs(aug[n][row]);
+			if (test_p > p)
 			{
-				p = aug[n][row];
+				p = test_p;
 				p_row = row;
 			}
 		}
 
 		if (p < eps) { return false; } // not invertible
-		const float inv_p = (1.f / p);
+		const float inv_p = (1.f / aug[n][p_row]);
 		if (p_row != n)
 		{
 			// swap and set to 1

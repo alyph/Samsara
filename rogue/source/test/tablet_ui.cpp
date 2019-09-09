@@ -250,6 +250,34 @@ void TabletUIApp::present(const Context& ctx)
 			_attr(attrs::text, str);
 			_attr(attrs::foreground_color, (Color{0.2f, 0.9f, 0.7f, 1.f}));
 			_attr(attrs::width, 50);
+
+
+			node(_ctx);
+			str = "[ click me! ]";
+			_attr(attrs::text, str);
+			
+			if (_hover)
+			{
+				_attr(attrs::foreground_color, (Color{1.f, 1.f, 1.f, 1.f}));
+				_attr(attrs::background_color, (Color{0.8f, 0.1f, 0.1f, 1.f}));
+			}
+			else if (_down)
+			{
+				_attr(attrs::foreground_color, (Color{1.f, 1.f, 1.f, 1.f}));
+				_attr(attrs::background_color, (Color{1.f, 0.f, 0.f, 1.f}));
+			}
+			else
+			{
+				_attr(attrs::foreground_color, (Color{0.8f, 0.1f, 0.1f, 1.f}));
+				_attr(attrs::background_color, (Color{1.f, 1.f, 1.f, 1.f}));
+			}
+
+			if (_clicked)
+			{
+
+			}
+			
+
 		}
 	}
 
