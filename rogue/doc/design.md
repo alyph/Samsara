@@ -4,9 +4,12 @@
 ### Exploration
 - Discover a weird universe: flora and fauna, ruins and remnants, planets and stars, worlds and dimensions, unique resource, biomes, architecture, culture, society and characters, uncover the alternate reality, laws of physics and the mysteries of cosmos
 - The discoveries can lead to quests, expeditions and personal pursuit
+- All found natural and artificial features should be displayed and can be observed on the worlds, characters, ships and any other entities, wonders and interesting events can be admired and beholden
+- A variety of population types exist in various worlds, classes, jobs, cultures, religions, tech levels should all be represented 
 
 ### Development
 - Construct large scale facilities with deep resource chain and upgrade path
+- All about numbers going up! combo and multiplicative effects
 - All development projects should be randomly and procedurely provided instead of available all the time
 - Awe inspiring wonders and space projects
 - Colonization and terraforming

@@ -49,6 +49,7 @@ extern Id register_elem_type(ElemTypeInitFunc init_func);
 //template<typename T> void set_elem_type_attr(Id type_id, const Attribute<T>& attr, const T& value);
 
 extern Id make_element(const Context& context, Id type_id);
+extern Id get_parent(const Frame& frame, Id elem_id);
 extern Id get_first_child(const Frame& frame, Id elem_id);
 extern Id get_next_sibling(const Frame& frame, Id elem_id);
 inline Id get_last_in_subtree(const Frame& frame, Id root_elem_id); // TODO: rename to get_last_descendant()??

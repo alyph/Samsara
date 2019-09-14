@@ -235,6 +235,7 @@ void Window::mouse_button_callback(GLFWwindow* glfw, int button, int action, int
 	if (window)
 	{
 		InputEvent event;
+		event.type = InputEventType::mouse_button;
 		if (action == GLFW_PRESS)
 		{
 			event.down = true;

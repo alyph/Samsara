@@ -24,6 +24,7 @@ struct Vec4
 
 	inline float& operator[](int i);
 	inline float operator[](int i) const;
+	inline Vec4& operator/=(float div);
 	inline float* data();
 	inline const float* data() const;
 };
@@ -76,7 +77,9 @@ struct Pose
 
 // Vec2
 inline Vec2 operator+(const Vec2& v0, const Vec2& v1);
+inline Vec2 operator-(const Vec2& v0, const Vec2& v1);
 inline Vec2 operator*(const Vec2& v, float s);
+inline float cross(const Vec2& v0, const Vec2& v1);
 
 // Vec3
 inline Vec3 operator-(const Vec3& v);
@@ -98,6 +101,7 @@ inline Quat to_quat(const Mat33& m);
 
 // Mat44
 inline Vec4 operator*(const Mat44& m, const Vec4& v);
+inline Vec4 operator*(const Mat44& m, const Vec3& v);
 inline Mat44 operator*(const Mat44& m0, const Mat44& m1);
 inline Mat44 inverse(const Mat44& m);
 
@@ -127,9 +131,19 @@ inline Vec2 operator+(const Vec2& v0, const Vec2& v1)
 	return { v0.x + v1.x, v0.y + v1.y };
 }
 
+inline Vec2 operator-(const Vec2& v0, const Vec2& v1)
+{
+	return { v0.x - v1.x, v0.y - v1.y };
+}
+
 inline Vec2 operator*(const Vec2& v, float s)
 {
 	return { v.x * s, v.y * s };
+}
+
+inline float cross(const Vec2& v0, const Vec2& v1)
+{
+	return v0.x * v1.y - v0.y * v1.x;
 }
 
 // Vec3 Impl
@@ -206,6 +220,16 @@ inline float& Vec4::operator[](int i)
 inline float Vec4::operator[](int i) const
 {
 	return reinterpret_cast<const float*>(&x)[i];
+}
+
+inline Vec4& Vec4::operator/=(float div)
+{
+	float scale = 1.f / div;
+	x *= scale;
+	y *= scale;
+	z *= scale;
+	w *= scale;
+	return *this;
 }
 
 inline float* Vec4::data()
@@ -322,6 +346,11 @@ inline Mat44 Mat44::identity()
 inline Vec4 operator*(const Mat44& m, const Vec4& v)
 {
 	return m[0] * v.x + m[1] * v.y + m[2] * v.z + m[3] * v.w;
+}
+
+inline Vec4 operator*(const Mat44& m, const Vec3& v)
+{
+	return m[0] * v.x + m[1] * v.y + m[2] * v.z + m[3];
 }
 
 inline Mat44 operator*(const Mat44& m0, const Mat44& m1)

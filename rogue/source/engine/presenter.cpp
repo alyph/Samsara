@@ -140,6 +140,20 @@ Id make_element(const Context& context, Id type_id)
 	return (elem_worker.elem_id = index_to_id(new_elem_idx));
 }
 
+Id get_parent(const Frame& frame, Id elem_id)
+{
+	const auto elem_idx = id_to_index(elem_id); // NOTE: this can be 0
+	const auto depth = frame.elements[elem_idx].depth;
+	for (int64_t i = elem_idx - 1; i >= 0; i--)
+	{
+		if (frame.elements[i].depth < depth)
+		{
+			return index_to_id(i);
+		}
+	}
+	return null_id;
+}
+
 Id get_first_child(const Frame& frame, Id elem_id)
 {
 	const auto elem_idx = id_to_index(elem_id);
@@ -461,7 +475,7 @@ void Presenter::step_frame(double dt)
 	// call do_present()
 	present();
 	
-	// evaluate if some of the UI state may change with the result of present
+	// TODO: evaluate if some of the UI state may change with the result of present
 	// state which may change: down, hover items
 	// if such state changed, do_present() again (but to a limited number of times: maybe 1)
 
@@ -508,7 +522,7 @@ void Presenter::present()
 			while (elem_guid)
 			{
 				num_depth++;
-				elem_guid = globals.global_elems[elem_guid].parent;
+				elem_guid = globals.global_elems[id_to_index(elem_guid)].parent;
 			}
 
 			worker.num_mouse_interact_depth[interact*2+prev] = num_depth;
@@ -523,7 +537,7 @@ void Presenter::present()
 					worker.mouse_interact_per_depth[depth].interacts[interact].prev_elem_guid:
 					worker.mouse_interact_per_depth[depth].interacts[interact].curr_elem_guid);
 				interact_elem = elem_guid;
-				elem_guid = globals.global_elems[elem_guid].parent;
+				elem_guid = globals.global_elems[id_to_index(elem_guid)].parent;
 			}
 		}
 	}
@@ -573,7 +587,7 @@ void Presenter::render(const Frame& frame)
 Id Presenter::raycast(const Frame& frame, double x, double y)
 {
 	Id closest_hit_elem{};
-	double closest_z = 2.0; // z is between [0, 1], so 2 will be farther than the farthest
+	double closest_z = 2.0; // z is between [-1, 1], so 2 will be farther than the farthest
 
 	Id elem_id = frame.elements.empty() ? null_id : index_to_id(0);
 	while (elem_id)
@@ -593,7 +607,7 @@ Id Presenter::raycast(const Frame& frame, double x, double y)
 		elem_id = get_next_sibling(frame, elem_id);
 	}
 
-	return closest_hit_elem ? frame.elements[closest_hit_elem].guid : null_id;
+	return closest_hit_elem ? frame.elements[id_to_index(closest_hit_elem)].guid : null_id;
 }
 
 

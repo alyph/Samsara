@@ -31,7 +31,7 @@ namespace elem
 struct TriangleRaycastResult
 {
 	bool hit{};
-	int hit_triangle_idx{};
+	size_t hit_triangle_idx{};
 	double z{}; // z in NDC (-1, 1)
 	float w0{}, w1{}, w2{}; // barycentric coordinates
 };
