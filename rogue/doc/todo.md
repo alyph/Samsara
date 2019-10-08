@@ -4,17 +4,20 @@
 ### presenter
 - [x] multiple text nodes (requires layout??)
 - [ ] buttons
-  - [ ] scope, global elment
+  - [x] scope, global elment
     - [x] scope traversal, create global element
-    - [ ] frame element change sibling offset to tree offset
+    - [x] frame element change sibling offset to tree offset
   - [x] impl button, add function to check pressed() released()?, clicked()
-  - [ ] input
+    - [ ] do click state change
+  - [x] input
     - [x] input process
     - [x] worker mouse interaction cache
     - [x] fix window input callback from glfw, also add enums for keys and mouse buttons
     - [x] viewport raycast function
     - [x] raycast triangle function
-    - [ ] recheck hover after present() in step_frame()
+    - [x] recheck hover after present() in step_frame()
+- [ ] text should influence width if not determine it (perhaps should determine max width?), 
+  - one work around for now is to let the high level function (like button()) preset width based on the length of the text
 - [ ] text wrap?
 - [ ] more layout options (padding, margin), horizontal stack
 - [ ] border

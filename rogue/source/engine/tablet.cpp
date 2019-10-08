@@ -519,6 +519,7 @@ static void postprocess_tablet(Frame& frame, Id elem_id)
 		else // otherwise if any children has width set then take the max?
 		{
 			// TODO: some attr can determine width (e.g. image)
+			// TODO: and some may influence but not determine width (e.g. text, maybe set max width??)
 
 			int max_children_width = -1; // if nothing set, then set to -1 as if nothing happened
 			Id child_elem_id = get_first_child(frame, curr_elem_id);

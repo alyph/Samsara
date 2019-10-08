@@ -1,6 +1,9 @@
 
 ## Pillars
 
+### Perspective
+- Play an interstellar empire as a whole, beyond individuals, factions or government. Actions can be instigated by the states, the private sectors as well as characters, however the actions can also go against each individual officials, civillians or the government itself
+
 ### Exploration
 - Discover a weird universe: flora and fauna, ruins and remnants, planets and stars, worlds and dimensions, unique resource, biomes, architecture, culture, society and characters, uncover the alternate reality, laws of physics and the mysteries of cosmos
 - The discoveries can lead to quests, expeditions and personal pursuit
@@ -21,7 +24,7 @@
 ### Politics
 - Manage relationship and conflicts between species, races, nations, factions, organizations, classes and demographic groups
 - Political ideas and social, cultural phenomenon will emerge by simulation. Events, decisions, debates, crisis and policies can take place accordingly
-- Covert actions, espionage, secret dealings, secret societies
+- Covert actions, espionage, secret dealings, secret societies, political intrigues
 
 ### Military
 - Large scale operations: intergalactic wars, invasions

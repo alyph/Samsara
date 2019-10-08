@@ -101,7 +101,7 @@ struct PresentGlobals
 	std::vector<ElementType> elem_types;
 	AttrTable elem_type_attr_table;
 
-	// TODO: technically these do not belong the global of everything
+	// TODO: technically these do not belong to the global of everything
 	// should be actually tied to a present function, each different present
 	// function may create an entirely differenet set of scopes and global elements
 	std::vector<ScopeEntry> scopes;
@@ -113,7 +113,8 @@ struct Element
 	Id guid{};
 	uint16_t type{};
 	uint16_t depth{};
-	uint32_t sibling_offset{}; // TODO: change this to be a tree offset
+	uint32_t tree_offset{}; // offset to the first element not in this element's sub tree 
+							// (can be sibling or one of the ancestors' sibling)
 	AttrListHandle inst_attrs;
 	AttrListHandle post_attrs;
 };
@@ -182,6 +183,7 @@ struct ScopedChildrenBlock
 
 private:
 	PresentWorker* worker{};
+	Frame* frame{};
 };
 
 class Presenter final
@@ -257,24 +259,11 @@ template<typename T> void ElementTypeSetup::set_attr(const Attribute<T>& attr, c
 
 inline Id get_last_in_subtree(const Frame& frame, Id root_elem_id)
 {
-	const Id sibling = get_next_sibling(frame, root_elem_id);
-	if (sibling)
-	{
-		return (sibling - 1);
-	}
-	else
-	{
-		// TODO: maybe store the next subtree start offset in the sibling offset as well
-		// use positive as its own sibling but negative as the non-sibling subtree?
-		const auto root_elem_idx = id_to_index(root_elem_id);
-		const auto depth = frame.elements[root_elem_idx].depth;
-		size_t elem_idx = root_elem_idx + 1;
-		for (; elem_idx < frame.elements.size(); elem_idx++)
-		{
-			if (frame.elements[elem_idx].depth <= depth) break;
-		}
-		return index_to_id(elem_idx - 1);
-	}
+	const auto elem_idx = id_to_index(root_elem_id);
+	const auto& elem = frame.elements[elem_idx];
+	const auto offset_idx = (elem_idx + elem.tree_offset);
+	asserts(offset_idx > elem_idx);
+	return index_to_id(offset_idx - 1);
 }
 
 template<typename T> 

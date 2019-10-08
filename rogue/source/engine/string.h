@@ -8,6 +8,20 @@
 #include <utility>
 #include <algorithm>
 
+// Strings are immutable
+// By default all Strings are allocated in temp memory
+// Use store_str(str, val?, allocator?) to store and allocate the given string in a persistent memory
+// Persistently stored Strings are ref counted and automatically deallocated when no longer referenced
+// Temporarily stored Strings are not ref counted and only valid for a reasonable amount of time defined 
+// by the application (usually until next frame). References to these Strings should not be kept, but 
+// should be safe to pass into or return from function calls 
+//
+// StringRef is a trivially copiable references to a String. They are not ref counted and valid as long as
+// the referenced Strings are valid. Generally it can be considered as safe and valid for the same life
+// time as a temporarily allocated String. Even if a String (persistent) is deallocated, the String buffer
+// can still be accessed until the memory is reclaimed (which is normally until next frame)
+
+
 static const constexpr unsigned int string_layout_bits = 2;
 static const constexpr unsigned int short_string_capacity_bits = (8 - string_layout_bits);
 //static const constexpr unsigned int string_start_bits = (sizeof(NormalStringData::start) * 8 - string_layout_bits);

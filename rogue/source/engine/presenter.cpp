@@ -88,7 +88,7 @@ void ElementTypeSetup::set_name(const char* name)
 
 Id make_element(const Context& context, Id type_id)
 {
-	using sibling_offset_type = decltype(Element::sibling_offset);
+	using offset_type = decltype(Element::tree_offset);
 
 	auto frame = context.frame;
 	auto worker = context.worker;
@@ -103,7 +103,7 @@ Id make_element(const Context& context, Id type_id)
 		auto prev_sibling_idx = id_to_index(elem_worker.elem_id);
 		auto& prev_sibling_elem = frame->elements[prev_sibling_idx];
 		// TODO: replace this with a next tree offset
-		prev_sibling_elem.sibling_offset = static_cast<sibling_offset_type>(new_elem_idx - prev_sibling_idx);
+		prev_sibling_elem.tree_offset = static_cast<offset_type>(new_elem_idx - prev_sibling_idx);
 	}
 	// NOTE: commented out since this is kinda already checked in ScopedChildrenBlock::ScopedChildrenBlock
 	// else
@@ -170,10 +170,18 @@ Id get_first_child(const Frame& frame, Id elem_id)
 Id get_next_sibling(const Frame& frame, Id elem_id)
 {
 	const auto elem_idx = id_to_index(elem_id);
-	const auto sibling_offset = frame.elements[elem_idx].sibling_offset;
-	if (sibling_offset)
+	const auto& elem = frame.elements[elem_idx];
+	const auto offset_idx = (elem_idx + elem.tree_offset);
+	asserts(offset_idx > elem_idx);
+	if (offset_idx < frame.elements.size())
 	{
-		return index_to_id(elem_idx + sibling_offset);
+		const auto offset_depth = frame.elements[offset_idx].depth;
+		if (elem.depth == offset_depth)
+		{
+			return index_to_id(offset_idx);
+		}
+		// can't offset to something lower 
+		asserts(elem.depth > offset_depth);
 	}
 	return null_id;
 }
@@ -338,11 +346,13 @@ bool was_elem_pressed(const Context& context)
 
 
 ScopedChildrenBlock::ScopedChildrenBlock(const Context& context):
-	worker(context.worker)
+	worker(context.worker),
+	frame(context.frame)
 {
 	// make sure current working element is the last element registered (meaning only 1 children block is used per element)
-	asserts(!context.frame->elements.empty() && 
-		worker->elem_worker_stack.back().elem_id == index_to_id(context.frame->elements.size() - 1));
+	asserts(worker->elem_worker_stack.empty() ||
+		(!context.frame->elements.empty() && 
+		worker->elem_worker_stack.back().elem_id == index_to_id(context.frame->elements.size() - 1)));
 
 	// add an empty entry, which will be filled when the first child element is made
 	worker->elem_worker_stack.emplace_back();
@@ -350,6 +360,15 @@ ScopedChildrenBlock::ScopedChildrenBlock(const Context& context):
 
 ScopedChildrenBlock::~ScopedChildrenBlock()
 {
+	using offset_type = decltype(Element::tree_offset);
+
+	const auto elem_id = worker->elem_worker_stack.back().elem_id;
+	if (elem_id)
+	{
+		const auto elem_idx = id_to_index(elem_id);
+		asserts(frame->elements[elem_idx].tree_offset == 0);
+		frame->elements[elem_idx].tree_offset = static_cast<offset_type>(frame->elements.size() - elem_idx);
+	}
 	worker->elem_worker_stack.pop_back();
 }
 
@@ -475,9 +494,15 @@ void Presenter::step_frame(double dt)
 	// call do_present()
 	present();
 	
-	// TODO: evaluate if some of the UI state may change with the result of present
-	// state which may change: down, hover items
-	// if such state changed, do_present() again (but to a limited number of times: maybe 1)
+	// evaluate if some of the UI state may change as a result of present
+	// state which may change: hover items
+	// if such state changed, present() again (but to a limited number of times: just once for now)
+	const Id hover_elem = raycast(curr_frame, latest_input.mouse_x, latest_input.mouse_y);
+	if (hover_elem != latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover])
+	{
+		latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover] = hover_elem;
+		present();
+	}
 
 	// call render() to render the latest frame out
 	render(curr_frame);
@@ -500,9 +525,6 @@ void Presenter::present()
 	// TODO: to avoid extra allocation, maybe just keep a worker around and clear everything every frame
 	// call present func to present
 	PresentWorker worker;
-	// make an empty entry in elem stack for the top level elements (the stack can never be empty)
-	// the scope stack however will be empty at the beginning
-	worker.elem_worker_stack.emplace_back();
 
 	Context context;
 	context.frame = &curr_frame;
@@ -542,9 +564,16 @@ void Presenter::present()
 		}
 	}
 
-
-	asserts(present_func);
-	present_func(std::move(context), present_func_param);
+	{	
+		// Create a scoped children block to ensure all elements are children of this virtual root
+		// This will insert an empty entry into the worker stack for the top level elements,
+		// and when exiting the scope, this will also pop the last top level element, and set its
+		// tree offset. (NOTE: the stack can never be empty during the present_func call. The scope 
+		// stack though will be empty at the beginning)
+		const ScopedChildrenBlock root(context);
+		asserts(present_func);
+		present_func(std::move(context), present_func_param);
+	}
 
 	// may perform any necessary post processing
 	// TODO: if an element gets processed more than once (since some may process the whole sub tree)

@@ -22,8 +22,8 @@ struct Engine
 struct EngineStore
 {
 	~EngineStore();
-	std::aligned_storage_t<sizeof(Engine), alignof(Engine)> engine_buffer;
 	bool initialized = false;
+	std::aligned_storage_t<sizeof(Engine), alignof(Engine)> engine_buffer;
 };
 
 extern EngineStore global_engine;
