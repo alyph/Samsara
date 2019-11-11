@@ -159,6 +159,7 @@ void AllocHandle::refresh(AllocatorGlobals& globals)
 	// TODO: maybe alloc_id == 0 is fine, which means the allocation is freed 
 	// but the header is not yet used by other allocations
 	// but that maybe bad because the earlier allocations may suddenly consider this header is valid as well
+	// TODO: maybe we don't need mark alloc_id = 0 ever??
 	if (alloc_id >= alloc_header.alloc_id && alloc_header.alloc_id != 0)
 	{
 		const auto min_valid_id = globals.min_valid_ids[allocator];

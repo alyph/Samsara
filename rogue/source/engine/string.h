@@ -10,13 +10,13 @@
 
 // Strings are immutable
 // By default all Strings are allocated in temp memory
-// Use store_str(str, val?, allocator?) to store and allocate the given string in a persistent memory
+// Use store() to store and allocate the given string in a persistent memory
 // Persistently stored Strings are ref counted and automatically deallocated when no longer referenced
 // Temporarily stored Strings are not ref counted and only valid for a reasonable amount of time defined 
 // by the application (usually until next frame). References to these Strings should not be kept, but 
 // should be safe to pass into or return from function calls 
 //
-// StringRef is a trivially copiable references to a String. They are not ref counted and valid as long as
+// StringView is a trivially copiable references to a String. They are not ref counted and valid as long as
 // the referenced Strings are valid. Generally it can be considered as safe and valid for the same life
 // time as a temporarily allocated String. Even if a String (persistent) is deallocated, the String buffer
 // can still be accessed until the memory is reclaimed (which is normally until next frame)
@@ -88,6 +88,7 @@ struct StringData
 	inline StringHeader* header() const;
 };
 
+#if 0
 class StringAccessor
 {
 public:
@@ -96,12 +97,14 @@ public:
 	inline const char* c_str() const { return str_data.c_str(); }
 	inline size_t size() const { return str_data.size(); }	
 };
+#endif
 
 // value always temp
 // const ref may be persistent
-class String final : public StringAccessor
+class String final
 {
 public:
+	StringData str_data;
 
 	inline String() = default;
 	template<size_t N>
@@ -110,16 +113,43 @@ public:
 	inline String(char (&str)[N]) = delete;
 	inline String(const char* start, size_t size);
 	inline String(const String& other) { *this = other; }
-	inline String(String&& other) = default;
+	inline String(String&& other);
+	inline ~String();
 
 	template<size_t N>
 	inline String& operator=(const char (&str)[N]);
 	template<size_t N>
 	inline String& operator=(char (&str)[N]) = delete;
 	inline String& operator=(const String& other);
-	inline String& operator=(String&& other) = default;
+	inline String& operator=(String&& other);
 
+	inline void store();
+	template<size_t N>
+	inline void store(const char (&str)[N]);
+	template<size_t N>
+	inline void store(char (&str)[N]) = delete;
+	inline void store(const String& str);
+
+	inline const char* c_str() const { return str_data.c_str(); }
+	inline size_t size() const { return str_data.size(); }
+
+private:
+	inline void dispose();
 };
+
+class StringView final
+{
+public:
+	StringData str_data;
+	inline StringView() = default;
+	// inline StringView(const StringView& other) = default;
+	inline StringView(const String& str) { str_data = str.str_data; }
+	inline StringView& operator=(const String& str) { str_data = str.str_data; return *this; }
+	inline const String& str() const { return *reinterpret_cast<const String*>(this); }
+};
+
+
+#if 0
 
 // can be temp or persistent
 // TODO: even though this type is mostly returned when getting a portion of the existing String (or StringStore),
@@ -165,7 +195,6 @@ public:
 	// inline String to_string_latched() const; // should make this implicit maybe just do operator const String&
 };
 
-#if 0
 
 class StringView final
 {
@@ -257,6 +286,19 @@ inline void assign_string(StringData& str_data, const char* start, size_t size, 
 	}
 }
 
+inline void assign_stored_string(StringData& str_data, const char* start, size_t size)
+{
+	if (size <= max_short_string_size)
+	{
+		assign_short_string(str_data, start, size);
+	}
+	else
+	{
+		assign_normal_string(str_data, start, size, Allocator::string);
+		str_data.header()->ref_count = 1;
+	}
+}
+
 inline void* validate_and_get_string_buffer(const StringData& str_data)
 {
 	auto ptr = str_data.normal_data.alloc_handle.get(engine().allocators);
@@ -278,6 +320,38 @@ inline void* validate_and_get_string_buffer(const StringData& str_data)
 
 	return ptr;
 }
+
+inline uint32_t string_ref_count(const StringData& str_data)
+{
+	auto header = str_data.header();
+	return (header ? header->ref_count : 0);
+}
+
+inline void add_string_ref(const StringData& str_data)
+{
+	auto header = str_data.header();
+	if (header)
+	{
+		header->ref_count++;
+		asserts(header->ref_count > 1);
+	}
+}
+
+inline void release_string_ref(StringData& str_data)
+{
+	auto header = str_data.header();
+	if (header)
+	{
+		asserts(header->ref_count >= 1);
+		header->ref_count--;
+		if (header->ref_count == 0)
+		{
+			engine().allocators.deallocate(str_data.normal_data.alloc_handle);
+		}
+		str_data.clear();
+	}
+}
+
 
 // StringData
 
@@ -359,61 +433,72 @@ inline String::String(const char* start, size_t size)
 	assign_string(str_data, start, size, engine().allocators.current_temp_allocator);
 }
 
+inline String::String(String&& other)
+{
+	std::swap(str_data, other.str_data);
+}
+
+inline String::~String()
+{
+	dispose();
+}
+
 template<size_t N>
 inline String& String::operator=(const char (&str)[N])
 {
+	dispose();
 	assign_string(str_data, str, (N - 1), engine().allocators.current_temp_allocator);
 	return *this;
 }
 
 inline String& String::operator=(const String& other)
 {
-	// other can be String, SubString or StringStore
-	// copy if the string is persistently allocated, because String is always allocated in temp buffer
 	if (other.str_data.is_persistent_allocated())
 	{
-		assign_string(str_data, other.str_data.data(), other.str_data.size(), engine().allocators.current_temp_allocator);
+		add_string_ref(other.str_data);
 	}
-	else
-	{
-		str_data = other.str_data;
-	}
+	dispose();
+	str_data = other.str_data;
 	return *this;
 }
 
-
-// persistent string ref
-
-inline uint32_t string_ref_count(const StringData& str_data)
+inline String& String::operator=(String&& other)
 {
-	auto header = str_data.header();
-	return (header ? header->ref_count : 0);
+	std::swap(str_data, other.str_data);
+	return *this;
 }
 
-inline void add_string_ref(const StringData& str_data)
+inline void String::store()
 {
-	auto header = str_data.header();
-	if (header)
+	if (!str_data.is_short() && !str_data.is_persistent_allocated())
 	{
-		header->ref_count++;
-		asserts(header->ref_count > 1);
+		assign_stored_string(str_data, str_data.data(), str_data.size());
 	}
 }
 
-inline void release_string_ref(StringData& str_data)
+template<size_t N>
+inline void String::store(const char (&str)[N])
 {
-	auto header = str_data.header();
-	if (header)
+	dispose();
+	assign_stored_string(str_data, str, (N - 1));
+}
+
+inline void String::store(const String& str)
+{
+	*this = str;
+	store();
+}
+
+
+inline void String::dispose()
+{
+	if (str_data.is_persistent_allocated())
 	{
-		asserts(header->ref_count >= 1);
-		header->ref_count--;
-		if (header->ref_count == 0)
-		{
-			engine().allocators.deallocate(str_data.normal_data.alloc_handle);
-		}
-		str_data.clear();
+		release_string_ref(str_data);
 	}
 }
+
+#if 0
 
 // SubString
 inline SubString::~SubString()
@@ -429,7 +514,6 @@ inline SubString& SubString::operator=(SubString&& other)
 	std::swap(str_data, other.str_data);
 	return *this;
 }
-
 
 
 // StringStore
@@ -574,7 +658,7 @@ namespace attribute_serialization
 
 
 
-#if 0
+
 
 template<bool Temp>
 inline void add_string_ref(const StringData& str_data)

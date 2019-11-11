@@ -458,7 +458,7 @@ static int compute_elem_self_height(const Frame& frame, Id elem_id, int width)
 		{
 			// TODO: utf8
 			// TODO: text wrap
-			height = ((int)text->size() + width - 1) / width;
+			height = ((int)text->str().size() + width - 1) / width;
 		}
 		else
 		{
@@ -760,8 +760,8 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		}
 		else if (auto text = get_elem_defined_attr(frame, id, attrs::text))
 		{
-			const auto len = text->size();
-			auto c_str = text->c_str();
+			const auto len = text->str().size();
+			auto c_str = text->str().c_str();
 			for (size_t i = 0; i < len; i++)
 			{
 				int line = (int)(i / layout.width); // TODO: tab, new line, text wrap, utf8

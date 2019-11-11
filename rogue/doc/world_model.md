@@ -71,7 +71,7 @@ Other aspects
 - tourism - travel, entertainment, activities
 - unemployment - workforce generated from population, portion of population actively seek employment, if jobs (provided by work site) not available, unemployment occurs
 - productivity - technology, attribute of work site and work activity
-- skills shortage - education and specialty of population, work activity may require certain levels of education and specialty
+- skills shortage - education and specialty of population, work activity may require certain levels of education and certain types of specialty
 - drug addiction - entertainment and critminal activities, income, law and law enforcement
 - gambling - entertainment, activities, also law and law enforcement
 - epidemic - health related, event also related to activiteis, dietary
@@ -87,7 +87,91 @@ Other aspects
 
 ### Resources
 
-Resources are physical or abstract materials or elements that are produced by certain entities (e.g. factories, facilities, populations) and consumed by others. This creates tangible connections between entities via a supply and demand
+Resources are physical or abstract materials and elements that are produced by certain entities (e.g. factories, facilities, populations) via activities?? and consumed by others. This creates tangible connections between entities via a supply and demand model
 
 
+### Locations
 
+world > region > territory
+
+#### World
+
+Habitable astronomical bodies, usually are planets. But can be other things like artificial body (like ring world, dyson sphere, but wouldn't be small objects like space stations which are tethered to worlds). Worlds can also be other less common locations like asteroid belt or more strange ones like paralelle worlds, outer dimensional worlds, virtual worlds
+
+Example: Earth, Mars
+
+#### Region
+
+Regions are large geographical locations in a world. They are divided based on geographical boundaries and are relatively stable. Their names may change throughout the history
+
+Example: Western Europe, North America, East Asia, Outer Space, Subterranean Land (where space stations are located)
+
+#### Territory
+
+Territories are smaller areas in each region. They are either divided via geographical or political boundaries, relatively dynamic. Territories can split and merge throughout the history, and not all area in a regions are represented by territories, only ones relevant to inhabitants are marked as territories. Territories are not usually visible to players, and only internally tracked by the simulation. The cities and facilities in the territories however can be managed and observed by the players
+
+Example: Tokyo, California, Normandy, Space station
+
+#### City
+
+Most of the populous territories will have their predominant cities and some territories are entirely cities (e.g. metropolis). Each world will have a top list of cities
+
+
+### Facility
+
+- farm (type? wheat, corn, soy beans, rice)
+- ranch
+- orchard
+- vineyard
+- plantation (type)
+- mine, quarry (type)
+- clay pit
+- road network
+- blacksmith, armorer, fletcher, tanner workshop, manufacturer (type)
+- forge
+- factory (type)
+- warehouse, builder hall
+- crafter's district (guild?)
+- park, plaza, monument, garden, statue
+- market
+- shop
+- slave market 
+- trading post, trade center, caravan house 
+- bank
+- mint
+- guild (type)
+- wall
+- castle
+- fort
+- estate, mansion
+- watch towers
+- barracks, stables, military base
+- school
+- scriptorium
+- academy
+- university
+- library
+- temple
+- cathedral
+- monastery
+- wonders
+- theater, amphitheater, Colosseum
+- arena
+- museum
+- zoo
+- circus
+- tavern, inn, gambling ring, fighting pit
+- pleasure house
+- harbor, port
+- shipyard
+- dam
+- palace
+- governor mansion
+- senate
+- forum
+- hospital, clinic, herbalist
+- sewer
+- aqueduct
+- courthouse
+- prison
+- pirate's lair

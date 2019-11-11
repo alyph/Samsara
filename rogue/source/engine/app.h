@@ -15,8 +15,7 @@ int run_app()
 	WindowCreationParams params;
 	params.width = 1024;
 	params.height = 768;
-	params.title = get_executable_name();
-	StringStore title = params.title;
+	params.title.store(get_executable_name());
 	auto window = Window::create(params);
 	engine().window = window.get();
 
@@ -53,7 +52,7 @@ int run_app()
 		if ((now - start_time) >= std::chrono::duration<double>(1.0))
 		{
 			// TODO: use String's function for concatenating or formating strings
-			std::string title_and_fps = title.c_str();
+			std::string title_and_fps = params.title.c_str();
 			title_and_fps += "  fps: ";
 			title_and_fps += std::to_string(std::lround(frame_count / (std::chrono::duration_cast<std::chrono::duration<double>>(now - start_time).count())));
 			window->set_title(String{title_and_fps.data(), title_and_fps.length()});

@@ -6,14 +6,14 @@ int main()
 {
 	scoped_engine_init();
 
-	StringStore str1 = "good man whatever ok";
+	String str1 = "good man whatever ok";
 	asserts(str1.str_data.is_short());
 	asserts(str1.size() == 20);
 
-	StringStore str2 = "It was of no use to demonstrate to such opponents that the Vermont myths differed but little in essence from those universal legends of natural personification which filled the ancient world with fauns and dryads and satyrs, suggested the kallikanzarai of modern Greece, and gave to wild Wales and Ireland their dark hints of strange, small, and terrible hidden races of troglodytes and burrowers. No use, either, to point out the even more startlingly similar belief of the Nepalese hill tribes in the dreaded Mi-Go or \"Abominable Snow-Men\" who lurk hideously amidst the ice and rock pinnacles of the Himalayan summits. When I brought up this evidence, my opponents turned it against me by claiming that it must imply some actual historicity for the ancient tales; that it must argue the real existence of some queer elder earth-race, driven to hiding after the advent and dominance of mankind, which might very conceivably have survived in reduced numbers to relatively recent times—or even to the present.";
+	String str2 = "It was of no use to demonstrate to such opponents that the Vermont myths differed but little in essence from those universal legends of natural personification which filled the ancient world with fauns and dryads and satyrs, suggested the kallikanzarai of modern Greece, and gave to wild Wales and Ireland their dark hints of strange, small, and terrible hidden races of troglodytes and burrowers. No use, either, to point out the even more startlingly similar belief of the Nepalese hill tribes in the dreaded Mi-Go or \"Abominable Snow-Men\" who lurk hideously amidst the ice and rock pinnacles of the Himalayan summits. When I brought up this evidence, my opponents turned it against me by claiming that it must imply some actual historicity for the ancient tales; that it must argue the real existence of some queer elder earth-race, driven to hiding after the advent and dominance of mankind, which might very conceivably have survived in reduced numbers to relatively recent times—or even to the present.";
 	asserts(str2.str_data.is_normal());
 
-	StringStore str3 = "another fairly long string, but not as crazy";
+	String str3 = "another fairly long string, but not as crazy";
 	asserts(str3.str_data.is_normal());
 
 	printf("first string: %s\n", str1.c_str());
@@ -33,69 +33,63 @@ int main()
 	printf("temp string is long now: %s\n", temp_str.c_str());
 	asserts(temp_str.str_data.normal_data.alloc_handle.allocator_type() == engine().allocators.current_temp_allocator);
 
-	StringData str4_data;
+	StringView str4_view;
 	{
-		StringStore str4 = str3;
+		str3.store();
+		String str4 = str3;
 		printf("forth string is : %s\n", str4.c_str());
 		asserts(str4.str_data.normal_data.alloc_handle.allocator_type() == Allocator::string);
-		asserts(str4.str_data.header()->ref_count == 2);
-		asserts(str3.str_data.header()->ref_count == 2);
+		asserts(string_ref_count(str4.str_data) == 2);
+		asserts(string_ref_count(str3.str_data) == 2);
 
+		str2.store();
 		str4 = str2;
-		asserts(str3.str_data.header()->ref_count == 1);
-		asserts(str4.str_data.header()->ref_count == 2);
-		asserts(str2.str_data.header()->ref_count == 2);
+		asserts(string_ref_count(str3.str_data) == 1);
+		asserts(string_ref_count(str4.str_data) == 2);
+		asserts(string_ref_count(str2.str_data) == 2);
 
 		str2 = "second string gets asigned to new one";
-		asserts(str4.str_data.header()->ref_count == 1);
-		asserts(str2.str_data.header()->ref_count == 1);
+		asserts(string_ref_count(str4.str_data) == 1);
+		asserts(str2.str_data.normal_data.alloc_handle.allocator_type() == engine().allocators.current_temp_allocator);
 		printf("second string now : %s\n", str2.c_str());
 		printf("forth string now : %s\n", str4.c_str());
 
+		String str5 = str4;
+		asserts(str5.str_data.normal_data.alloc_handle.allocator_type() == Allocator::string);
+		asserts(string_ref_count(str5.str_data) == 2);
+		asserts(string_ref_count(str4.str_data) == 2);
+		asserts(validate_and_get_string_buffer(str5.str_data) == validate_and_get_string_buffer(str4.str_data));
+
 		// str4 will be deallocated, however it is still safe to access its data
 		// since deallocation actually doesn't do anything until the allocator shrinks
-		str4_data = str4.str_data;
+		str4_view = str4;
 	}
 
 	// although we can still access this data, but we can confirm the ref count is now 0 
 	// and the memory can go away when the allocator shrinks
-	asserts(str4_data.header()->ref_count == 0);
+	asserts(string_ref_count(str4_view.str_data) == 0);
 
-	StringStore reloc_str1 = "first long enough string to relocate actually";
-	asserts(reloc_str1.str_data.is_normal());
+	String reloc_str = "first long enough string to relocate actually";
+	reloc_str.store();
+	asserts(reloc_str.str_data.is_normal());
+	asserts(reloc_str.str_data.normal_data.alloc_handle.allocator_type() == Allocator::string);
 
-	StringStore reloc_str2 = "second really long string to relocate for sure, which blocks the first string";
+	auto old_ptr = validate_and_get_string_buffer(reloc_str.str_data);
+	auto old_size = reloc_str.size();
+
+	StringView reloc_str_view = reloc_str;
+
+	reloc_str.store("first long enough string to relocate actually -- need more");
+
+	auto new_ptr = validate_and_get_string_buffer(reloc_str.str_data);
+
+	printf("before relocation: %s\n", reloc_str_view.str().c_str());
+	printf("after relocation: %s\n", reloc_str.c_str());
+
+	asserts(validate_and_get_string_buffer(reloc_str_view.str_data) == old_ptr);
+	asserts(reloc_str_view.str().size() == old_size);
+	asserts(new_ptr == reinterpret_cast<uint8_t*>(old_ptr) + reloc_str_view.str_data.normal_data.alloc_handle.capacity(engine().allocators));
 	
-	auto old_ptr2 = reloc_str2.str_data.normal_data.alloc_handle.get(engine().allocators);
-	auto old_len2 = reloc_str2.size();
-	reloc_str2 = "second really long string to relocate for sure, which blocks the first string + relocated portion";
-	auto new_ptr2 = reloc_str2.str_data.normal_data.alloc_handle.get(engine().allocators);
-	auto new_len2 = reloc_str2.size();
-	asserts(old_ptr2 == new_ptr2);
-
-	auto old_ptr1 = reloc_str1.str_data.normal_data.alloc_handle.get(engine().allocators);
-	auto old_len1 = reloc_str1.size();
-	reloc_str1 = "first long enough string to relocate actually -- need more";
-	auto new_ptr1 = reloc_str1.str_data.normal_data.alloc_handle.get(engine().allocators);
-	auto new_len1 = reloc_str1.size();
-
-	printf("relocated first string : %s\n", reloc_str1.c_str());
-	printf("relocated second string : %s\n", reloc_str2.c_str());
-
-	asserts(new_ptr1 == reinterpret_cast<uint8_t*>(new_ptr2) + reloc_str2.str_data.normal_data.alloc_handle.capacity(engine().allocators));
-	
-	old_ptr2 = new_ptr2;
-	reloc_str2 = "second really long string to relocate for sure, which blocks the first string + relocated portion and a little more";
-	new_ptr2 = reloc_str2.str_data.normal_data.alloc_handle.get(engine().allocators);
-	asserts(old_ptr2 == new_ptr2);
-	printf("relocated second string now : %s\n", reloc_str2.c_str());
-
-	reloc_str2 = "second really long string to relocate for sure, which blocks the first string + relocated portion and a little more double up: second really long string to relocate for sure, which blocks the first string + relocated portion and a little more";
-	new_ptr2 = reloc_str2.str_data.normal_data.alloc_handle.get(engine().allocators);
-	asserts(old_ptr2 != new_ptr2);
-	printf("relocated second string final : %s\n", reloc_str2.c_str());
-
-
 	std::system("pause");
 
 	return 0;
