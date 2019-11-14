@@ -16,6 +16,7 @@
     - [x] viewport raycast function
     - [x] raycast triangle function
     - [x] recheck hover after present() in step_frame()
+- [ ] forward only layout and maybe allow deferred parent??
 - [ ] text should influence width if not determine it (perhaps should determine max width?), 
   - one work around for now is to let the high level function (like button()) preset width based on the length of the text
 - [ ] text wrap?
@@ -25,8 +26,11 @@
 
 ### core
 - [ ] make Id an actual type so it can't be used directly as index
-- [ ] string store should probably be immutible too, so copy that into normal string or string attribute would work fine
+- [x] string store should probably be immutible too, so copy that into normal string or string attribute would work fine
   - we need be careful since if we have frequent changing strings that will cause the main allocator to expand quickly and will require reclaiming unused memory more often
+- [x] string builder, string format
+- [ ] perf: add a string layout which points directly to the pointer of a string literal
+- [ ] have custom allocator (declared as static variable and auto assign an allocator id, limited number 16 right now), the custom allocator should also be configurable (e.g. temp or not, reclaimation strategy)
 
 
 

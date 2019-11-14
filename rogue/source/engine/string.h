@@ -5,6 +5,7 @@
 #include "attribute.h"
 #include <cstddef>
 #include <cstring>
+#include <cstdio>
 #include <utility>
 #include <algorithm>
 
@@ -55,7 +56,7 @@ enum class StringLayout : uint8_t
 {
 	short_string = 0,
 	normal_string = 1,
-	sub_string = 2,
+	sub_string = 2, // TODO: do we still need sub string?
 	max,
 };
 
@@ -78,6 +79,7 @@ struct StringData
 	inline StringData() { clear(); }	
 	inline void clear();
 	inline const char* data() const;
+	inline char* data_mut() { return const_cast<char*>(data()); }
 	inline size_t size() const;
 	inline const char* c_str() const;
 	inline StringLayout layout() const;
@@ -147,6 +149,19 @@ public:
 	inline StringView& operator=(const String& str) { str_data = str.str_data; return *this; }
 	inline const String& str() const { return *reinterpret_cast<const String*>(this); }
 };
+
+class StringBuilder final
+{
+public:
+	template<typename ...Ts>
+	inline void append_format(const String& fmt, const Ts&... args);
+	inline String to_str();
+private:
+	StringData str_data;
+};
+
+template<typename ...Ts>
+inline String format_str(const String& fmt, const Ts&... args);
 
 
 #if 0
@@ -250,6 +265,7 @@ inline void assign_short_string(StringData& str_data, const char* start, size_t 
 	str_data.short_data.layout = static_cast<uint8_t>(StringLayout::short_string);
 }
 
+// TODO: probably don't want to inline this
 inline void assign_normal_string(StringData& str_data, const char* start, size_t size, Allocator allocator)
 {
 	// allocate strict size for the first time since majority of the time it will just 
@@ -259,9 +275,8 @@ inline void assign_normal_string(StringData& str_data, const char* start, size_t
 	size_t alloc_size = sizeof(StringHeader) + size + 1; 
 	AllocatorGlobals& alloc_globals = engine().allocators;
 	
-	str_data.normal_data.alloc_handle = alloc_globals.allocate(allocator, alloc_size);
-	
-	auto ptr = reinterpret_cast<uint8_t*>(str_data.normal_data.alloc_handle.get(alloc_globals));
+	auto handle = alloc_globals.allocate(allocator, alloc_size);
+	auto ptr = reinterpret_cast<uint8_t*>(handle.ptr);
 	auto header = reinterpret_cast<StringHeader*>(ptr);
 
 	header->ref_count = 0;
@@ -269,12 +284,13 @@ inline void assign_normal_string(StringData& str_data, const char* start, size_t
 	std::memcpy(buffer, start, size);
 	buffer[size] = 0;
 
+	str_data.normal_data.alloc_handle = handle;
 	str_data.normal_data.size = static_cast<decltype(str_data.normal_data.size)>(size);
 	str_data.normal_data.start = 0;
 	str_data.normal_data.layout = static_cast<uint8_t>(StringLayout::normal_string);
 }
 
-inline void assign_string(StringData& str_data, const char* start, size_t size, Allocator allocator)
+inline void assign_temp_string(StringData& str_data, const char* start, size_t size)
 {
 	if (size <= max_short_string_size)
 	{
@@ -282,7 +298,7 @@ inline void assign_string(StringData& str_data, const char* start, size_t size, 
 	}
 	else
 	{
-		assign_normal_string(str_data, start, size, allocator);
+		assign_normal_string(str_data, start, size, engine().allocators.current_temp_allocator);
 	}
 }
 
@@ -425,12 +441,12 @@ inline StringHeader* StringData::header() const
 template<size_t N>
 inline String::String(const char (&str)[N])
 {
-	assign_string(str_data, str, (N - 1), engine().allocators.current_temp_allocator);
+	assign_temp_string(str_data, str, (N - 1));
 }
 
 inline String::String(const char* start, size_t size)
 {
-	assign_string(str_data, start, size, engine().allocators.current_temp_allocator);
+	assign_temp_string(str_data, start, size);
 }
 
 inline String::String(String&& other)
@@ -447,7 +463,7 @@ template<size_t N>
 inline String& String::operator=(const char (&str)[N])
 {
 	dispose();
-	assign_string(str_data, str, (N - 1), engine().allocators.current_temp_allocator);
+	assign_temp_string(str_data, str, (N - 1));
 	return *this;
 }
 
@@ -497,6 +513,109 @@ inline void String::dispose()
 		release_string_ref(str_data);
 	}
 }
+
+// StringBuilder
+
+template<typename T>
+inline std::enable_if_t<std::is_arithmetic_v<T> || std::is_pointer_v<T> || std::is_enum_v<T>, const T&>
+format_arg_wrapper(const T& arg)
+{
+	return arg;
+}
+
+inline const char* format_arg_wrapper(const String& arg)
+{
+	return arg.c_str();
+}
+
+inline char* sb_buffer_end(StringData& str_data)
+{
+	return str_data.data_mut() + str_data.size();
+}
+
+inline size_t sb_buffer_remaining(const StringData& str_data)
+{
+	if (str_data.is_short())
+	{
+		return str_data.short_data.remaining_capacity + 1; // add the null terminator slot
+	}
+	else
+	{
+		const auto& normal_data = str_data.normal_data;
+		const auto capacity = normal_data.alloc_handle.capacity(engine().allocators);
+		asserts(capacity > 0);
+		const auto occupied = normal_data.start + normal_data.size;
+		return (capacity - sizeof(StringHeader) - occupied);
+	}
+}
+
+// size not including null terminator
+inline void sb_increment_size(StringData& str_data, size_t size)
+{
+	if (str_data.is_short())
+	{
+		str_data.short_data.remaining_capacity -= (uint8_t)size;
+	}
+	else
+	{
+		str_data.normal_data.size += (uint32_t)size;
+	}
+}
+
+// size including null terminator
+extern void sb_expand_buffer(StringData& str_data, size_t size);
+
+template<typename ...Ts>
+inline void StringBuilder::append_format(const String& fmt, const Ts&... args)
+{
+	// TODO: real implementation of string formatting
+	// similar to fmt lib and c++20 std::format
+	// https://github.com/fmtlib/fmt
+	// https://fmt.dev/Text%20Formatting.html
+	auto end = sb_buffer_end(str_data);
+	auto buffer_size = sb_buffer_remaining(str_data);
+	auto orig_remaining = str_data.short_data.remaining_capacity;
+	int str_size = std::snprintf(end, buffer_size, fmt.c_str(), format_arg_wrapper(args)...);
+	if (str_size >= buffer_size)
+	{
+		// no need to check if it's short string
+		// because if it's normal string the str_data itself shouldn't change
+		// but for short string, all data will be modified by the previous snprintf
+		str_data.short_data.remaining_capacity = orig_remaining;
+		sb_expand_buffer(str_data, str_size + 1);
+		end = sb_buffer_end(str_data);
+		std::snprintf(end, str_size + 1, fmt.c_str(), format_arg_wrapper(args)...);
+	}
+	sb_increment_size(str_data, str_size);
+}
+
+inline String StringBuilder::to_str()
+{
+	// TODO: maybe we should shrink before sending to string
+	// this way not only it saves memory, but also enforces the
+	// rule where the size of the allocated memory is always
+	// sizeof(StringHeader) + str_size + 1, and then we can rely
+	// on this convention to check if a string is a sub string
+	String str;
+	str.str_data = str_data;
+	str_data.clear();
+	return str;
+}
+
+
+
+
+
+// functions
+
+template<typename ...Ts>
+inline String format_str(const String& fmt, const Ts&... args)
+{
+	StringBuilder builder;
+	builder.append_format(fmt, args...);
+	return builder.to_str();
+}
+
 
 #if 0
 

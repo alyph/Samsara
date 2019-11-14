@@ -9,6 +9,7 @@ static inline void assertion_fail(const char* expr, const char* file, int line, 
 	std::fprintf(stderr, "Assertion failed: '%s' in %s (%s:%d)\n", expr, func, file, line);
 }
 
+// TODO: move these functions to external (cpp), so the code here doesn't clobber the total code size
 static inline void assertion_fail(const char* expr, const char* file, int line, const char* func, const char* message, ...)
 {
 	std::fprintf(stderr, "Assertion failed: '%s' in %s (%s:%d)\n>>> ", expr, func, file, line);

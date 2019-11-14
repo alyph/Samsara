@@ -15,6 +15,9 @@ static size_t allocate_bytes(AllocatorData& allocator_data, AllocId& min_valid_i
 	buffer.resize(new_size, alloc_page_size);
 	auto new_data = buffer.get(0);
 
+	// TODO: could have buffer.resize() return a bool to indicate weather pointer changed
+	// NOTE: even if realloc() occured, pointer may not change if there is space (should check that)
+	// on the other hand, this check here is not that bad either
 	if (new_data != old_data)
 	{
 		min_valid_id = std::max(allocator_data.max_reg_id + 1, min_valid_id);
@@ -112,6 +115,36 @@ void AllocatorGlobals::reallocate(AllocHandle& handle, size_t size)
 		// TODO: mark old block free
 
 	}	
+}
+
+void AllocatorGlobals::transallocate(AllocHandle& handle, size_t size)
+{
+	handle.validate(*this);
+	asserts(handle.alloc_id != 0);
+
+	const size_t allocator = ((handle.header >> 28) & 0x0000000F);
+	const uint32_t header_idx = (handle.header & 0x0FFFFFFF);
+	asserts(allocator < num_allocators);
+	auto& allocator_data = allocators[allocator];
+	asserts(header_idx < allocator_data.num_headers);
+	auto& header = allocator_data.headers[header_idx];
+	asserts(header.size < size); // no point resizing if the block is already large enough
+
+	if (header.ptr + header.size == allocator_data.buffer.size())
+	{
+		// this memory block is at the end of all allocations, so just need grow it
+		size_t grow_size = (size - header.size);
+		header.size += allocate_bytes(allocator_data, min_valid_ids[allocator], grow_size);
+		// handle and everything else remains the same
+	}
+	else
+	{
+		// this memory block is in the middle, allocate new, copy content and deallocate old
+		auto new_handle = allocate((Allocator)allocator, size);
+		std::memcpy(new_handle.ptr, allocator_data.buffer.get(header.ptr), header.size);
+		deallocate(handle);
+		handle = new_handle;
+	}
 }
 
 void AllocatorGlobals::deallocate(AllocHandle& handle)

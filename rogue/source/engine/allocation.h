@@ -9,12 +9,13 @@
 // basic allocator functions
 
 // ------------------------------------------------------------------------------------------------------------------------------------
-//  function     | effect                      | new ptr                     | handle                | ptr            
+//  function     | effect                      | new ptr                     | handle                  | ptr            
 // ------------------------------------------------------------------------------------------------------------------------------------
-//  allocate     | alloc new memory            | new block                   | N/A                   | N/A
-//  deallocate   | mark memory reclaimable     | null                        | valid until reclaimed | valid until reclaimed
-//  reallocate   | move memory to fit new size | same if fit, diff otherwise | valid                 | not valid if moved, retrievable
-//  reuse-alloc  | alloc memory over the old   | same if fit, diff otherwise | not valid             | not valid, not retrievable 
+//  allocate     | alloc new memory            | new block                   | N/A                     | N/A
+//  deallocate   | mark memory reclaimable     | null                        | valid until reclaimed   | valid until reclaimed
+//  reallocate   | move memory to fit new size | same if fit, diff otherwise | valid                   | not valid if moved, retrievable
+//  reuse-alloc  | alloc memory over the old   | same if fit, diff otherwise | not valid               | not valid, not retrievable 
+//  transallocate| move to fit and dealloc old | same if fit, diff otherwise | same if fit, or dealloc | valid if fit, or valid until reclaimed
 // ------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -71,6 +72,7 @@ struct AllocatorGlobals
 
 	AllocHandle allocate(Allocator allocator, size_t size);
 	void reallocate(AllocHandle& handle, size_t size);
+	void transallocate(AllocHandle& handle, size_t size);
 	void deallocate(AllocHandle& handle);
 	void regular_cleanup();
 };

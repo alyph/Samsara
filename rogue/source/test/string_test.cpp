@@ -90,6 +90,14 @@ int main()
 	asserts(reloc_str_view.str().size() == old_size);
 	asserts(new_ptr == reinterpret_cast<uint8_t*>(old_ptr) + reloc_str_view.str_data.normal_data.alloc_handle.capacity(engine().allocators));
 	
+	StringBuilder builder1;
+	builder1.append_format(str4_view.str());
+	builder1.append_format(str4_view.str());
+	String built_str = builder1.to_str();
+	asserts(built_str.size() == str4_view.str().size() * 2);
+	printf("built string: %s\n", built_str.c_str());
+
+
 	std::system("pause");
 
 	return 0;
