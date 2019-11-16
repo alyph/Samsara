@@ -3,12 +3,12 @@
 
 ### presenter
 - [x] multiple text nodes (requires layout??)
-- [ ] buttons
+- [x] buttons
   - [x] scope, global elment
     - [x] scope traversal, create global element
     - [x] frame element change sibling offset to tree offset
   - [x] impl button, add function to check pressed() released()?, clicked()
-    - [ ] do click state change
+    - [x] do click state change
   - [x] input
     - [x] input process
     - [x] worker mouse interaction cache

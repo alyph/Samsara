@@ -253,7 +253,7 @@ void TabletUIApp::present(const Context& ctx)
 
 
 			node(_ctx);
-			str = "[ click me! ]";
+			str = format_str("[ click me! (%d) ]", click_count);
 			_attr(attrs::text, str);
 			
 			if (_down)
@@ -274,7 +274,7 @@ void TabletUIApp::present(const Context& ctx)
 
 			if (_clicked)
 			{
-
+				click_count++;
 			}
 			
 

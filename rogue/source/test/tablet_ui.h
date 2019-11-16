@@ -15,4 +15,5 @@ private:
 	Id tablet_shader;
 	Id tablet_screen_shader;
 	Texture atlas_texture;
+	int click_count{};
 };
