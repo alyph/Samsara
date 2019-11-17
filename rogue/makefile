@@ -2,32 +2,40 @@ BIN_DIR := bin\win64
 BUILD_DIR := build\win64
 SRC_DIR := source
 
-ALL_SRC := $(wildcard $(SRC_DIR)/**/*.cpp) external/glew/src/glew.c
+# ALL_SRC := $(wildcard $(SRC_DIR)/**/*.cpp) external/glew/src/glew.c
 TEST_SRC := $(wildcard $(SRC_DIR)/test/*.cpp)
-ENGINE_SRC := $(filter-out $(TEST_SRC), $(ALL_SRC))
+# ENGINE_SRC := $(filter-out $(TEST_SRC), $(ALL_SRC))
 # ENGINE_OBJ := $(patsubst $(SRC_DIR)/*/%.cpp, $(BUILD_DIR)/%.obj, $(ENGINE_SRC))
+ENGINE_SRC := $(wildcard $(SRC_DIR)/engine/*.cpp) external/glew/src/glew.c
 ENGINE_OBJ := $(patsubst %, $(BUILD_DIR)/%.obj, $(basename $(notdir $(ENGINE_SRC))))
+GAME_SRC := $(wildcard $(SRC_DIR)/game/*.cpp)
 
 TESTS_EXE := $(TEST_SRC:$(SRC_DIR)/test/%.cpp=$(BIN_DIR)/%.exe)
 TESTS := $(TESTS_EXE:$(BIN_DIR)/%.exe=%)
 # TABLET_TEST := tablet_test
 # TABLET_TEST_EXE := $(BIN_DIR)/$(TABLET_TEST).exe
+GAME_EXE := $(BIN_DIR)/game.exe
 
 INCLUDES := /I.\source /I.\external\glew\include /I.\external\glfw\include /I.\external\stb /I.\external\easy_profiler\include /I.\external\freetype\include
 COMPILER_FLAGS := /Od /W3 /WX /Zi /MD /GR- /MP /utf-8 /std:c++latest /D_HAS_EXCEPTIONS=0 /DGLEW_STATIC=1 /DBUILD_WITH_EASY_PROFILER=1 $(INCLUDES)
 LINKER_FLAGS := /INCREMENTAL:NO /LIBPATH:external\glfw\bin\win64 /LIBPATH:external\easy_profiler\bin /LIBPATH:external\freetype\bin\win64
 LIBS := opengl32.lib glfw3.lib User32.lib Gdi32.lib Shell32.lib easy_profiler.lib freetype.lib
 
-.PHONY: all engine clean makedirs $(TESTS)
+.PHONY: all engine clean makedirs game $(TESTS)
 
 
-all: $(TESTS)
+all: game $(TESTS)
+
+game: $(GAME_EXE)
 
 $(TESTS):%:$(BIN_DIR)/%.exe
 
 
 $(TESTS_EXE):$(BIN_DIR)/%.exe:$(SRC_DIR)/test/%.cpp engine
 	cl $(COMPILER_FLAGS) /Fo$(BUILD_DIR)\\ /Fd$(BUILD_DIR)\\ $< $(ENGINE_OBJ) /link $(LINKER_FLAGS) $(LIBS) /OUT:$@
+
+$(GAME_EXE): $(GAME_SRC) engine
+	cl $(COMPILER_FLAGS) /Fo$(BUILD_DIR)\\ /Fd$(BUILD_DIR)\\ $(GAME_SRC) $(ENGINE_OBJ) /link $(LINKER_FLAGS) $(LIBS) /OUT:$@
 
 # $(TABLET_TEST_EXE): $(SRC_DIR)/test/$(TABLET_TEST).cpp engine
 # 	cl $(COMPILER_FLAGS) /Fo$(BUILD_DIR)\\ /Fd$(BUILD_DIR)\\ $< $(ENGINE_OBJ) /link $(LINKER_FLAGS) $(LIBS) /OUT:$@

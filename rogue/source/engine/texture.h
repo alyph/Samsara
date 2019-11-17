@@ -18,6 +18,7 @@ struct TextureDesc
 	std::vector<uint8_t> data;
 };
 
+// convert texture into id based and manage it through asset manager
 class Texture
 {
 public:

@@ -517,7 +517,7 @@ inline void String::dispose()
 // StringBuilder
 
 template<typename T>
-inline std::enable_if_t<std::is_arithmetic_v<T> || std::is_pointer_v<T> || std::is_enum_v<T>, const T&>
+inline std::enable_if_t<std::is_arithmetic_v<T> || std::is_pointer_v<T> || std::is_enum_v<T>, T>
 format_arg_wrapper(const T& arg)
 {
 	return arg;
