@@ -17,6 +17,11 @@ int run_app()
 	params.height = 768;
 	params.title.store(get_executable_name());
 	auto window = Window::create(params);
+	if (!window) {
+		fprintf(stderr, "failed to create app window\n");
+		return 1;
+	}
+
 	engine().window = window.get();
 
 	AppT app;
