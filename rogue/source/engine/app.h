@@ -31,16 +31,11 @@ int run_app()
 	int frame_count{};
 	std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
 
-	// TabletTestApp app;
-	// set_present_func(present_func, std::ref(app.engine), std::ref(app.model));
 	while (!app.ended())
 	{
 		presenter.process_control(window->poll_events());
 		
 		app.update();
-
-		// render stuff out
-		//renderer->render(store, model);
 
 		const double dt = 1.0 / 60.0;
 		presenter.step_frame(dt);
@@ -51,7 +46,6 @@ int run_app()
 		// clean up allocators (deallocate memory when needed)
 		engine().allocators.regular_cleanup();
 
-		// TODO: reuse this code
 		frame_count++;
 		auto now = std::chrono::system_clock::now();
 		if ((now - start_time) >= std::chrono::duration<double>(1.0))

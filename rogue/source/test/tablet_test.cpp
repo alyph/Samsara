@@ -1,6 +1,6 @@
 
 #include "tablet_test.h"
-#include "engine/renderer.h"
+#include "engine/app.h"
 #include "engine/math_utils.h"
 #include "engine/image_utils.h"
 #include "engine/viewport.h"
@@ -10,51 +10,7 @@
 
 int main()
 {
-	profiler::startListen();
-
-	scoped_engine_init();
-
-	WindowCreationParams params;
-	params.width = 1024;
-	params.height = 768;
-	params.title = "Tablet Test";
-	auto window = Window::create(params);
-
-	TabletTestApp app(window.get());
-	Presenter presenter;
-	presenter.set_present_object(&app);
-
-	int frame_count{};
-	std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
-
-	// TabletTestApp app;
-	// set_present_func(present_func, std::ref(app.engine), std::ref(app.model));
-	while (!app.ended())
-	{
-		presenter.process_control(window->poll_events());
-		
-		app.update();
-
-		// render stuff out
-		//renderer->render(store, model);
-
-		const double dt = 1.0 / 60.0;
-		presenter.step_frame(dt);
-
-		// present
-		window->present();
-
-		// TODO: reuse this code
-		frame_count++;
-		auto now = std::chrono::system_clock::now();
-		if ((now - start_time) >= std::chrono::duration<double>(1.0))
-		{
-			printf("-- fps: %f\n", frame_count / (std::chrono::duration_cast<std::chrono::duration<double>>(now - start_time).count()));
-			start_time = now;
-			frame_count = 0;
-		}
-	}
-	return 0;
+	return run_app<TabletTestApp>();
 }
 
 
@@ -89,8 +45,7 @@ static void randomize_tablet(TabletTestModel::TabletItem& tablet, double prob)
 	}
 }
 
-TabletTestApp::TabletTestApp(Window* window):
-	window(window)
+TabletTestApp::TabletTestApp()
 {
 	// set a seed
 	std::srand(static_cast<unsigned int>(std::time(nullptr)));
@@ -132,7 +87,7 @@ TabletTestApp::TabletTestApp(Window* window):
 	model.tablets = 
 	{ 
 		{ Pose{}, width, height, {}, alloc_simple_array<GlyphData>(width * height) },
-		{ Pose{ {0.f, 0.f, -1.f} }, 16, 16, {}, alloc_simple_array<GlyphData>(16 * 16) },
+		{ Pose{}, 16, 16, {}, alloc_simple_array<GlyphData>(16 * 16) },
 	};
 
 	randomize_tablet(model.tablets[0], 1.0);
@@ -182,13 +137,15 @@ void TabletTestApp::update()
 
 bool TabletTestApp::ended()
 {
-	return window->should_close();
+	return engine().window->should_close();
 }
 
 
 void TabletTestApp::present(const Context& ctx)
 {
 	using namespace elem;
+
+	auto window = engine().window;
 
 	Viewpoint vp;
 	vp.projection = make_perspective(to_rad(60.f), window->aspect(), 0.1f, 100.f);

@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(Windows) Launch",
+            "name": "run game",
             "type": "cppvsdbg",
             "request": "launch",
             "program": "game.exe",
@@ -13,12 +13,29 @@
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/bin/win64",
             "environment": [],
-            "externalConsole": true,
-            "logging": {
-                "exceptions": true,
-                "moduleLoad": true,
-                "trace": true
-            }
+            "externalConsole": true
+        },
+        {
+            "name": "run tablet ui",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "tablet_ui.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/bin/win64",
+            "environment": [],
+            "externalConsole": true
+        },
+        {
+            "name": "run tablet test",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "tablet_test.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/bin/win64",
+            "environment": [],
+            "externalConsole": true
         }
     ]
 }

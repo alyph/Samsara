@@ -745,13 +745,13 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 					int dst_start = (dst_y + y) * width + dst_x;
 					if (src_start + w <= num_glyphs)
 					{
-						memcpy(glyphs.data() + dst_start, defined_glyphs->data() + src_start, w);
+						memcpy(glyphs.data() + dst_start, defined_glyphs->data() + src_start, w * sizeof(GlyphData));
 					}
 					else
 					{
 						if (src_start < num_glyphs)
 						{
-							memcpy(glyphs.data() + dst_start, defined_glyphs->data() + src_start, num_glyphs - src_start);
+							memcpy(glyphs.data() + dst_start, defined_glyphs->data() + src_start, (num_glyphs - src_start) * sizeof(GlyphData));
 						}
 						break;
 					}					

@@ -1,6 +1,5 @@
 
 #include "mesh_viewer.h"
-#include "engine/renderer.h"
 #include "engine/math_utils.h"
 #include "engine/viewport.h"
 
@@ -21,8 +20,6 @@ MeshViewerApp::MeshViewerApp()
 	params.height = 768;
 	params.title = "Mesh Viewer";
 	window = Window::create(params);
-
-	renderer = std::make_unique<MeshViewerRenderer>(*window);
 
 	// create a mesh (cube), left handed
 	Mesh mesh;
@@ -167,12 +164,6 @@ bool MeshViewerApp::ended()
 	return window->should_close();
 }
 
-MeshViewerRenderer::MeshViewerRenderer(Window& window)
-{
-	// TODO: window asepct may change at runtime.
-	vp.projection = make_perspective(to_rad(60.f), window.aspect(), 0.1f, 100.f);
-}
-
 void MeshViewerApp::present(const Context& ctx)
 {
 	using namespace elem;
@@ -199,23 +190,3 @@ void MeshViewerApp::present(const Context& ctx)
 	}
 }
 
-void MeshViewerRenderer::render(const MeshViewerStore& store, const MeshViewerModel& model)
-{
-	vp.pose = model.cam_pose;
-	const auto mat_vp = calc_mat_vp(vp);
-
-	stream.items.resize(model.meshes.size());
-	for (size_t i = 0; i < model.meshes.size(); i++)
-	{
-		auto& mesh_model = model.meshes[i];
-		auto& item = stream.items[i];
-		item.mesh_id = mesh_model.mesh_id;
-		item.mvp = (mat_vp * to_mat44(mesh_model.pose));
-	}
-
-	// clear
-	renderer::clear(Color{});
-
-	// draw meshes
-	renderer::draw(store.mesh_store, stream);
-}

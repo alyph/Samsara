@@ -46,23 +46,13 @@ public:
 class TabletTestApp
 {
 public:
-	TabletTestApp(Window* window);
+	TabletTestApp();
 	void update();
 	bool ended();
 	void present(const Context& ctx);
 	
 public:
-	//Engine* app_engine{};
-	Window* window{};
-
-	// std::unique_ptr<Window> window;
-	// Presenter presenter;
-	// std::unique_ptr<TabletTestRenderer> renderer;
-
 	TabletTestModel model;
 	TabletTestStore store;
-
-	// std::chrono::system_clock::time_point start_time;
-	// int frame_count{};
 };
 

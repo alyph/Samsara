@@ -33,17 +33,6 @@ public:
 	MeshStore mesh_store;
 };
 
-class MeshViewerRenderer
-{
-public:
-	MeshViewerRenderer(Window& window);
-	void render(const MeshViewerStore& store, const MeshViewerModel& model);
-
-private:
-	Viewpoint vp;
-	MeshDrawStream stream;
-};
-
 class MeshViewerApp
 {
 public:
@@ -55,7 +44,6 @@ public:
 private:
 	std::unique_ptr<Window> window;
 	Presenter presenter;
-	std::unique_ptr<MeshViewerRenderer> renderer;
 
 	MeshViewerModel model;
 	MeshViewerStore store;

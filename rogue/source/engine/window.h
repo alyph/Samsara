@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-// struct GLFWwindow;
 struct InputEvent;
 
 struct WindowCreationParams
@@ -32,11 +31,6 @@ public:
 	int height() const;
 	void set_title(const String& title);
 
-	// static void key_callback(GLFWwindow* glfw, int key, int scancode, int action, int mods);
-	// static void mouse_position_callback(GLFWwindow* glfw, double xpos, double ypos);
-	// static void mouse_button_callback(GLFWwindow* glfw, int button, int action, int mods);
-
-	// GLFWwindow* glfw{};
 private:
 	bool request_close{};
 };

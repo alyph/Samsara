@@ -38,7 +38,7 @@ static void render_viewport(const Frame& frame, Id elem_id)
 
 		// TODO: configurable and maybe per sub tree configurable
 		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		glDepthFunc(GL_LEQUAL); // let the later drawn objects cover the previous ones if depth are the same
 		glEnable(GL_CULL_FACE);
 
 		while (!elem_stack.empty())

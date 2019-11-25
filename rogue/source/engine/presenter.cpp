@@ -568,8 +568,8 @@ void Presenter::present()
 		// Create a scoped children block to ensure all elements are children of this virtual root
 		// This will insert an empty entry into the worker stack for the top level elements,
 		// and when exiting the scope, this will also pop the last top level element, and set its
-		// tree offset. (NOTE: the stack can never be empty during the present_func call. The scope 
-		// stack though will be empty at the beginning)
+		// tree offset. (NOTE: the worker stack can never be empty during the present_func call.
+		// The scope stack though will be empty at the beginning)
 		const ScopedChildrenBlock root(context);
 		asserts(present_func);
 		present_func(std::move(context), present_func_param);
