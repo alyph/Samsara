@@ -1,3 +1,4 @@
+SHELL=cmd
 BIN_DIR := bin\win64
 BUILD_DIR := build\win64
 SRC_DIR := source
