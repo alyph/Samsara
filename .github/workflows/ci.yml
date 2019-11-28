@@ -14,5 +14,4 @@ jobs:
     - name: Build all
       run: build all
       shell: cmd
-      working-directory: ./rogue
 
