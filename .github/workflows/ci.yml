@@ -10,5 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Build all
-      run: ./build all
+      run: build all
       shell: cmd
+      working-directory: ./rogue
+
