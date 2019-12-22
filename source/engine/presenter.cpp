@@ -14,6 +14,12 @@ struct PresentWorker
 		size_t scope_idx{};
 	};
 
+	struct Section
+	{
+		Id root{};
+		Id last_elem_id{};
+	};
+
 	struct MouseInteractElemEntry
 	{
 		Id curr_elem_guid{};
@@ -27,8 +33,10 @@ struct PresentWorker
 
 	std::vector<ElementWorkerEntry> elem_worker_stack;
 	std::vector<ScopeWorkerEntry> scope_worker_stack;
+	std::vector<Id> all_section_roots;
 	std::vector<MouseInteractEntry> mouse_interact_per_depth;
 	uint16_t num_mouse_interact_depth[(size_t)MouseInteraction::max * 2]{};
+	Id last_finalized_elem{};
 
 	inline bool is_mouse_currently(MouseInteraction interaction, const Element& elem)
 	{
@@ -50,15 +58,15 @@ struct PresentWorker
 
 namespace attrs
 {
-	Attribute<RendererFunc> renderer{nullptr};
-	Attribute<PostProcessorFunc> postprocessor{nullptr};
+	Attribute<FinalizerFunc> finalizer{nullptr};
 	Attribute<RaycasterFunc> raycaster{nullptr};
-	Attribute<double> top{0.0};
-	Attribute<double> bottom{0.0};
-	Attribute<double> left{0.0};
-	Attribute<double> right{0.0};
-	Attribute<double> width{0.0};
-	Attribute<double> height{0.0};
+	Attribute<RendererFunc> renderer{nullptr};
+	Attribute<Scalar> top{undefined_scalar};
+	Attribute<Scalar> bottom{undefined_scalar};
+	Attribute<Scalar> left{undefined_scalar};
+	Attribute<Scalar> right{undefined_scalar};
+	Attribute<Scalar> width{undefined_scalar};
+	Attribute<Scalar> height{undefined_scalar};
 	Attribute<Mat44> transform{Mat44::identity()};
 	Attribute<Color> background_color{Color{0.f, 0.f, 0.f, 0.f}};
 	Attribute<Color> foreground_color{Color{1.f, 1.f, 1.f, 1.f}};
@@ -79,11 +87,6 @@ Id register_elem_type(ElemTypeInitFunc init_func)
 	const auto id = index_to_id(registered_funcs.size());
 	registered_funcs.push_back(init_func);
 	return id;
-}
-
-void ElementTypeSetup::set_name(const char* name)
-{
-	type->name = name;
 }
 
 Id make_element(const Context& context, Id type_id)
@@ -137,7 +140,12 @@ Id make_element(const Context& context, Id type_id)
 	new_elem.depth = static_cast<decltype(new_elem.depth)>(worker->elem_worker_stack.size() - 1);
 	// TODO: if we store the depth in global element, we should assert the global and local elements' depth match
 
-	return (elem_worker.elem_id = index_to_id(new_elem_idx));
+	const auto new_elem_id = index_to_id(new_elem_idx);
+	if (type_id && globals->elem_types[id_to_index(type_id)].as_section_root)
+	{
+		worker->all_section_roots.push_back(new_elem_id);
+	}
+	return (elem_worker.elem_id = new_elem_id);
 }
 
 Id get_parent(const Frame& frame, Id elem_id)
@@ -195,6 +203,7 @@ Context create_scoped_context(const Context& parent_scope_context, uint64_t coun
 	Context context;
 	context.frame = frame;
 	context.worker = worker;
+	context.begin_elem_id = (frame->elements.size() + 1);
 
 	const auto parent_scope_idx = parent_scope_context.scope_idx;
 	const auto& parent_scope = globals->scopes[parent_scope_idx];
@@ -304,6 +313,122 @@ Element& get_working_elem(const Context& context)
 	return frame->elements[id_to_index(elem_worker.elem_id)];
 }
 
+inline void close_tree_offset(Frame& frame, Id elem_id)
+{
+	using offset_type = decltype(Element::tree_offset);
+	const auto elem_idx = id_to_index(elem_id);
+	auto& elem = frame.elements[elem_idx];
+	asserts(elem.tree_offset == 0);
+	elem.tree_offset = static_cast<offset_type>(frame.elements.size() - elem_idx);
+}
+
+void finalize(const Context& context, bool open_tree)
+{
+	auto worker = context.worker;
+	auto frame = context.frame;
+
+	if (!open_tree && !worker->elem_worker_stack.empty())
+	{
+		const Id closing_id = worker->elem_worker_stack.back().elem_id;
+		asserts(closing_id >= context.begin_elem_id);
+		close_tree_offset(*frame, closing_id);
+	}
+
+	const Id prev = worker->last_finalized_elem;
+	const Id first = worker->last_finalized_elem + 1;
+	const Id last = frame->elements.size();
+	if (first > last)
+	{
+		return;
+	}
+
+	const auto& section_roots = worker->all_section_roots;
+	std::vector<Id> section_root_stack;
+	size_t next_root_idx = 0;
+	for (; next_root_idx < section_roots.size(); next_root_idx++)
+	{
+		const Id root_id = section_roots[next_root_idx];
+		const auto& root_elem = get_element(*frame, root_id);
+
+		if (root_id >= first)
+		{
+			break;
+		}
+		// 0 means not processed, thus contain everything afterwards
+		// NOTE: we count everything that include prev finalized element,
+		// so we can put those in stack and later pop to ensure a final
+		// processing even if no elements are being finalized
+		else if (root_elem.tree_offset == 0 || (root_id + root_elem.tree_offset > prev))
+		{
+			section_root_stack.push_back(root_id);
+		}
+	}
+
+	Id current = first;
+	while (current <= last || !section_root_stack.empty())
+	{
+		if (section_root_stack.empty())
+		{
+			if (next_root_idx < section_roots.size())
+			{
+				const Id next_root_id = section_roots[next_root_idx++];
+				current = next_root_id + 1;
+				section_root_stack.push_back(next_root_id);
+			}
+			else
+			{
+				break;
+			}
+		}
+		else
+		{
+			const Id root_id = section_root_stack.back();
+			const auto& root_elem = get_element(*frame, root_id);
+			Id process_end{};
+			bool always_finalize = false;
+			// next root is the child of current root
+			if (next_root_idx < section_roots.size() && 
+				(root_elem.tree_offset == 0 || 
+				(root_id + root_elem.tree_offset > section_roots[next_root_idx])))
+			{
+				const Id next_root_id = section_roots[next_root_idx++];
+				// process everything from current to next_root_id
+				// NOTE: next_root_id will be finalized by current section not by itself
+				process_end = next_root_id;
+				section_root_stack.push_back(next_root_id);
+			}
+			// current root has capped offset (i.e. all children have been presented)
+			else if (root_elem.tree_offset)
+			{
+				// process until the end of the current root's sub tree
+				process_end = (root_id + root_elem.tree_offset - 1);
+				// we will call finalizer even if current > process_end becauase it is
+				// required to call finalizer at least once last time for final processing 
+				always_finalize = true;
+				section_root_stack.pop_back();
+			}
+			// current root is uncapped (more children may be added in the future)
+			else
+			{
+				process_end = last;
+				// clear all stack because we will exit the loop after the finalize call
+				section_root_stack.clear();
+			}
+
+			if (always_finalize || current <= process_end)
+			{
+				const auto finalizer_func = get_elem_attr_or_default(*frame, root_id, attrs::finalizer);
+				if (finalizer_func)
+				{
+					finalizer_func(*frame, root_id, current, process_end);
+				}
+			}
+			current = process_end + 1;
+		}
+	}
+	worker->last_finalized_elem = last;
+}
+
 bool is_elem_hover(const Context& context)
 {
 	const auto& elem = get_working_elem(context);
@@ -352,7 +477,8 @@ ScopedChildrenBlock::ScopedChildrenBlock(const Context& context):
 	// make sure current working element is the last element registered (meaning only 1 children block is used per element)
 	asserts(worker->elem_worker_stack.empty() ||
 		(!context.frame->elements.empty() && 
-		worker->elem_worker_stack.back().elem_id == index_to_id(context.frame->elements.size() - 1)));
+		worker->elem_worker_stack.back().elem_id == index_to_id(context.frame->elements.size() - 1) &&
+		context.frame->elements.back().tree_offset == 0)); // hierarchy must not be closed
 
 	// add an empty entry, which will be filled when the first child element is made
 	worker->elem_worker_stack.emplace_back();
@@ -360,14 +486,10 @@ ScopedChildrenBlock::ScopedChildrenBlock(const Context& context):
 
 ScopedChildrenBlock::~ScopedChildrenBlock()
 {
-	using offset_type = decltype(Element::tree_offset);
-
 	const auto elem_id = worker->elem_worker_stack.back().elem_id;
 	if (elem_id)
 	{
-		const auto elem_idx = id_to_index(elem_id);
-		asserts(frame->elements[elem_idx].tree_offset == 0);
-		frame->elements[elem_idx].tree_offset = static_cast<offset_type>(frame->elements.size() - elem_idx);
+		close_tree_offset(*frame, elem_id);
 	}
 	worker->elem_worker_stack.pop_back();
 }
@@ -574,19 +696,8 @@ void Presenter::present()
 		asserts(present_func);
 		present_func(std::move(context), present_func_param);
 	}
-
-	// may perform any necessary post processing
-	// TODO: if an element gets processed more than once (since some may process the whole sub tree)
-	// then we may run into issue where the element's attribute list is no longer contiguous
-	for (size_t elem_idx = 0; elem_idx < curr_frame.elements.size(); elem_idx++)
-	{
-		const Id elem_id = index_to_id(elem_idx);
-		auto postprocessor = get_elem_attr_or_default(curr_frame, elem_id, attrs::postprocessor);
-		if (postprocessor)
-		{
-			postprocessor(curr_frame, elem_id);
-		}
-	}
+	
+	finalize(context);
 	
 	// now new frame is stored in curr_frame
 }

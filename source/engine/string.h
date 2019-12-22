@@ -134,6 +134,7 @@ public:
 
 	inline const char* c_str() const { return str_data.c_str(); }
 	inline size_t size() const { return str_data.size(); }
+	inline const char* data() const { return str_data.data(); }
 
 private:
 	inline void dispose();

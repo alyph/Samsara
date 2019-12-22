@@ -60,6 +60,7 @@
         "xutility": "cpp",
         "fstream": "cpp",
         "iostream": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "iterator": "cpp"
     }
 }

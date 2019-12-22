@@ -48,8 +48,8 @@ void Game::present(const Context& ctx)
 	vp.pose.pos.y = ((float)tablet_size.y - vp_height) / 2;
 
 	viewport(_ctx);
-	_attr(attrs::width, static_cast<double>(window->width()));
-	_attr(attrs::height, static_cast<double>(window->height()));
+	_attr(attrs::width, window->width());
+	_attr(attrs::height, window->height());
 	_attr(attrs::viewpoint, vp);
 	_attr(attrs::background_color, Color{});
 

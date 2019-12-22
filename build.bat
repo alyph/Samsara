@@ -12,7 +12,6 @@ if not exist "%InstallDir%\VC\Auxiliary\Build\vcvarsall.bat" (
 )
 
 echo Building using VS installation: %InstallDir%
-echo.
 
 call "%InstallDir%\VC\Auxiliary\Build\vcvarsall.bat" x64
 

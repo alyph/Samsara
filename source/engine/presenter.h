@@ -9,6 +9,7 @@
 #include "buffer.h"
 #include "macros.h"
 #include "string.h"
+#include "types.h"
 #include <functional>
 
 struct InputEvent;
@@ -20,23 +21,23 @@ struct Element;
 struct ElementType;
 struct ElementTypeSetup;
 
-using RendererFunc = void(*)(const Frame& frame, Id elem_id);
-using PostProcessorFunc = void(*)(Frame& frame, Id elem_id);
+using FinalizerFunc = void(*)(Frame& frame, Id root_elem_id, Id first_elem_id, Id last_elem_id);
 // x, y in screen space (in pixels), out_z in NDC space (-1, 1)
 using RaycasterFunc = Id(*)(const Frame& frame, Id elem_id, double x, double y, double& out_z);
+using RendererFunc = void(*)(const Frame& frame, Id elem_id);
 using ElemTypeInitFunc = std::function<void(ElementTypeSetup&)>;
 
 namespace attrs
 {
-	extern Attribute<RendererFunc> renderer;
-	extern Attribute<PostProcessorFunc> postprocessor;
+	extern Attribute<FinalizerFunc> finalizer;
 	extern Attribute<RaycasterFunc> raycaster;
-	extern Attribute<double> top;
-	extern Attribute<double> bottom;
-	extern Attribute<double> left;
-	extern Attribute<double> right;
-	extern Attribute<double> width;
-	extern Attribute<double> height;
+	extern Attribute<RendererFunc> renderer;
+	extern Attribute<Scalar> top;
+	extern Attribute<Scalar> bottom;
+	extern Attribute<Scalar> left;
+	extern Attribute<Scalar> right;
+	extern Attribute<Scalar> width;
+	extern Attribute<Scalar> height;
 	extern Attribute<Mat44> transform;
 	extern Attribute<Color> background_color;
 	extern Attribute<Color> foreground_color;
@@ -49,15 +50,19 @@ extern Id register_elem_type(ElemTypeInitFunc init_func);
 //template<typename T> void set_elem_type_attr(Id type_id, const Attribute<T>& attr, const T& value);
 
 extern Id make_element(const Context& context, Id type_id);
+inline const Element& get_element(const Frame& frame, Id elem_id);
 extern Id get_parent(const Frame& frame, Id elem_id);
 extern Id get_first_child(const Frame& frame, Id elem_id);
+inline Id get_last_child(const Frame& frame, Id elem_id);
 extern Id get_next_sibling(const Frame& frame, Id elem_id);
 inline Id get_last_in_subtree(const Frame& frame, Id root_elem_id); // TODO: rename to get_last_descendant()??
+inline size_t num_elems_in_subtree(const Frame& frame, Id root_elem_id);
 
 template<typename T> const T* get_elem_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T& get_elem_attr_or_default(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T& get_elem_attr_or_assert(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T> const T* get_elem_defined_attr(const Frame& frame, Id elem_id, const Attribute<T>& attr);
+template<typename T> T& get_mutable_elem_attr_or_assert(const Frame& frame, Id elem_id, const Attribute<T>& attr);
 template<typename T, typename ValT> void set_elem_instance_attr(const Context& context, const Attribute<T>& attr, const ValT& val);
 template<typename T, typename ValT> void set_elem_post_attr(Frame& frame, Id elem_id, const Attribute<T>& attr, const ValT& val);
 
@@ -65,6 +70,7 @@ template<typename T, typename ValT> void set_elem_post_attr(Frame& frame, Id ele
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count);
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count, uint64_t user_id);
 extern Element& get_working_elem(const Context& context);
+extern void finalize(const Context& context, bool open_tree=false); // run finalize (attributes) on all unfinalized elements
 
 // input related
 extern bool is_elem_hover(const Context& context);
@@ -115,6 +121,8 @@ struct Element
 	uint16_t depth{};
 	uint32_t tree_offset{}; // offset to the first element not in this element's sub tree 
 							// (can be sibling or one of the ancestors' sibling)
+							// equivalent to the number of elements in this sub tree
+							// TODO: just rename it to the num_tree_elems?
 	AttrListHandle inst_attrs;
 	AttrListHandle post_attrs;
 };
@@ -124,6 +132,7 @@ struct ElementType
 	Id id{};
 	std::string name;
 	AttrListHandle type_attrs;
+	bool as_section_root{};
 };
 
 struct ElementTypeSetup
@@ -131,8 +140,9 @@ struct ElementTypeSetup
 	ElementType* type{};
 	PresentGlobals* globals{};
 
-	void set_name(const char* name);
-	template<typename T> void set_attr(const Attribute<T>& attr, const T& value);
+	inline void set_name(const char* name) { type->name = name; }
+	inline void as_section_root() { type->as_section_root = true; }
+	template<typename T> inline void set_attr(const Attribute<T>& attr, const T& value);
 };
 
 struct Context
@@ -140,6 +150,7 @@ struct Context
 	Frame* frame{};
 	PresentWorker* worker{};
 	size_t scope_idx{};
+	Id begin_elem_id{};
 
 	Context() = default;
 	Context(const Context& other) = delete;
@@ -252,9 +263,27 @@ void Presenter::set_present_object(T* obj)
 
 // }
 
-template<typename T> void ElementTypeSetup::set_attr(const Attribute<T>& attr, const T& value)
+template<typename T> 
+inline void ElementTypeSetup::set_attr(const Attribute<T>& attr, const T& value)
 {
 	globals->elem_type_attr_table.set_attr(type->type_attrs, attr, value);
+}
+
+inline const Element& get_element(const Frame& frame, Id elem_id)
+{
+	return frame.elements[id_to_index(elem_id)];
+}
+
+inline Id get_last_child(const Frame& frame, Id elem_id)
+{
+	Id child_id = get_first_child(frame, elem_id);
+	while (child_id)
+	{
+		Id next_id = get_next_sibling(frame, child_id);
+		if (!next_id) { break; }
+		child_id = next_id;
+	}
+	return child_id;
 }
 
 inline Id get_last_in_subtree(const Frame& frame, Id root_elem_id)
@@ -264,6 +293,14 @@ inline Id get_last_in_subtree(const Frame& frame, Id root_elem_id)
 	const auto offset_idx = (elem_idx + elem.tree_offset);
 	asserts(offset_idx > elem_idx);
 	return index_to_id(offset_idx - 1);
+}
+
+inline size_t num_elems_in_subtree(const Frame& frame, Id root_elem_id)
+{
+	const auto elem_idx = id_to_index(root_elem_id);
+	const auto& elem = frame.elements[elem_idx];
+	asserts(elem.tree_offset > 0);
+	return elem.tree_offset;
 }
 
 template<typename T> 
@@ -304,6 +341,13 @@ const T* get_elem_defined_attr(const Frame& frame, Id elem_id, const Attribute<T
 	}
 
 	return nullptr;
+}
+
+template<typename T> 
+T& get_mutable_elem_attr_or_assert(const Frame& frame, Id elem_id, const Attribute<T>& attr)
+{
+	// TODO: add static assert the attribute is mutable
+	return const_cast<T&>(get_elem_attr_or_assert(frame, elem_id, attr));
 }
 
 template<typename T, typename ValT> 

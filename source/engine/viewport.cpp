@@ -17,9 +17,9 @@ static void render_viewport(const Frame& frame, Id elem_id)
 {
 	EASY_FUNCTION();
 
-	const auto width = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::width));
-	const auto height = std::lround(get_elem_attr_or_assert(frame, elem_id, attrs::height));
-	glViewport(0, 0, width, height);
+	const auto width = get_elem_attr_or_assert(frame, elem_id, attrs::width).to_int();
+	const auto height = get_elem_attr_or_assert(frame, elem_id, attrs::height).to_int();
+	glViewport(0, 0, (GLsizei)width, (GLsizei)height);
 
 	const auto color = get_elem_attr_or_default(frame, elem_id, attrs::background_color);
 	glClearColor(color.r, color.g, color.b, color.a);
@@ -86,8 +86,8 @@ static void render_viewport(const Frame& frame, Id elem_id)
 
 static Id raycast_viewport(const Frame& frame, Id elem_id, double x, double y, double& out_z)
 {
-	const auto width = get_elem_attr_or_assert(frame, elem_id, attrs::width);
-	const auto height = get_elem_attr_or_assert(frame, elem_id, attrs::height);
+	const auto width = get_elem_attr_or_assert(frame, elem_id, attrs::width).to_double();
+	const auto height = get_elem_attr_or_assert(frame, elem_id, attrs::height).to_double();
 	const auto& vp = get_elem_attr_or_default(frame, elem_id, attrs::viewpoint);
 
 	if (x > width || y > height)

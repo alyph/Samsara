@@ -6,6 +6,7 @@
 #include "viewport.h"
 #include "singleton.h"
 #include "engine.h"
+#include "array.h"
 #include "easy/profiler.h"
 #include <cstddef>
 #include <algorithm>
@@ -20,11 +21,12 @@ namespace attrs
 }
 
 static constexpr const char* uniform_mvp = "MVP";
-static constexpr const char* uniform_dims = "Dims";
+static constexpr const char* uniform_tablet_dims = "TabletDims";
 static constexpr const char* uniform_atlas = "Atlas";
 static constexpr const char* uniform_texture = "Texture";
 static constexpr const char* attribute_vert_pos = "VertexPos";
 static constexpr const char* attribute_coord = "Coordinates";
+static constexpr const char* attribute_dims = "Dimensions";
 static constexpr const char* attribute_color1 = "Color1";
 static constexpr const char* attribute_color2 = "Color2";
 static constexpr const char* attribute_page = "Page";
@@ -36,7 +38,6 @@ struct TabletCache
 	Id vao{};
 	Id vao_screen{};
 	Id vert_buffer;
-	Id coord_buffer{};
 	Id glyph_buffer{};
 	Id texture{};
 	Id fbo{};
@@ -67,6 +68,24 @@ struct TabletGlobals
 
 SingletonHandle<TabletGlobals> tablet_globals;
 
+struct TabletElemWorker
+{
+	Id id{};
+	TabletLayout layout;
+	int child_x{}, child_y{}, child_max_w{}, child_max_h{}; // potential child zone for current child if pushed, or next one if not pushed
+};
+
+struct TabletWorkState
+{
+	SimpleArray<TabletElemWorker> finalizing_stack;
+};
+
+namespace attrs
+{
+	// internal state attribute used during a construction of a frame as well as rendering
+	Attribute<TabletWorkState> tablet_work_state{TabletWorkState{}};
+	Attribute<TabletRenderBuffer> tablet_render_buffer{TabletRenderBuffer{}};
+}
 
 Vec2 calc_tablet_size(int width, int height, Id texture)
 {
@@ -97,7 +116,7 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 
 	cache.shader_id = shader_id;
 	//cache.param_mvp = shader.uniform_loc(uniform_mvp);
-	cache.param_dims = shader_uniform_loc(shader, uniform_dims);
+	cache.param_dims = shader_uniform_loc(shader, uniform_tablet_dims);
 
 	const auto screen_shader_id = quad_shader;
 	cache.quad_shader_id = screen_shader_id;
@@ -136,36 +155,6 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 		printf("Cannot find shader attribute: %s\n", attribute_vert_pos);
 	}
 
-	// setup an initial coord buffer
-	std::vector<IVec2> coords(num_fixed_glyphs);
-	for (int y = 0; y < height; y++)
-	{
-		for (int x = 0; x < width; x++)
-		{
-			const auto idx = x + y * width;
-			coords[idx].x = x;
-			coords[idx].y = y;
-		}
-	}
-
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, cache.max_num_glyphs * sizeof(IVec2), nullptr, GL_STREAM_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, num_fixed_glyphs * sizeof(IVec2), coords.data());
-	cache.coord_buffer = vbo;
-
-	const auto coord_loc = shader_attribute_loc(shader, attribute_coord);
-	if (coord_loc >= 0)
-	{
-		glVertexAttribIPointer(coord_loc, 2, GL_INT, 0, 0);
-		glEnableVertexAttribArray(coord_loc);
-		glVertexAttribDivisor(coord_loc, 1);
-	}
-	else
-	{
-		printf("Cannot find shader attribute: %s\n", attribute_coord);
-	}
-
 	// generate the glyph data buffer (this buffer has all the color, 
 	// code point data combined into a big buffer and will be updated per frame)
 	glGenBuffers(1, &vbo);
@@ -195,7 +184,10 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 		}
 	};
 
-	setup_glyph_data_attribute(attribute_color1, 4, GL_UNSIGNED_BYTE, GL_TRUE, false, 0);
+	setup_glyph_data_attribute(attribute_coord, 2, GL_INT, GL_FALSE, true, (void*)offsetof(GlyphData, coords));
+	setup_glyph_data_attribute(attribute_dims, 2, GL_INT, GL_FALSE, true, (void*)offsetof(GlyphData, size));
+
+	setup_glyph_data_attribute(attribute_color1, 4, GL_UNSIGNED_BYTE, GL_TRUE, false, (void*)offsetof(GlyphData, color1));
 	setup_glyph_data_attribute(attribute_color2, 4, GL_UNSIGNED_BYTE, GL_TRUE, false, (void*)offsetof(GlyphData, color2));
 	
 	setup_glyph_data_attribute(attribute_page, 1, GL_UNSIGNED_BYTE, GL_FALSE, true, (void*)offsetof(GlyphData, page));
@@ -473,7 +465,265 @@ static int compute_elem_self_height(const Frame& frame, Id elem_id, int width)
 	return height;
 }
 
+// render and at the same time finalize layout if not done
+static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, const Frame& frame, Id elem_id, TabletLayout& layout, int max_width, int max_height)
+{
+	int x = layout.left;
+	int y = layout.top;
+	int& w = layout.width;
+	int& h = layout.height;
+	const auto back_color = to_color32(get_elem_attr_or_default(frame, elem_id, attrs::background_color));
+	const auto fore_color = to_color32(get_elem_attr_or_default(frame, elem_id, attrs::foreground_color));
 
+	bool render_back =  (back_color.a != 0);
+	size_t back_glyph_idx{};
+	if (render_back)
+	{
+		GlyphData back_glyph;
+		back_glyph.coords.x = x;
+		back_glyph.coords.y = y;
+		back_glyph.color1 = back_color;
+		back_glyph_idx = render_buffer.push_glyph(elem_id, back_glyph);
+	}
+
+	// draw text, predict width height based on text length, wrapping etc.
+	auto text = get_elem_defined_attr(frame, elem_id, attrs::text);
+	if (text)
+	{
+		const auto& str = text->str();
+		// TODO: provide a character iterator to avoid caching these things
+		const auto str_size = str.size();
+		const auto str_data = str.data();
+		if (w < 0)
+		{
+			w = std::min((int)str_size, max_width);
+		}
+		if (w > 0)
+		{
+			if (h < 0)
+			{
+				// TODO: utf8
+				// TODO: text wrap
+				// TODO: overflow or respect max_height?
+				h = (((int)str_size + w - 1) / w);
+			}
+
+			const int max_size = std::min((int)str_size, (w * h));
+			for (int c = 0; c < max_size; c++)
+			{
+				// TODO: tab, new line, text wrap, utf8
+				const char code = *(str_data + c);
+				if (code != '\0' && code != ' ')
+				{
+					int line = (int)(c / w);
+					GlyphData glyph;
+					glyph.color2 = fore_color; // color1 is left to be 0s (transparent)
+					glyph.code = code;
+					glyph.coords.x = (x + (c % w));
+					glyph.coords.y = (y + line);
+					render_buffer.push_glyph(elem_id, glyph);
+				}
+			}
+		}
+	}
+	// TODO: image and other common elements
+	
+	// fill remaining missing layout
+	// TODO: horizontal layout would be different
+	if (h <= 0) // if height 0 or undefined, everything is 0
+	{
+		w = 0; h = 0;
+	}
+	else // otherwise, undefined width will be set to max width
+	{
+		if (w < 0) { w = max_width; }
+	}
+
+	// draw background (if background is not transparent) once size is determined
+	if (render_back)
+	{
+		if (w > 0 && h > 0)
+		{
+			// updat the glyph to correct size
+			auto& back_glyph = render_buffer.mutate_glyph(back_glyph_idx);
+			back_glyph.size.x = w;
+			back_glyph.size.y = h;
+		}
+		else
+		{
+			// if it's degenerated, nothing should have been drawn either, so safely pop the back glyph
+			render_buffer.pop_glyph(back_glyph_idx);
+		}
+	}
+}
+
+inline bool layout_done(const TabletLayout& layout)
+{
+	// can left, top be outside of the bounds???
+	return layout.left >= 0 && layout.top >= 0 && layout.width >= 0 && layout.height >= 0;
+}
+
+static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_id, Id last_elem_id)
+{
+	TabletWorkState& state = get_mutable_elem_attr_or_assert(frame, root_elem_id, attrs::tablet_work_state);
+	TabletRenderBuffer& render_buffer = get_mutable_elem_attr_or_assert(frame, root_elem_id, attrs::tablet_render_buffer);
+
+	// empty indicate this is the first time calling, 
+	// and the setup of the tablet itself is complete
+	auto& stack = state.finalizing_stack;
+	if (stack.empty())
+	{
+		TabletElemWorker worker;
+		worker.id = root_elem_id;
+		worker.child_max_w = worker.layout.width = get_elem_attr_or_assert(frame, root_elem_id, attrs::width).to_int();
+		worker.child_max_h = worker.layout.height = get_elem_attr_or_assert(frame, root_elem_id, attrs::height).to_int();
+		stack.push_back(worker);
+		
+		// is post attr now basicaclly a different bank to help minimizing insertion?
+		set_elem_post_attr(frame, root_elem_id, attrs::tablet_layout, worker.layout);
+
+		// TODO: should render the tablet element itself
+	}
+
+	Id curr_id = first_elem_id;
+	while (curr_id <= last_elem_id || stack.size() > 1)
+	{
+		bool advance = true;
+		const Id prev_id = stack.back().id;
+		const auto& prev_elem = get_element(frame, prev_id);
+		if (curr_id > last_elem_id) // at the end
+		{
+			// the processing on the node can't be completed if the tree is still open
+			// (i.e. tree offset is 0, meaning more children can be added)
+			// or not all children are included within the current processing range
+			// (i.e. last child is > last_elem_id)
+			// TODO: pop if the first child already not in range as this means it's a sub section root
+			const bool all_children_processed =
+				(prev_elem.tree_offset > 0 && 
+				(prev_id + prev_elem.tree_offset - 1 <= last_elem_id || // either all descendants in range (cheap check)
+				get_last_child(frame, prev_id) <= last_elem_id)); // or all immediate children in range (expensive check)
+			if (all_children_processed) { advance = false; } // if all completed, pop
+			else { break; } // otherwise end finalization and wait until next finalize cal
+		}
+		// current elem is not the child of last
+		else if (get_element(frame, curr_id).depth <= prev_elem.depth)
+		{
+			advance = false; // pop last
+		}
+
+		if (advance)
+		{
+			// eval layout, render and push
+			auto& parent = stack.back();
+			TabletElemWorker worker;
+			worker.id = curr_id;
+			// TODO: top, left attributes
+			worker.child_x = worker.layout.left = parent.child_x;
+			worker.child_y = worker.layout.top = parent.child_y;
+			// TODO: horizontal layout
+			const auto& width = get_elem_attr_or_default(frame, curr_id, attrs::width);
+			if (width.undefined())
+			{
+				worker.layout.width = -1;
+				worker.child_max_w = parent.child_max_w;
+			}
+			else
+			{
+				// TODO: % values
+				// TODO: should always take >= value, maybe add a to_pos_int()
+				worker.child_max_w = worker.layout.width = width.to_int();
+			}
+			const auto& height = get_elem_attr_or_default(frame, curr_id, attrs::height);
+			if (height.undefined())
+			{
+				worker.layout.height = -1;
+				worker.child_max_h = parent.child_max_h;
+			}
+			else
+			{
+				// TODO: % values
+				worker.child_max_h = worker.layout.height = height.to_int();
+			}
+			// render now if all layout is already done
+			if (layout_done(worker.layout))
+			{
+				render_and_layout_common_element(render_buffer, frame, curr_id, worker.layout, parent.child_max_w, parent.child_max_h);
+				// TODO: maybe set layout attribute now
+			}
+			stack.push_back(worker);
+			curr_id++;
+		}
+		else
+		{
+			auto& worker = stack.back();
+			auto& parent_worker = stack[stack.size() - 2];
+
+			// if has children, fill in missing layout based on children bounding box
+			if (!layout_done(worker.layout))
+			{
+				// TODO: simplify code here with a Rect type
+				bool bounds_set = false;
+				TabletLayout bounds;
+				Id child_id = get_first_child(frame, worker.id);
+				while (child_id)
+				{
+					const auto& child_layout = get_elem_attr_or_assert(frame, child_id, attrs::tablet_layout);
+					if (bounds_set)
+					{
+						bounds.width = std::max(bounds.left + bounds.width, child_layout.left + child_layout.width) - bounds.left;
+						bounds.height = std::max(bounds.top + bounds.height, child_layout.top + child_layout.height) - bounds.top;
+						bounds.left = std::min(bounds.left, child_layout.left);
+						bounds.top = std::min(bounds.top, child_layout.top);
+					}
+					else
+					{
+						bounds = child_layout;
+					}					
+					child_id = get_next_sibling(frame, child_id);
+				}
+
+				// if bounds not set (no children), will take last chance in the render step next
+				if (bounds_set)
+				{
+					if (worker.layout.width < 0)
+					{
+						worker.layout.left = bounds.left;
+						worker.layout.width = bounds.width;
+					}
+					if (worker.layout.height < 0)
+					{
+						worker.layout.top = bounds.top;
+						worker.layout.height = bounds.height;
+					}
+				}
+
+				// render and finalize layout
+				render_and_layout_common_element(render_buffer, frame, worker.id, worker.layout, parent_worker.child_max_w, parent_worker.child_max_h);
+			}
+
+			// set layout attribute
+			set_elem_post_attr(frame, worker.id, attrs::tablet_layout, worker.layout);
+
+			// update parent's child box
+			// only height is adjusted for vertical stacking
+			// TODO: handle horizontal stacking and any other layout options
+			// also need to handle pull down or pull right cases
+			const auto occupied_height = std::min(worker.layout.top + worker.layout.height - parent_worker.child_y, parent_worker.child_max_h);
+			parent_worker.child_y += occupied_height;
+			parent_worker.child_max_h -= occupied_height;
+
+			// pop
+			stack.pop_back();
+		}
+	}
+
+	// if (stack.size() == 1)
+	// {
+	// 	render_buffer.streamline_blocks();
+	// }
+}
+
+#if 0
 static void postprocess_tablet(Frame& frame, Id elem_id)
 {
 	EASY_FUNCTION();
@@ -662,6 +912,7 @@ static void postprocess_tablet(Frame& frame, Id elem_id)
 		set_elem_post_attr(frame, elem_id + i, attrs::tablet_layout, layout);
 	}
 }
+#endif
 
 static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& transform)
 {
@@ -685,6 +936,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	const auto& texture = get_elem_attr_or_assert(frame, elem_id, attrs::texture);
 	const auto& shader = get_elem_attr_or_assert(frame, elem_id, attrs::shader);
 	const auto& quad_shader = get_elem_attr_or_assert(frame, elem_id, attrs::quad_shader);
+	const auto& render_buffer = get_elem_attr_or_assert(frame, elem_id, attrs::tablet_render_buffer);
 
 	// create cache for the given tablet
 	// TODO: match uuid of the element (not the elem_id since that's per frame)
@@ -710,13 +962,67 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// glEnable(GL_DEPTH_TEST);
 	// glDepthFunc(GL_LESS);
+	glEnable(GL_BLEND);
+	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.texture)); // texture for glyph atlas
 	glUseProgram(static_cast<GLuint>(tablet_cache.shader_id)); // glyph shader;
 	glUniform2i(tablet_cache.param_dims, tablet_cache.width, tablet_cache.height); // dimensions uniform
 	glBindVertexArray(static_cast<GLuint>(tablet_cache.vao)); // tablet glyph vao
 
+	// make sure gl buffer has enough space for all glyphs
+	glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.glyph_buffer));
+
+	const auto& glyphs = render_buffer.glyphs;
+	const size_t num_glyphs = glyphs.size();
+	if (num_glyphs > tablet_cache.max_num_glyphs)
+	{
+		glBufferData(GL_ARRAY_BUFFER, num_glyphs * 2 * sizeof(GlyphData), nullptr, GL_STREAM_DRAW);
+	}
+
+	// insert each block index into a temp array sorted by elem id
+	// TODO: maybe more cache friendly if we just insert all block data in instead of just index?
+	const auto& blocks = render_buffer.blocks;
+	auto sorted_block_indices = alloc_simple_array<size_t>(0, blocks.size(), true);
+	for (size_t block_idx = 0; block_idx < blocks.size(); block_idx++)
+	{
+		const Id block_elem_id = blocks[block_idx].elem_id;
+		size_t ins = sorted_block_indices.size();
+		for (; ins > 0; ins--)
+		{
+			if (block_elem_id >= blocks[sorted_block_indices[ins-1]].elem_id) { break; }
+		}
+		sorted_block_indices.insert(ins, block_idx);
+	}
+
+	// loop over the block index array and copy data to gl
+	// (if that's too slow, copy to temp array and then call glBufferSubData)
+	size_t curr = 0;
+	GLintptr glyph_buffer_offset = 0;
+	while (curr < sorted_block_indices.size())
+	{
+		const auto begin = curr;
+		size_t next = curr + 1;
+		while (next < sorted_block_indices.size())
+		{
+			if (sorted_block_indices[next] != sorted_block_indices[curr] + 1) { break; }
+			curr = next++;
+		}
+		const size_t begin_idx = sorted_block_indices[begin];
+		const size_t end_idx = sorted_block_indices[curr];
+
+		const size_t begin_glyph_idx = blocks[begin_idx].buffer_idx;
+		const size_t end_glyph_idx = (end_idx + 1 < blocks.size()) ? blocks[end_idx+1].buffer_idx : glyphs.size();
+		const size_t num_copy_glyphs = (end_glyph_idx - begin_glyph_idx);
+
+		// glBufferSubData from begin to end
+		glBufferSubData(GL_ARRAY_BUFFER, glyph_buffer_offset, num_copy_glyphs * sizeof(GlyphData), glyphs.data() + begin_glyph_idx);
+		glyph_buffer_offset += num_copy_glyphs;
+		curr++;
+	}
+
 	// construct glyph data and upload
+#if 0
 	const auto num_fixed_glyphs = (tablet_cache.width * tablet_cache.height);
 	SimpleArray<GlyphData> glyphs = alloc_simple_array<GlyphData>(num_fixed_glyphs, true);
 	glyphs.zero();
@@ -792,6 +1098,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	// TODO: do we need the optimization of only uploading data that changed?
 	glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.glyph_buffer));
 	glBufferSubData(GL_ARRAY_BUFFER, 0, num_glyphs * sizeof(GlyphData), glyphs.data());
+#endif
 
 	// Draw all glyphs instanced
 	// TODO: another way to draw this is to draw a quad, and have the pixel shader 
@@ -884,8 +1191,9 @@ static Id raycast_tablet(const Frame& frame, Id elem_id, const Mat44& transform,
 static const Id tablet_elem_type = register_elem_type([](ElementTypeSetup& setup)
 {
 	setup.set_name("tablet");
+	setup.as_section_root();
 	setup.set_attr(attrs::renderer_3d, &render_tablet);
-	setup.set_attr(attrs::postprocessor, &postprocess_tablet);
+	setup.set_attr(attrs::finalizer, &finalize_tablet_elems);
 	setup.set_attr(attrs::raycaster_3d, &raycast_tablet);
 });
 
@@ -894,6 +1202,20 @@ namespace elem
 	// TODO: maybe make this inline and extern the tablet_elem_type
 	Id tablet(const Context ctx)
 	{
-		return make_element(ctx, tablet_elem_type);
+		Id tablet_id = make_element(ctx, tablet_elem_type);
+
+		// TODO: set self layout
+		TabletWorkState work_state;
+		work_state.finalizing_stack.alloc_temp(0, 16);
+		_attr(attrs::tablet_work_state, work_state);
+
+		TabletRenderBuffer render_buffer;
+		// TODO: ideally if we could store the last frame's allocated size in a persistent state, then we could inherit that size
+		render_buffer.glyphs.alloc_temp(0, 32 * 1024); // 32k preallocated buffer size
+		render_buffer.blocks.alloc_temp(0, 1024); // 1k blocks (roughly how many sub elements in the tablet)
+		_attr(attrs::tablet_render_buffer, render_buffer);
+		
+		return tablet_id;
 	}
 }
+

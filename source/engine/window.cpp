@@ -20,6 +20,8 @@ LRESULT CALLBACK window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 		case WM_SYSKEYDOWN:
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
+			// TODO: this skips alt+F4, should probably enable that?
+			// also what handles alt+enter?
 			break;
 		case WM_MENUCHAR:
 			return MNC_CLOSE << 16;

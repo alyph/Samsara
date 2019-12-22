@@ -8,5 +8,9 @@ out vec4 color;
 
 void main()
 {
+	// TODO: premultiplied color from render target buffer
+	// http://www.rw-designer.com/entry/1137
+	// http://apoorvaj.io/alpha-compositing-opengl-blending-and-premultiplied-alpha.html
+	// https://developer.nvidia.com/content/alpha-blending-pre-or-not-pre
 	color = texture(Texture, fragUV);
 }
