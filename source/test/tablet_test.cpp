@@ -90,6 +90,17 @@ TabletTestApp::TabletTestApp()
 		{ Pose{}, 16, 16, {}, alloc_simple_array<GlyphData>(16 * 16) },
 	};
 
+	for (auto& tablet : model.tablets)
+	{
+		for (int i = 0; i < tablet.glyphs.size(); i++)
+		{
+			auto& glyph = tablet.glyphs[i];
+			glyph.coords.x = (i % tablet.width);
+			glyph.coords.y = (i / tablet.width);
+			glyph.size.x = glyph.size.y = 1;
+		}
+	}
+
 	randomize_tablet(model.tablets[0], 1.0);
 
 	for (size_t i = 0; i < model.tablets[1].glyphs.size(); i++)

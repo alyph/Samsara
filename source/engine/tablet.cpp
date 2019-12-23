@@ -465,8 +465,14 @@ static int compute_elem_self_height(const Frame& frame, Id elem_id, int width)
 	return height;
 }
 
+inline bool layout_done(const TabletLayout& layout)
+{
+	// can left, top be outside of the bounds???
+	return layout.left >= 0 && layout.top >= 0 && layout.width >= 0 && layout.height >= 0;
+}
+
 // render and at the same time finalize layout if not done
-static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, const Frame& frame, Id elem_id, TabletLayout& layout, int max_width, int max_height)
+static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, Frame& frame, Id elem_id, TabletLayout& layout, int max_width, int max_height)
 {
 	int x = layout.left;
 	int y = layout.top;
@@ -487,8 +493,7 @@ static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, 
 	}
 
 	// draw text, predict width height based on text length, wrapping etc.
-	auto text = get_elem_defined_attr(frame, elem_id, attrs::text);
-	if (text)
+	if (auto text = get_elem_defined_attr(frame, elem_id, attrs::text))
 	{
 		const auto& str = text->str();
 		// TODO: provide a character iterator to avoid caching these things
@@ -526,6 +531,23 @@ static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, 
 			}
 		}
 	}
+	else if (auto glyphs = get_elem_defined_attr(frame, elem_id, attrs::glyphs))
+	{
+		const auto num_glyphs = glyphs->size();
+		if (w < 0) { w = std::min((int)num_glyphs, max_width); }
+		if (w > 0)
+		{
+			if (h < 0) { h = (((int)num_glyphs + w - 1) / w); }
+			const int max_size = std::min((int)num_glyphs, (w * h));
+			for (int i = 0; i < max_size; i++)
+			{
+				const auto glyph_idx = render_buffer.push_glyph(elem_id, (*glyphs)[i]);
+				auto& glyph = render_buffer.mutate_glyph(glyph_idx);
+				glyph.coords.x += x;
+				glyph.coords.y += x;
+			}
+		}
+	}
 	// TODO: image and other common elements
 	
 	// fill remaining missing layout
@@ -555,12 +577,11 @@ static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, 
 			render_buffer.pop_glyph(back_glyph_idx);
 		}
 	}
-}
 
-inline bool layout_done(const TabletLayout& layout)
-{
-	// can left, top be outside of the bounds???
-	return layout.left >= 0 && layout.top >= 0 && layout.width >= 0 && layout.height >= 0;
+	// all layout should be set now, save that in the attribute
+	asserts(layout_done(layout));
+	// is post attr now basicaclly a different bank to help minimizing insertion?
+	set_elem_post_attr(frame, elem_id, attrs::tablet_layout, layout);
 }
 
 static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_id, Id last_elem_id)
@@ -578,11 +599,8 @@ static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_i
 		worker.child_max_w = worker.layout.width = get_elem_attr_or_assert(frame, root_elem_id, attrs::width).to_int();
 		worker.child_max_h = worker.layout.height = get_elem_attr_or_assert(frame, root_elem_id, attrs::height).to_int();
 		stack.push_back(worker);
-		
-		// is post attr now basicaclly a different bank to help minimizing insertion?
-		set_elem_post_attr(frame, root_elem_id, attrs::tablet_layout, worker.layout);
 
-		// TODO: should render the tablet element itself
+		render_and_layout_common_element(render_buffer, frame, root_elem_id, worker.layout, worker.layout.width, worker.layout.height);
 	}
 
 	Id curr_id = first_elem_id;
@@ -648,7 +666,6 @@ static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_i
 			if (layout_done(worker.layout))
 			{
 				render_and_layout_common_element(render_buffer, frame, curr_id, worker.layout, parent.child_max_w, parent.child_max_h);
-				// TODO: maybe set layout attribute now
 			}
 			stack.push_back(worker);
 			curr_id++;
@@ -699,10 +716,7 @@ static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_i
 
 				// render and finalize layout
 				render_and_layout_common_element(render_buffer, frame, worker.id, worker.layout, parent_worker.child_max_w, parent_worker.child_max_h);
-			}
-
-			// set layout attribute
-			set_elem_post_attr(frame, worker.id, attrs::tablet_layout, worker.layout);
+			}			
 
 			// update parent's child box
 			// only height is adjusted for vertical stacking
@@ -969,56 +983,65 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	glUseProgram(static_cast<GLuint>(tablet_cache.shader_id)); // glyph shader;
 	glUniform2i(tablet_cache.param_dims, tablet_cache.width, tablet_cache.height); // dimensions uniform
 	glBindVertexArray(static_cast<GLuint>(tablet_cache.vao)); // tablet glyph vao
-
-	// make sure gl buffer has enough space for all glyphs
 	glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.glyph_buffer));
 
 	const auto& glyphs = render_buffer.glyphs;
 	const size_t num_glyphs = glyphs.size();
-	if (num_glyphs > tablet_cache.max_num_glyphs)
-	{
-		glBufferData(GL_ARRAY_BUFFER, num_glyphs * 2 * sizeof(GlyphData), nullptr, GL_STREAM_DRAW);
-	}
 
-	// insert each block index into a temp array sorted by elem id
-	// TODO: maybe more cache friendly if we just insert all block data in instead of just index?
-	const auto& blocks = render_buffer.blocks;
-	auto sorted_block_indices = alloc_simple_array<size_t>(0, blocks.size(), true);
-	for (size_t block_idx = 0; block_idx < blocks.size(); block_idx++)
+	if (num_glyphs > 0)
 	{
-		const Id block_elem_id = blocks[block_idx].elem_id;
-		size_t ins = sorted_block_indices.size();
-		for (; ins > 0; ins--)
+		// make sure gl buffer has enough space for all glyphs
+		if (num_glyphs > tablet_cache.max_num_glyphs)
 		{
-			if (block_elem_id >= blocks[sorted_block_indices[ins-1]].elem_id) { break; }
+			glBufferData(GL_ARRAY_BUFFER, num_glyphs * 2 * sizeof(GlyphData), nullptr, GL_STREAM_DRAW);
 		}
-		sorted_block_indices.insert(ins, block_idx);
-	}
 
-	// loop over the block index array and copy data to gl
-	// (if that's too slow, copy to temp array and then call glBufferSubData)
-	size_t curr = 0;
-	GLintptr glyph_buffer_offset = 0;
-	while (curr < sorted_block_indices.size())
-	{
-		const auto begin = curr;
-		size_t next = curr + 1;
-		while (next < sorted_block_indices.size())
+		// insert each block index into a temp array sorted by elem id
+		// TODO: maybe more cache friendly if we just insert all block data in instead of just index?
+		const auto& blocks = render_buffer.blocks;
+		auto sorted_block_indices = alloc_simple_array<size_t>(0, blocks.size(), true);
+		for (size_t block_idx = 0; block_idx < blocks.size(); block_idx++)
 		{
-			if (sorted_block_indices[next] != sorted_block_indices[curr] + 1) { break; }
-			curr = next++;
+			const Id block_elem_id = blocks[block_idx].elem_id;
+			size_t ins = sorted_block_indices.size();
+			for (; ins > 0; ins--)
+			{
+				if (block_elem_id >= blocks[sorted_block_indices[ins-1]].elem_id) { break; }
+			}
+			sorted_block_indices.insert(ins, block_idx);
 		}
-		const size_t begin_idx = sorted_block_indices[begin];
-		const size_t end_idx = sorted_block_indices[curr];
 
-		const size_t begin_glyph_idx = blocks[begin_idx].buffer_idx;
-		const size_t end_glyph_idx = (end_idx + 1 < blocks.size()) ? blocks[end_idx+1].buffer_idx : glyphs.size();
-		const size_t num_copy_glyphs = (end_glyph_idx - begin_glyph_idx);
+		// loop over the block index array and copy data to gl
+		// (if that's too slow, copy to temp array and then call glBufferSubData)
+		size_t curr = 0;
+		GLintptr glyph_buffer_offset = 0;
+		while (curr < sorted_block_indices.size())
+		{
+			const auto begin = curr;
+			size_t next = curr + 1;
+			while (next < sorted_block_indices.size())
+			{
+				if (sorted_block_indices[next] != sorted_block_indices[curr] + 1) { break; }
+				curr = next++;
+			}
+			const size_t begin_idx = sorted_block_indices[begin];
+			const size_t end_idx = sorted_block_indices[curr];
 
-		// glBufferSubData from begin to end
-		glBufferSubData(GL_ARRAY_BUFFER, glyph_buffer_offset, num_copy_glyphs * sizeof(GlyphData), glyphs.data() + begin_glyph_idx);
-		glyph_buffer_offset += num_copy_glyphs;
-		curr++;
+			const size_t begin_glyph_idx = blocks[begin_idx].buffer_idx;
+			const size_t end_glyph_idx = (end_idx + 1 < blocks.size()) ? blocks[end_idx+1].buffer_idx : glyphs.size();
+			const size_t num_copy_glyphs = (end_glyph_idx - begin_glyph_idx);
+
+			// glBufferSubData from begin to end
+			glBufferSubData(GL_ARRAY_BUFFER, glyph_buffer_offset, num_copy_glyphs * sizeof(GlyphData), glyphs.data() + begin_glyph_idx);
+			glyph_buffer_offset += num_copy_glyphs;
+			curr++;
+		}
+		// Draw all glyphs instanced
+		// TODO: another way to draw this is to draw a quad, and have the pixel shader 
+		// fill in the content based on uv
+		// 6 because of two triangles, see above indices in add_tablet()
+		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(num_glyphs));
+		// glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	}
 
 	// construct glyph data and upload
@@ -1099,13 +1122,6 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.glyph_buffer));
 	glBufferSubData(GL_ARRAY_BUFFER, 0, num_glyphs * sizeof(GlyphData), glyphs.data());
 #endif
-
-	// Draw all glyphs instanced
-	// TODO: another way to draw this is to draw a quad, and have the pixel shader 
-	// fill in the content based on uv
-	// 6 because of two triangles, see above indices in add_tablet()
-	glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(num_glyphs));
-	// glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);

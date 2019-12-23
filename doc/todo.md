@@ -23,7 +23,7 @@
   - [ ] allow elements to find its section root
     - so it can access the shared renderable buffer and add custom buffer data to it
   - [x] impl tablet finalizer with layout and render buffer
-- [ ] text should influence width if not determine it (perhaps should determine max width?), 
+- [x] text should influence width if not determine it (perhaps should determine max width?), 
   - one work around for now is to let the high level function (like button()) preset width based on the length of the text
 - [ ] text wrap?
 - [ ] more layout options (padding, margin), horizontal stack

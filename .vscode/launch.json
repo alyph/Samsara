@@ -36,6 +36,17 @@
             "cwd": "${workspaceFolder}/bin/win64",
             "environment": [],
             "externalConsole": true
+        },
+        {
+            "name": "run string test",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "string_test.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/bin/win64",
+            "environment": [],
+            "externalConsole": true
         }
     ]
 }
