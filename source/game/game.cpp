@@ -18,13 +18,59 @@ Game::Game()
 	desc.fs_path = "../../data/shaders/basic_textured_fs.gls";
 	tablet_screen_shader = create_shader(desc);
 
-	auto tex_desc = load_texture("../../data/fonts/cp437_20x20.png");
+	auto tex_desc = load_texture("../../data/fonts/Anikki_square_32x32.png");
 	atlas_texture = Texture::create(tex_desc);
+
+	// tile_types.alloc_stored(0, 64);
+	tile_types.push_back({"empty", 0, 0_rgb, 0_rgb});
+	tile_types.push_back({"forest", 0x05, 0x30ff50_rgb, 0x60b010_rgb});
+
+	map_vp.x = map_vp.y = (map_chunk_size / 2);
+	map.chunks.alloc_stored(0, 1024);
+	map.tiles.alloc_stored(0, 512 * 512);
+	map.set_tile({0, 0}, {1});
+	map.set_tile({16, 16}, {1});
+	map.set_tile({10, 10}, {1});
 }
 
 
 void Game::update()
 {
+}
+
+static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& tile_types, const IVec2& viewpoint, const Scalar& width, const Scalar& height)
+{
+	const Id elem_id = make_element(ctx, null_id);
+	_attr(attrs::width, width);
+	_attr(attrs::height, height);
+
+	TabletRenderBuffer& render_buffer = access_tablet_render_buffer(ctx);
+	const TabletLayout& layout = get_elem_attr_or_assert(*ctx.frame, elem_id, attrs::tablet_layout);
+	int map_x = viewpoint.x - layout.width / 2;
+	int map_y = viewpoint.y - layout.height / 2;
+
+	for (int y = 0; y < layout.height; y++)
+	{
+		for (int x = 0; x < layout.width; x++)
+		{
+			IVec2 tile_coords{ map_x + x, map_y + y };
+			Id tile_id = map.tile_id(tile_coords);
+			if (tile_id)
+			{
+				const Tile& tile = map.tiles[id_to_index(tile_id)];
+				if (tile.type)
+				{
+					const TileType& tile_type = tile_types[tile.type];
+					GlyphData glyph;
+					glyph.code = (uint8_t)(tile_type.glyph);
+					glyph.color2 = to_color32(tile_type.color_a);
+					glyph.coords = { layout.left + x, layout.top + y };
+					render_buffer.push_glyph(elem_id, glyph);
+				}
+			}
+		}
+	}
+	return elem_id;
 }
 
 void Game::present(const Context& ctx)
@@ -35,17 +81,19 @@ void Game::present(const Context& ctx)
 
 	const float aspect = window->aspect();
 
-	const int tablet_width = 160;
-	const int tablet_height = 80;
+	int tablet_width = 100;
+	int tablet_height = 64;
 	const Vec2 tablet_size = calc_tablet_size(tablet_width, tablet_height, atlas_texture.id());
 
 	const float vp_width = (float)tablet_width;
 	const float vp_height = vp_width / aspect;
 
+	// tablet_height = (int)std::floor(vp_height / (tablet_size.y / tablet_height));
+
 	// TODO: use othographic projection
 	Viewpoint vp;
 	vp.projection = make_orthographic(vp_width / 2, aspect, 0.f, 100.f);
-	vp.pose.pos.y = ((float)tablet_size.y - vp_height) / 2;
+	vp.pose.pos.y = 0.f; //((float)tablet_size.y - vp_height) / 2;
 
 	viewport(_ctx);
 	_attr(attrs::width, window->width());
@@ -67,51 +115,7 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			node(_ctx);
-			_attr(attrs::height, 2);
-
-			node(_ctx);
-			String str = "Dream Park is a futuristic amusement park using holograms and other advanced technologies to entertain customers, including live-action role-players. Dream Park, The Barsoom Project and The California Voodoo Game follow security chief Alex Griffin as he attempts to solve various mysteries set in the park. The other stories in this series have only a peripheral connection. Saturn's Race is a prequel to Achilles' Choice; both involve young adults technologically \"upgrading\" their bodies in an effort to join the world's ruling elite.";
-			_attr(attrs::text, str);
-			_attr(attrs::foreground_color, (Color{0.8f, 0.1f, 0.5f, 1.f}));
-
-			node(_ctx);
-			str = "---------------------------------------------------------------------";
-			_attr(attrs::text, str);
-			_attr(attrs::foreground_color, (Color{0.8f, 0.8f, 0.8f, 1.f}));
-
-
-			node(_ctx);
-			str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~!@#$%^&*()_+-*/={}'\"?<>|\\[]:,.";
-			_attr(attrs::text, str);
-			_attr(attrs::foreground_color, (Color{0.2f, 0.9f, 0.7f, 1.f}));
-			_attr(attrs::width, 50);
-
-
-			node(_ctx);
-			str = format_str("[ click me! (%d) ]", click_count);
-			_attr(attrs::text, str);
-			
-			if (_down)
-			{
-				_attr(attrs::foreground_color, (Color{1.f, 1.f, 1.f, 1.f}));
-				_attr(attrs::background_color, (Color{1.f, 0.5f, 0.5f, 1.f}));
-			}
-			else if (_hover)
-			{
-				_attr(attrs::foreground_color, (Color{1.f, 1.f, 1.f, 1.f}));
-				_attr(attrs::background_color, (Color{0.8f, 0.1f, 0.1f, 1.f}));
-			}
-			else
-			{
-				_attr(attrs::foreground_color, (Color{0.8f, 0.1f, 0.1f, 1.f}));
-				_attr(attrs::background_color, (Color{1.f, 1.f, 1.f, 1.f}));
-			}
-
-			if (_clicked)
-			{
-				click_count++;
-			}
+			map_view(_ctx, map, tile_types, map_vp, tablet_width, tablet_height);
 		}
 	}
 }

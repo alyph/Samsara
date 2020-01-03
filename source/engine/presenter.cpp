@@ -318,7 +318,7 @@ inline void close_tree_offset(Frame& frame, Id elem_id)
 	using offset_type = decltype(Element::tree_offset);
 	const auto elem_idx = id_to_index(elem_id);
 	auto& elem = frame.elements[elem_idx];
-	asserts(elem.tree_offset == 0);
+	asserts(elem.tree_offset == 0 || elem.tree_offset == (frame.elements.size() - elem_idx));
 	elem.tree_offset = static_cast<offset_type>(frame.elements.size() - elem_idx);
 }
 
@@ -337,10 +337,10 @@ void finalize(const Context& context, bool open_tree)
 	const Id prev = worker->last_finalized_elem;
 	const Id first = worker->last_finalized_elem + 1;
 	const Id last = frame->elements.size();
-	if (first > last)
-	{
-		return;
-	}
+	// if (first > last)
+	// {
+	// 	return;
+	// }
 
 	const auto& section_roots = worker->all_section_roots;
 	std::vector<Id> section_root_stack;
@@ -427,6 +427,26 @@ void finalize(const Context& context, bool open_tree)
 		}
 	}
 	worker->last_finalized_elem = last;
+}
+
+Id get_section_root(const Context& context)
+{
+	auto worker = context.worker;
+	asserts(!worker->elem_worker_stack.empty());
+	const Id working_elem_id = worker->elem_worker_stack.back().elem_id;
+	const auto& section_roots = worker->all_section_roots;
+	for (auto it = section_roots.rbegin(); it != section_roots.rend(); ++it)
+	{
+		const Id root_id = *it;
+		const auto& root_elem = get_element(*context.frame, root_id);
+		if (root_id < working_elem_id && 
+			(root_elem.tree_offset == 0 || 
+			root_id + root_elem.tree_offset > working_elem_id))
+		{
+			return root_id;
+		}
+	}
+	return null_id;
 }
 
 bool is_elem_hover(const Context& context)

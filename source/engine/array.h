@@ -140,6 +140,7 @@ public:
 	inline void push_back(const T& value);
 	inline void pop_back();
 	inline void insert(size_t pos, const T& value);
+	inline void insert_zeroes(size_t pos, size_t count);
 
 private:
 	inline T& at(size_t idx) const;
@@ -278,8 +279,19 @@ inline void SimpleArray<T>::insert(size_t pos, const T& value)
 	asserts(pos <= s);
 	resize(s + 1);
 	auto d = data();
-	memmove(d + pos, d + pos + 1, s - pos);
+	memmove(d + pos + 1, d + pos, (s - pos) * sizeof(T));
 	*(d + pos) = value;
+}
+
+template<typename T>
+inline void SimpleArray<T>::insert_zeroes(size_t pos, size_t count)
+{
+	const auto s = size();
+	asserts(pos <= s);
+	resize(s + count);
+	auto d = data();
+	memmove(d + pos + count, d + pos, (s - pos) * sizeof(T));
+	memset(d + pos, 0, count * sizeof(T));
 }
 
 template<typename T>

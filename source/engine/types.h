@@ -53,7 +53,7 @@ constexpr Scalar operator"" _percent(unsigned long long v)
 
 inline int Scalar::to_int() const
 { 
-	asserts(flag == ScalarFlag::absolute); 
+	asserts(flag == ScalarFlag::absolute);
 	return static_cast<int>(std::lround(value));
 }
 

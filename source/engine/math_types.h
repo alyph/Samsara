@@ -34,6 +34,11 @@ struct IVec2
 	int32_t x{}, y{};
 };
 
+struct IRect
+{
+	int32_t x{}, y{}, width{}, height{};
+};
+
 // column major, post multiply
 // m[col][row]
 // [x, y, z]

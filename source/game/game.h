@@ -2,6 +2,7 @@
 
 #include "engine/presenter.h"
 #include "engine/texture.h"
+#include "map.h"
 
 class Game
 {
@@ -17,8 +18,9 @@ private:
 	Id tablet_screen_shader;
 	Texture atlas_texture;
 
-	// TODO: remove
-	int click_count{};
+	Map map;
+	std::vector<TileType> tile_types;
+	IVec2 map_vp;
 };
 
 

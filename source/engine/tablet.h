@@ -59,6 +59,8 @@ struct TabletRenderBuffer
 	inline void pop_glyph(size_t idx);
 };
 
+extern TabletRenderBuffer& access_tablet_render_buffer(const Context& context);
+
 
 // TabletRenderBuffer
 

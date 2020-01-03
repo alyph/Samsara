@@ -20,6 +20,7 @@ struct PresentWorker;
 struct Element;
 struct ElementType;
 struct ElementTypeSetup;
+struct RaycastResult;
 
 using FinalizerFunc = void(*)(Frame& frame, Id root_elem_id, Id first_elem_id, Id last_elem_id);
 // x, y in screen space (in pixels), out_z in NDC space (-1, 1)
@@ -71,6 +72,7 @@ extern Context create_scoped_context(const Context& parent_scope_context, uint64
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count, uint64_t user_id);
 extern Element& get_working_elem(const Context& context);
 extern void finalize(const Context& context, bool open_tree=false); // run finalize (attributes) on all unfinalized elements
+extern Id get_section_root(const Context& context);
 
 // input related
 extern bool is_elem_hover(const Context& context);
@@ -143,6 +145,14 @@ struct ElementTypeSetup
 	inline void set_name(const char* name) { type->name = name; }
 	inline void as_section_root() { type->as_section_root = true; }
 	template<typename T> inline void set_attr(const Attribute<T>& attr, const T& value);
+};
+
+struct RaycastResult
+{
+	Id hit_elem_id{};
+	Vec3 point; // in ndc
+	Vec2 uv; // contextual 2d data
+	IVec2 iuv; // contextual 2d integer data
 };
 
 struct Context

@@ -99,6 +99,14 @@ Vec2 calc_tablet_size(int width, int height, Id texture)
 	return Vec2{ (float)width, (float)height * tex_h / tex_w };
 }
 
+TabletRenderBuffer& access_tablet_render_buffer(const Context& context)
+{
+	finalize(context);
+	Id tablet_elem_id = get_section_root(context);
+	asserts(tablet_elem_id);
+	return get_mutable_elem_attr_or_assert(*context.frame, tablet_elem_id, attrs::tablet_render_buffer);
+}
+
 // Id add_tablet(int width, int height, Id texture, Id shader, Id screen_shader)
 // {
 // 	return engine().singletons.get(tablet_globals).store.add_tablet(width, height, texture, shader, screen_shader);
@@ -964,32 +972,33 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	const auto& tablet_cache = globals.tablet_caches[cache_index];
 	asserts(tablet_cache.width == width && tablet_cache.height == height);
 	asserts(tablet_cache.texture == texture && tablet_cache.shader_id == shader && tablet_cache.quad_shader_id == quad_shader);
-
-	// const auto& tablet_cache = store.tablet_cache(tablet_id);
-	// const auto& shader_cache = store.shader_cache(tablet_id);
-	// const auto& screen_shader_cache = store.screen_shader_cache(tablet_id);
-
-	// render the tablet to texture
-	glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(tablet_cache.fbo));
-	glViewport(0, 0, tablet_cache.rt_width, tablet_cache.rt_height);
-	glClearColor(0.f, 0.f, 0.f, 0.f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	// glEnable(GL_DEPTH_TEST);
-	// glDepthFunc(GL_LESS);
-	glEnable(GL_BLEND);
-	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.texture)); // texture for glyph atlas
-	glUseProgram(static_cast<GLuint>(tablet_cache.shader_id)); // glyph shader;
-	glUniform2i(tablet_cache.param_dims, tablet_cache.width, tablet_cache.height); // dimensions uniform
-	glBindVertexArray(static_cast<GLuint>(tablet_cache.vao)); // tablet glyph vao
-	glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.glyph_buffer));
-
+		
 	const auto& glyphs = render_buffer.glyphs;
 	const size_t num_glyphs = glyphs.size();
 
 	if (num_glyphs > 0)
 	{
+		// const auto& tablet_cache = store.tablet_cache(tablet_id);
+		// const auto& shader_cache = store.shader_cache(tablet_id);
+		// const auto& screen_shader_cache = store.screen_shader_cache(tablet_id);
+
+		// render the tablet to texture
+		glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(tablet_cache.fbo));
+		glViewport(0, 0, tablet_cache.rt_width, tablet_cache.rt_height);
+		glClearColor(0.f, 0.f, 0.f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// glEnable(GL_DEPTH_TEST);
+		// glDepthFunc(GL_LESS);
+		glEnable(GL_BLEND);
+		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.texture)); // texture for glyph atlas
+		glUseProgram(static_cast<GLuint>(tablet_cache.shader_id)); // glyph shader;
+		glUniform2i(tablet_cache.param_dims, tablet_cache.width, tablet_cache.height); // dimensions uniform
+		glBindVertexArray(static_cast<GLuint>(tablet_cache.vao)); // tablet glyph vao
+		glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.glyph_buffer));
+
+
 		// make sure gl buffer has enough space for all glyphs
 		if (num_glyphs > tablet_cache.max_num_glyphs)
 		{
@@ -1042,7 +1051,6 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		// 6 because of two triangles, see above indices in add_tablet()
 		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(num_glyphs));
 		// glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	}
 
 	// construct glyph data and upload
 #if 0
@@ -1123,32 +1131,34 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	glBufferSubData(GL_ARRAY_BUFFER, 0, num_glyphs * sizeof(GlyphData), glyphs.data());
 #endif
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 
-	// draw quad on screen
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+		// draw quad on screen
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.rt_texture));
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.rt_texture));
 
-	// use shader
-	glUseProgram(static_cast<GLuint>(tablet_cache.quad_shader_id));
-	
-	// set mvp
-	const auto& tablet_tf = get_elem_attr_or_default(frame, elem_id, attrs::transform);
-	const auto& mvp = transform * tablet_tf;
-	glUniformMatrix4fv(tablet_cache.param_mvp, 1, GL_FALSE, mvp.data());
+		// use shader
+		glUseProgram(static_cast<GLuint>(tablet_cache.quad_shader_id));
+		
+		// set mvp
+		const auto& tablet_tf = get_elem_attr_or_default(frame, elem_id, attrs::transform);
+		const auto& mvp = transform * tablet_tf;
+		glUniformMatrix4fv(tablet_cache.param_mvp, 1, GL_FALSE, mvp.data());
 
-	// draw elements
-	glBindVertexArray(static_cast<GLuint>(tablet_cache.vao_screen));
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+		// draw elements
+		glBindVertexArray(static_cast<GLuint>(tablet_cache.vao_screen));
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+	}
 
 	return Render3dType::sub_tree;
 }
