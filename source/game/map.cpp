@@ -37,10 +37,10 @@ void Map::expand_to_fit_chunk(const IVec2 coords)
 	}
 	else if (coords.y >= (chunk_bounds.y + chunk_bounds.height))
 	{
-		chunks.insert_zeroes(chunks.size(), (coords.y - chunk_bounds.y - chunk_bounds.height + 1));
+		chunks.insert_zeroes(chunks.size(), (coords.y - chunk_bounds.y - chunk_bounds.height + 1) * chunk_bounds.width);
 		chunk_bounds.height = (coords.y - chunk_bounds.y + 1);
 	}
-	
+	asserts(chunks.size() == (chunk_bounds.width * chunk_bounds.height));
 }
 
 

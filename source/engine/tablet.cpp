@@ -1163,7 +1163,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	return Render3dType::sub_tree;
 }
 
-static Id raycast_tablet(const Frame& frame, Id elem_id, const Mat44& transform, double x, double y, double& out_z)
+static RaycastResult raycast_tablet(const Frame& frame, Id elem_id, const Mat44& transform, double x, double y)
 {
 	const auto& root_layout = get_elem_attr_or_assert(frame, elem_id, attrs::tablet_layout);
 	const int width = root_layout.width;
@@ -1181,10 +1181,11 @@ static Id raycast_tablet(const Frame& frame, Id elem_id, const Mat44& transform,
 	const uint32_t indices[] = { 0, 1, 2, 0, 2, 3 };
 	const Vec2 uvs[] = { {0.f, 1.f}, {1.f, 1.f}, {1.f, 0.f}, {0.f, 0.f} };
 
+	RaycastResult hit_result;
 	const auto& result = raycast_triangles(2, verts, indices, transform, x, y);
 	if (result.hit)
 	{
-		out_z = result.z;
+		hit_result.point = {(float)x, (float)y, (float)result.z};
 
 		const uint32_t i0 = indices[result.hit_triangle_idx*3];
 		const uint32_t i1 = indices[result.hit_triangle_idx*3 + 1];
@@ -1195,6 +1196,9 @@ static Id raycast_tablet(const Frame& frame, Id elem_id, const Mat44& transform,
 		const int cx = std::clamp((int)std::floor(uv.x * width), 0, width-1);
 		const int cy = std::clamp((int)std::floor(uv.y * height), 0, height-1);
 
+		hit_result.uv = uv;
+		hit_result.iuv = {cx, cy};
+
 		// loop backwards to find the deepest hit descendent
 		// TODO: may want to optimize such that we can skip the whole sub tree
 		const Id last_elem_id = get_last_in_subtree(frame, elem_id);
@@ -1204,14 +1208,16 @@ static Id raycast_tablet(const Frame& frame, Id elem_id, const Mat44& transform,
 			if (cx >= layout.left && cx < layout.left + layout.width &&
 				cy >= layout.top && cy < layout.top + layout.height)
 			{
-				return id;
+				hit_result.hit_elem_id = id;
+				break;
 			}
 		}
-		return elem_id; // if no child hit, tablet itself is hit
+
+		// if no child hit, tablet itself is hit
+		if (!hit_result.hit_elem_id) { hit_result.hit_elem_id = elem_id; }
 	}
 
-	// if no hit
-	return null_id;
+	return hit_result;
 }
 
 static const Id tablet_elem_type = register_elem_type([](ElementTypeSetup& setup)

@@ -14,7 +14,7 @@ using Renderer3dFunc = Render3dType(*)(const Frame& frame, Id elem_id, const Mat
 //using Raycaster3dFunc = Id(*)(const Frame& frame, Id elem_id, const Mat44& transform, const Vec3& start, const Vec3& dir, float dist, float& out_hit_dist);
 
 // x, y, z in NDC (-1, 1)
-using Raycaster3dFunc = Id(*)(const Frame& frame, Id elem_id, const Mat44& transform, double x, double y, double& out_z);
+using Raycaster3dFunc = RaycastResult(*)(const Frame& frame, Id elem_id, const Mat44& transform, double x, double y);
 
 namespace attrs
 {

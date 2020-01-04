@@ -70,6 +70,28 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 			}
 		}
 	}
+
+	if (_hover)
+	{
+		const IVec2& cursor = ctx.frame->curr_input.mouse_hit.iuv;
+		if (cursor.x >= layout.left && cursor.x < (layout.left + layout.width) &&
+			cursor.y >= layout.top && cursor.y < (layout.top + layout.height))
+		{
+			const TileType& tile_type = tile_types[1];
+			GlyphData glyph;
+			glyph.code = (uint8_t)(tile_type.glyph);
+			glyph.color2 = to_color32(tile_type.color_a);
+			glyph.color1 = to_color32(0x606060_rgb);
+			glyph.coords = { cursor.x, cursor.y };
+			render_buffer.push_glyph(elem_id, glyph);
+
+			if (_down)
+			{
+				map.set_tile({map_x + cursor.x - layout.left, map_y + cursor.y - layout.top}, {1});
+			}
+		}
+	}
+
 	return elem_id;
 }
 

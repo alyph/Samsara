@@ -84,7 +84,7 @@ static void render_viewport(const Frame& frame, Id elem_id)
 	}
 }
 
-static Id raycast_viewport(const Frame& frame, Id elem_id, double x, double y, double& out_z)
+static RaycastResult raycast_viewport(const Frame& frame, Id elem_id, double x, double y)
 {
 	const auto width = get_elem_attr_or_assert(frame, elem_id, attrs::width).to_double();
 	const auto height = get_elem_attr_or_assert(frame, elem_id, attrs::height).to_double();
@@ -92,7 +92,7 @@ static Id raycast_viewport(const Frame& frame, Id elem_id, double x, double y, d
 
 	if (x > width || y > height)
 	{
-		return null_id; // outside of the viewport
+		return {}; // outside of the viewport
 	}
 
 	// find out ndc for x, y
@@ -104,8 +104,8 @@ static Id raycast_viewport(const Frame& frame, Id elem_id, double x, double y, d
 	tf_stack.push_back(calc_mat_vp(vp));
 
 	// loop through all sub elements and do raycast if provided, push in model view transform
-	Id closest_hit_elem = null_id;
-	double closest_hit_z = 2.0;
+	RaycastResult closest_hit_result;
+	closest_hit_result.point.z = 2.0;
 
 	const auto this_depth = frame.elements[id_to_index(elem_id)].depth;
 	Id child_id = elem_id + 1;
@@ -145,12 +145,10 @@ static Id raycast_viewport(const Frame& frame, Id elem_id, double x, double y, d
 
 			const auto& self_tf = get_elem_attr_or_default(frame, child_id, attrs::transform);
 
-			double hit_z{};
-			Id hit_elem = raycaster(frame, child_id, tf_stack.back() * self_tf, ndc_x, ndc_y, hit_z);
-			if (hit_elem && hit_z < closest_hit_z)
+			RaycastResult hit_result = raycaster(frame, child_id, tf_stack.back() * self_tf, ndc_x, ndc_y);
+			if (hit_result.hit_elem_id && hit_result.point.z < closest_hit_result.point.z)
 			{
-				closest_hit_elem = hit_elem;
-				closest_hit_z = hit_z;
+				closest_hit_result = hit_result;
 			}
 
 			// skip the whole sub tree
@@ -163,7 +161,7 @@ static Id raycast_viewport(const Frame& frame, Id elem_id, double x, double y, d
 		}
 	}
 
-	return closest_hit_elem;
+	return closest_hit_result;
 }
 
 // static Id register_viewport_elem_type()

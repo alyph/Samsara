@@ -604,14 +604,15 @@ void Presenter::process_control(const std::vector<InputEvent>& events)
 		}		
 
 		// always check mouse hover target
-		const Id hover_elem = raycast(curr_frame, latest_input.mouse_x, latest_input.mouse_y);
-		latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover] = hover_elem;
+		RaycastResult hit_result = raycast(curr_frame, latest_input.mouse_x, latest_input.mouse_y);
+		latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover] = hit_result.hit_elem_id;
+		latest_input.mouse_hit = hit_result;
 
 		// TODO: static assert MouseInteraction::left_down == MouseButtons::left
 		// and same for right and middle
 		if (event.type == InputEventType::mouse_button && (int)event.button < 3)
 		{
-			latest_input.mouse_interact_elems[(int)event.button] = (event.down ? hover_elem : null_id);
+			latest_input.mouse_interact_elems[(int)event.button] = (event.down ? hit_result.hit_elem_id : null_id);
 		}
 
 		// TODO: clicks
@@ -639,10 +640,11 @@ void Presenter::step_frame(double dt)
 	// evaluate if some of the UI state may change as a result of present
 	// state which may change: hover items
 	// if such state changed, present() again (but to a limited number of times: just once for now)
-	const Id hover_elem = raycast(curr_frame, latest_input.mouse_x, latest_input.mouse_y);
-	if (hover_elem != latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover])
+	RaycastResult hit_result = raycast(curr_frame, latest_input.mouse_x, latest_input.mouse_y);
+	if (hit_result.hit_elem_id != latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover])
 	{
-		latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover] = hover_elem;
+		latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover] = hit_result.hit_elem_id;
+		latest_input.mouse_hit = hit_result;
 		present();
 	}
 
@@ -744,10 +746,10 @@ void Presenter::render(const Frame& frame)
 	}
 }
 
-Id Presenter::raycast(const Frame& frame, double x, double y)
+RaycastResult Presenter::raycast(const Frame& frame, double x, double y)
 {
-	Id closest_hit_elem{};
-	double closest_z = 2.0; // z is between [-1, 1], so 2 will be farther than the farthest
+	RaycastResult closest_hit_result{};
+	closest_hit_result.point.z = 2.0; // z is between [-1, 1], so 2 will be farther than the farthest
 
 	Id elem_id = frame.elements.empty() ? null_id : index_to_id(0);
 	while (elem_id)
@@ -755,19 +757,22 @@ Id Presenter::raycast(const Frame& frame, double x, double y)
 		auto raycaster = get_elem_attr_or_assert(frame, elem_id, attrs::raycaster);
 		asserts(raycaster); // still need assert since the assigned value may be null
 
-		double z{};
-		Id hit_elem = raycaster(frame, elem_id, x, y, z);
-		if (hit_elem && z < closest_z)
+		RaycastResult result = raycaster(frame, elem_id, x, y);
+		if (result.hit_elem_id && result.point.z < closest_hit_result.point.z)
 		{
-			closest_hit_elem = hit_elem;
-			closest_z = z;
+			closest_hit_result = result;
 		}
 
 		// now moves to next sibling
 		elem_id = get_next_sibling(frame, elem_id);
 	}
 
-	return closest_hit_elem ? frame.elements[id_to_index(closest_hit_elem)].guid : null_id;
+	if (closest_hit_result.hit_elem_id)
+	{
+		closest_hit_result.hit_elem_id = frame.elements[id_to_index(closest_hit_result.hit_elem_id)].guid;
+	}
+
+	return closest_hit_result;
 }
 
 

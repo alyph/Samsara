@@ -23,8 +23,8 @@ struct ElementTypeSetup;
 struct RaycastResult;
 
 using FinalizerFunc = void(*)(Frame& frame, Id root_elem_id, Id first_elem_id, Id last_elem_id);
-// x, y in screen space (in pixels), out_z in NDC space (-1, 1)
-using RaycasterFunc = Id(*)(const Frame& frame, Id elem_id, double x, double y, double& out_z);
+// x, y in screen space (in pixels)
+using RaycasterFunc = RaycastResult(*)(const Frame& frame, Id elem_id, double x, double y);
 using RendererFunc = void(*)(const Frame& frame, Id elem_id);
 using ElemTypeInitFunc = std::function<void(ElementTypeSetup&)>;
 
@@ -150,7 +150,7 @@ struct ElementTypeSetup
 struct RaycastResult
 {
 	Id hit_elem_id{};
-	Vec3 point; // in ndc
+	Vec3 point; // in NDC space (-1, 1), smaller z means closer
 	Vec2 uv; // contextual 2d data
 	IVec2 iuv; // contextual 2d integer data
 };
@@ -182,6 +182,7 @@ struct InputState
 	double mouse_x{}, mouse_y{};
 	Id mouse_interact_elems[(size_t)MouseInteraction::max]{}; //guid
 	uint64_t key_button_down[4]{}; // merged key or mouse button down state (mouse occupy highest byte)
+	RaycastResult mouse_hit;
 
 	// TODO: click & double click
 };
@@ -223,7 +224,7 @@ public:
 private:
 	void present();
 	static void render(const Frame& frame);
-	static Id raycast(const Frame& frame, double x, double y); // return guid
+	static RaycastResult raycast(const Frame& frame, double x, double y); // returned result.hit_elem_id is guid
 
 	PresentGlobals globals;
 	double time{};
