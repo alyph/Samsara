@@ -36,6 +36,71 @@
 
 ## Mechanics
 
+### Economic Model
+- overall development
+  - population
+  - infrustructure, housing, sanitation, health, leisure
+  - more income
+  - more building slots
+  - more production and demand
+- agricultural/rural development
+  - including farming, minding, wood cutting, hunting and any other resource gathering activities
+  - rural population and infrustructure
+  - raw resource gathering, food, material production
+- commerce level
+  - merchant population
+  - trade infrustructure, market, ports, werehouse, trading post, roads, ships
+  - more income
+  - more trade power
+- industrial level
+  - worker, craftsman, blacksmith, mason, carpenter, population
+  - industrial infrustructure, workshop, factory, manufacturer
+  - consumes raw goods and produce manufactured goods
+  - increases infrustructural build up of other areas
+  - provide tools for other area (e.g. agriculture, mining)
+- cultural level
+  - population involved in academic/scientific research, philosophic/religious thinking, art creation etc.
+  - facilities supporting these actiities, schools, monesteries, temples, theatres
+  - generating culture and research points which (together with the technology points from pratical work) eventually lead to discoveries
+- military level
+  - population that serves in regular military force, or can be potentially drafted (e.g. levy)
+  - military infrustructure, barracks, training camp, arsenel, supply depot
+  - provide more manpower, and better quality fighting force
+  - also providing more war equipment, warships
+- wealthiness
+  - population generally split into rich, middle, poor wealthiness classes
+  - each of these classes also have different wealthiness level compared to other areas, certain area's middle class may be wealthier than other area's rich class
+  - wealth is a key indicator of a good economy (note wealth is measure in a general absolute value, not entirely based on volatile currency value), it provide the following benefits
+    - higher income
+    - attract more trade goods (but also demand more, so if certain resource becomes scarce, it can drain the wealth quickly)
+    - faster development of infrusturcture
+    - leads to more cultural development, grander facilities and more sophisticated architecture and decorations
+    - better quality of military (especially for drafted, self serving armies)
+  - one downside of wealthiness is it can eventually lead to decadence due to long term life indulgement 
+    - decadence will become a counter force to cultural and scientific development, slow down innovations
+    - in general the goal is to improve wealth but in the meantime utilize ways to counter decadence, and when necessary break down the wealth with extreme means like wars or revolutions
+
+### Province Stats
+
+- development/infrustructure/population
+- urbanization
+- city planning (common city facilities, public bath, taven, aqueduct, roads)
+- architecture
+- dietry
+- rural/agricultural development
+- commerce
+- industry
+- culture
+- military
+- wealth
+- decadence
+- goods consumed
+- goods produced
+- demography
+  - class, culture, religion, origin, language
+- technology
+
+
 ### Stats
 
 Quantitative values associated with each entity. The entities can be stars, systems, planets, cities, settlements, population, characters, fleets, ships, equipment etc.
