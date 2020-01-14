@@ -29,9 +29,11 @@ static constexpr const char* attribute_coord = "Coordinates";
 static constexpr const char* attribute_dims = "Dimensions";
 static constexpr const char* attribute_color1 = "Color1";
 static constexpr const char* attribute_color2 = "Color2";
-static constexpr const char* attribute_page = "Page";
+// static constexpr const char* attribute_page = "Page";
 static constexpr const char* attribute_code = "Code";
 static constexpr const char* attribute_uv = "UV";
+
+static constexpr const GLenum atlas_target = GL_TEXTURE_2D_ARRAY;
 
 struct TabletCache
 {
@@ -91,10 +93,10 @@ Vec2 calc_tablet_size(int width, int height, Id texture)
 {
 	// TODO: probably need a better texture inteface to read these values
 	GLint tex_w{}, tex_h{};
-	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tex_w);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &tex_h);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(atlas_target, static_cast<GLuint>(texture));
+	glGetTexLevelParameteriv(atlas_target, 0, GL_TEXTURE_WIDTH, &tex_w);
+	glGetTexLevelParameteriv(atlas_target, 0, GL_TEXTURE_HEIGHT, &tex_h);
+	glBindTexture(atlas_target, 0);
 
 	return Vec2{ (float)width, (float)height * tex_h / tex_w };
 }
@@ -198,8 +200,8 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 	setup_glyph_data_attribute(attribute_color1, 4, GL_UNSIGNED_BYTE, GL_TRUE, false, (void*)offsetof(GlyphData, color1));
 	setup_glyph_data_attribute(attribute_color2, 4, GL_UNSIGNED_BYTE, GL_TRUE, false, (void*)offsetof(GlyphData, color2));
 	
-	setup_glyph_data_attribute(attribute_page, 1, GL_UNSIGNED_BYTE, GL_FALSE, true, (void*)offsetof(GlyphData, page));
-	setup_glyph_data_attribute(attribute_code, 1, GL_UNSIGNED_BYTE, GL_FALSE, true, (void*)offsetof(GlyphData, code));
+	// setup_glyph_data_attribute(attribute_page, 1, GL_UNSIGNED_BYTE, GL_FALSE, true, (void*)offsetof(GlyphData, page));
+	setup_glyph_data_attribute(attribute_code, 1, GL_UNSIGNED_SHORT, GL_FALSE, true, (void*)offsetof(GlyphData, code));
 
 
 	uint32_t indices[] = { 0, 1, 2, 0, 2, 3 };
@@ -228,10 +230,10 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 
 	// TODO: probably need a better texture inteface to read these values
 	GLint tex_w{}, tex_h{};
-	glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tex_w);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &tex_h);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(atlas_target, static_cast<GLuint>(texture));
+	glGetTexLevelParameteriv(atlas_target, 0, GL_TEXTURE_WIDTH, &tex_w);
+	glGetTexLevelParameteriv(atlas_target, 0, GL_TEXTURE_HEIGHT, &tex_h);
+	glBindTexture(atlas_target, 0);
 
 	// create vao for screen
 	GLuint vao_screen;
@@ -992,7 +994,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		glEnable(GL_BLEND);
 		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.texture)); // texture for glyph atlas
+		glBindTexture(atlas_target, static_cast<GLuint>(tablet_cache.texture)); // texture for glyph atlas
 		glUseProgram(static_cast<GLuint>(tablet_cache.shader_id)); // glyph shader;
 		glUniform2i(tablet_cache.param_dims, tablet_cache.width, tablet_cache.height); // dimensions uniform
 		glBindVertexArray(static_cast<GLuint>(tablet_cache.vao)); // tablet glyph vao
@@ -1133,7 +1135,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
-		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(atlas_target, 0);
 
 
 		// draw quad on screen

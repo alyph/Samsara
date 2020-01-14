@@ -36,8 +36,7 @@ struct GlyphData
 	IVec2 size{1,1};
 	Color32 color1;
 	Color32 color2;
-	uint8_t code{};
-	uint8_t page{};
+	uint16_t code{};
 	uint8_t flags{};
 	uint8_t reserved{};
 };

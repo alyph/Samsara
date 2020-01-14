@@ -18,12 +18,18 @@ Game::Game()
 	desc.fs_path = "../../data/shaders/basic_textured_fs.gls";
 	tablet_screen_shader = create_shader(desc);
 
-	auto tex_desc = load_texture("../../data/fonts/Anikki_square_32x32.png");
-	atlas_texture = Texture::create(tex_desc);
+	// auto tex_desc = load_texture("../../data/fonts/Anikki_square_32x32.png");
+	// atlas_texture = Texture::create(tex_desc);
+	atlas_texture = load_texture_array(
+	{
+		"../../data/fonts/anikki_square_24x24.png",
+		"../../data/fonts/urr_a_24x24.png",
+	});
 
 	// tile_types.alloc_stored(0, 64);
 	tile_types.push_back({"empty", 0, 0_rgb, 0_rgb});
 	tile_types.push_back({"forest", 0x05, 0x30ff50_rgb, 0x60b010_rgb});
+	tile_types.push_back({"hill", 0x0118, 0x404060_rgb, 0x60b010_rgb});
 
 	map_vp.x = map_vp.y = (map_chunk_size / 2);
 	map.chunks.alloc_stored(0, 1024);
@@ -31,6 +37,8 @@ Game::Game()
 	map.set_tile({0, 0}, {1});
 	map.set_tile({16, 16}, {1});
 	map.set_tile({10, 10}, {1});
+	map.set_tile({10, 12}, {2});
+	map.set_tile({11, 12}, {2});
 }
 
 
@@ -62,7 +70,7 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 				{
 					const TileType& tile_type = tile_types[tile.type];
 					GlyphData glyph;
-					glyph.code = (uint8_t)(tile_type.glyph);
+					glyph.code = tile_type.glyph;
 					glyph.color2 = to_color32(tile_type.color_a);
 					glyph.coords = { layout.left + x, layout.top + y };
 					render_buffer.push_glyph(elem_id, glyph);
@@ -77,9 +85,10 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 		if (cursor.x >= layout.left && cursor.x < (layout.left + layout.width) &&
 			cursor.y >= layout.top && cursor.y < (layout.top + layout.height))
 		{
-			const TileType& tile_type = tile_types[1];
+			const uint16_t tile_type_idx = 2;
+			const TileType& tile_type = tile_types[tile_type_idx];
 			GlyphData glyph;
-			glyph.code = (uint8_t)(tile_type.glyph);
+			glyph.code = tile_type.glyph;
 			glyph.color2 = to_color32(tile_type.color_a);
 			glyph.color1 = to_color32(0x606060_rgb);
 			glyph.coords = { cursor.x, cursor.y };
@@ -87,7 +96,7 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 
 			if (_down)
 			{
-				map.set_tile({map_x + cursor.x - layout.left, map_y + cursor.y - layout.top}, {1});
+				map.set_tile({map_x + cursor.x - layout.left, map_y + cursor.y - layout.top}, {tile_type_idx});
 			}
 		}
 	}
@@ -105,7 +114,7 @@ void Game::present(const Context& ctx)
 
 	int tablet_width = 100;
 	int tablet_height = 64;
-	const Vec2 tablet_size = calc_tablet_size(tablet_width, tablet_height, atlas_texture.id());
+	const Vec2 tablet_size = calc_tablet_size(tablet_width, tablet_height, atlas_texture);
 
 	const float vp_width = (float)tablet_width;
 	const float vp_height = vp_width / aspect;
@@ -131,7 +140,7 @@ void Game::present(const Context& ctx)
 		_attr(attrs::transform, Mat44::identity());
 		_attr(attrs::width, tablet_width);
 		_attr(attrs::height, tablet_height);
-		_attr(attrs::texture, atlas_texture.id());
+		_attr(attrs::texture, atlas_texture);
 		_attr(attrs::shader, tablet_shader);
 		_attr(attrs::quad_shader, tablet_screen_shader);
 

@@ -16,7 +16,7 @@ private:
 	// TODO: managed by asset manager
 	Id tablet_shader;
 	Id tablet_screen_shader;
-	Texture atlas_texture;
+	Id atlas_texture;
 
 	Map map;
 	std::vector<TileType> tile_types;

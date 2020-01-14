@@ -2,7 +2,6 @@
 
 #include "allocation.h"
 #include "engine.h"
-#include "attribute.h"
 #include <cstddef>
 #include <cstring>
 #include <cstdio>
@@ -751,29 +750,29 @@ inline StringStore& StringStore::operator=(StringStore&& other)
 }
 
 
-namespace attribute_serialization
-{
-	inline void load(const Buffer& buffer, size_t ptr, const String*& out_val)
-	{
-		trivial_load(buffer, ptr, out_val);
-	}
+// namespace attribute_serialization
+// {
+// 	inline void load(const Buffer& buffer, size_t ptr, const String*& out_val)
+// 	{
+// 		trivial_load(buffer, ptr, out_val);
+// 	}
 
-	inline void store(Buffer& buffer, const String& val)
-	{
-		if (val.str_data.is_persistent_allocated())
-		{
-			// if persistently allocated, must store it into a temp string
-			// that's because we do not keep reference and the persistent string
-			// may change or released because not ref counted
-			String temp = val;
-			trivial_store(buffer, temp);
-		}
-		else
-		{
-			trivial_store(buffer, val);
-		}
-	}
-}
+// 	inline void store(Buffer& buffer, const String& val)
+// 	{
+// 		if (val.str_data.is_persistent_allocated())
+// 		{
+// 			// if persistently allocated, must store it into a temp string
+// 			// that's because we do not keep reference and the persistent string
+// 			// may change or released because not ref counted
+// 			String temp = val;
+// 			trivial_store(buffer, temp);
+// 		}
+// 		else
+// 		{
+// 			trivial_store(buffer, val);
+// 		}
+// 	}
+// }
 
 
 

@@ -6,14 +6,14 @@ in ivec2 Coordinates;
 in ivec2 Dimensions;
 in vec4 Color1;
 in vec4 Color2;
-in int Page;
+// in int Page;
 in int Code;
 
 // Out to fs
 flat out vec4 inColor1;
 flat out vec4 inColor2;
 out vec2 inUV;
-flat out int inPage;
+// flat out int inPage;
 flat out int inCode;
 
 // Values that stay constant for the whole mesh.
@@ -38,7 +38,7 @@ void main(){
 	// inColor1 = vec4(VertexPos.xy, 0, 1);
 	inColor1 = Color1;
 	inColor2 = Color2;
-	inPage = Page;
+	// inPage = Page;
 	inCode = Code;
 	//ivec2 atlas_coords = ivec2(Code % 16, 15 - (Code / 16)) + VertexPos;
 	inUV = vec2(VertexPos * Dimensions);

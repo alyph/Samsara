@@ -1,12 +1,12 @@
 #version 450 core
 
-uniform sampler2D Atlas;
+uniform sampler2DArray Atlas;
 
 // Interpolated values from the vertex shaders
 flat in vec4 inColor1;
 flat in vec4 inColor2;
 in vec2 inUV;
-flat in int inPage;
+// flat in int inPage;
 flat in int inCode;
 
 // Ouput data
@@ -16,7 +16,7 @@ void main()
 {
 	// TODO: maybe we should handle this implicitly by making sure 
 	// the glyph of this location on the atlas is always empty?
-	if (inPage == 0 && inCode == 0)
+	if (inCode == 0)
 	{
 		color.rgb = inColor1.rgb * inColor1.a;
 		color.a = inColor1.a;
@@ -32,9 +32,10 @@ void main()
 		if (glyph_uv.x == 0 && inUV.x > 0) { glyph_uv.x = 1.0; }
 		if (glyph_uv.y == 0 && inUV.y > 0) { glyph_uv.y = 1.0; }
 		glyph_uv = clamp(glyph_uv, min_uv, max_uv);
-		ivec2 glyph_coords = ivec2(inCode % 16, 15 - (inCode / 16));
+		ivec2 glyph_coords = ivec2(inCode % 16, 15 - ((inCode / 16) & 0x0f));
 		vec2 atlas_uv = (vec2(glyph_coords) + glyph_uv) / 16.0;	
-		vec4 atlas_color = texture(Atlas, atlas_uv);
+		int page = (inCode >> 8);
+		vec4 atlas_color = texture(Atlas, vec3(atlas_uv.xy, page));
 
 		float fore_a = atlas_color.r * inColor2.a;
 		float back_a = inColor1.a;
