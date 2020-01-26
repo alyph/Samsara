@@ -50,12 +50,24 @@ static_assert(sizeof(NormalStringData) == sizeof(ShortStringData));
 static_assert(sizeof(NormalStringData) == 24);
 static_assert(max_short_string_size < (1 << short_string_capacity_bits));
 
-// TODO: maybe another layout would be pointing directly to a const char* of a string literal
+struct LiteralStringData
+{
+	const char* ptr;
+	uint64_t padding;
+	uint32_t size;
+	uint32_t start : (32 - string_layout_bits);
+	uint32_t layout: string_layout_bits;
+};
+
+static_assert(sizeof(LiteralStringData) == sizeof(NormalStringData));
+static_assert(alignof(LiteralStringData) == alignof(NormalStringData));
+
+
 enum class StringLayout : uint8_t
 {
 	short_string = 0,
 	normal_string = 1,
-	sub_string = 2, // TODO: do we still need sub string?
+	literal = 2,
 	max,
 };
 
@@ -72,6 +84,7 @@ struct StringData
 	union
 	{
 		NormalStringData normal_data;
+		LiteralStringData literal_data;
 		ShortStringData short_data;
 	};
 
@@ -84,21 +97,11 @@ struct StringData
 	inline StringLayout layout() const;
 	inline bool is_short() const { return (layout() == StringLayout::short_string); }
 	inline bool is_normal() const { return (layout() == StringLayout::normal_string); }
-	inline bool is_sub() const { return (layout() == StringLayout::sub_string); }
-	inline bool is_persistent_allocated() const { return !is_short() && normal_data.alloc_handle.allocator_type() == Allocator::string; }
+	inline bool is_literal() const { return (layout() == StringLayout::literal); }
+	inline bool is_persistent_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() == Allocator::string; }
+	inline bool is_temp_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() != Allocator::string; }
 	inline StringHeader* header() const;
 };
-
-#if 0
-class StringAccessor
-{
-public:
-	StringData str_data;
-
-	inline const char* c_str() const { return str_data.c_str(); }
-	inline size_t size() const { return str_data.size(); }	
-};
-#endif
 
 // value always temp
 // const ref may be persistent
@@ -162,98 +165,7 @@ private:
 
 template<typename ...Ts>
 inline String format_str(const String& fmt, const Ts&... args);
-
-
-#if 0
-
-// can be temp or persistent
-// TODO: even though this type is mostly returned when getting a portion of the existing String (or StringStore),
-// using functions like (substr(), left(), right(), trim() etc.), the content may not always be a "sub" string
-// (i.e. is_sub() returns true), for example trim() may return the whole string, since there may not be anything
-// trim. So the class name may be mis-leading, more accurately it should be named something like TempOrPersistString!
-class SubString final : public StringAccessor
-{
-	inline SubString() = default;
-	inline SubString(const SubString& other) = delete; // probably no need to copy
-	inline SubString(SubString&& other) { *this = std::move(other); }
-	inline ~SubString();
-	
-	inline SubString& operator=(const SubString& other) = delete; // probably no need to copy
-	inline SubString& operator=(SubString&& other);
-
-	inline operator const String&() const { return *reinterpret_cast<const String*>(this); }
-};
-
-// always persistent
-class StringStore final : public StringAccessor
-{
-public:
-	inline StringStore() = default;
-	template<size_t N>
-	inline StringStore(const char (&str)[N]);
-	inline StringStore(const String& str) { *this = str; }
-	inline StringStore(const SubString& str) { *this = str; }
-	inline StringStore(const StringStore& other) { *this = other; }
-	inline StringStore(StringStore&& other) { *this = std::move(other); }
-	inline ~StringStore();
-
-	template<size_t N>
-	inline StringStore& operator=(const char (&str)[N]);
-	inline StringStore& operator=(const String& str);
-	inline StringStore& operator=(const SubString& str);
-	inline StringStore& operator=(const StringStore& other);
-	inline StringStore& operator=(StringStore&& other);
-
-	inline operator const String&() const { return *reinterpret_cast<const String*>(this); }
-
-	// inline String to_string_copied() const;
-	// inline String to_string_latched() const; // should make this implicit maybe just do operator const String&
-};
-
-
-class StringView final
-{
-public:
-	StringData str_data;
-
-	inline const char* c_str() const { return str_data.c_str(); }
-	inline size_t size() const { return str_data.size(); }	
-};
-
-template<bool Temp>
-class StringBase final
-{
-public:
-	StringData str_data;
-
-	inline StringBase() = default;
-	template<size_t N>
-	inline StringBase(const char (&str)[N]);
-	inline StringBase(const StringBase<Temp>& other) { *this = other; }
-	inline explicit StringBase(const StringBase<!Temp>& other) { *this = other; }
-	inline StringBase(StringBase<Temp>&& other) { *this = std::move(other); }
-	inline ~StringBase();
-
-	template<size_t N>
-	inline StringBase& operator=(const char (&str)[N]);
-	inline StringBase& operator=(const StringBase<Temp>& other);
-	inline StringBase& operator=(const StringBase<!Temp>& other);
-	inline StringBase& operator=(StringBase<Temp>&& other);
-
-	inline operator const StringView&() const;
-
-	inline const char* c_str() const { return str_data.c_str(); }
-	inline size_t size() const { return str_data.size(); }	
-
-private:
-	void assign(const char* str);
-};
-
-using String = StringBase<false>;
-using TempString = StringBase<true>;
-
-#endif
-
+inline String cstr_to_str(const char* cstr); // TODO: maybe should impl const char* String constructor and assignment instead?
 
 // string assignment
 
@@ -312,6 +224,22 @@ inline void assign_stored_string(StringData& str_data, const char* start, size_t
 	{
 		assign_normal_string(str_data, start, size, Allocator::string);
 		str_data.header()->ref_count = 1;
+	}
+}
+
+inline void assign_string_literal(StringData& str_data, const char* start, size_t size)
+{
+	if (size <= max_short_string_size)
+	{
+		assign_short_string(str_data, start, size);
+	}
+	else
+	{
+		str_data.literal_data.ptr = start;
+		str_data.literal_data.padding = 0;
+		str_data.literal_data.size = static_cast<decltype(str_data.literal_data.size)>(size);
+		str_data.literal_data.start = 0;
+		str_data.normal_data.layout = static_cast<uint8_t>(StringLayout::literal);
 	}
 }
 
@@ -384,6 +312,10 @@ inline const char* StringData::data() const
 	{
 		return reinterpret_cast<const char*>(short_data.chars);
 	}
+	else if (is_literal())
+	{
+		return (literal_data.ptr + literal_data.start);
+	}
 	else
 	{
 		auto ptr = reinterpret_cast<uint8_t*>(validate_and_get_string_buffer(*this));
@@ -393,30 +325,26 @@ inline const char* StringData::data() const
 
 inline size_t StringData::size() const
 {
+	// NOTE: literal and normal string's size field is at the same position
 	return is_short() ? (max_short_string_size - short_data.remaining_capacity) : normal_data.size;
 }
 
 inline const char* StringData::c_str() const
 {
-	if (is_sub())
+	const auto ptr = data();
+	const auto len = size();
+	if (*(ptr + len) == 0)
 	{
-		// if the sub string ends at the end of full string, can safely return it
-		if (*(data() + size()) == 0)
-		{
-			return data();
-		}
-		else
-		{
-			// expensive operation, create a temp string and return its c_str()
-			StringData temp_str;
-			assign_normal_string(temp_str, data(), size(), engine().allocators.current_temp_allocator);
-			return temp_str.c_str(); // this is safe since any allocation will last at least until the end of current calling context
-		}
+		return ptr;
 	}
 	else
 	{
-		return data();
-	}	
+		// partial string
+		// must copy into a temp storage and make it 0 terminated
+		StringData temp_str;
+		assign_temp_string(temp_str, ptr, len);
+		return temp_str.c_str(); // this is safe since any allocation will last at least until the end of current calling context
+	}
 }
 
 inline StringLayout StringData::layout() const
@@ -426,13 +354,7 @@ inline StringLayout StringData::layout() const
 
 inline StringHeader* StringData::header() const
 {
-	if (is_short())
-	{
-		return nullptr;
-	}
-
-	auto header = reinterpret_cast<StringHeader*>(validate_and_get_string_buffer(*this));
-	return header;
+	return is_normal() ? reinterpret_cast<StringHeader*>(validate_and_get_string_buffer(*this)) : nullptr;
 }
 
 
@@ -441,7 +363,7 @@ inline StringHeader* StringData::header() const
 template<size_t N>
 inline String::String(const char (&str)[N])
 {
-	assign_temp_string(str_data, str, (N - 1));
+	assign_string_literal(str_data, str, (N - 1));
 }
 
 inline String::String(const char* start, size_t size)
@@ -463,7 +385,7 @@ template<size_t N>
 inline String& String::operator=(const char (&str)[N])
 {
 	dispose();
-	assign_temp_string(str_data, str, (N - 1));
+	assign_string_literal(str_data, str, (N - 1));
 	return *this;
 }
 
@@ -486,8 +408,9 @@ inline String& String::operator=(String&& other)
 
 inline void String::store()
 {
-	if (!str_data.is_short() && !str_data.is_persistent_allocated())
+	if (str_data.is_temp_allocated())
 	{
+		// TODO: maybe just call assign_normal_string()??
 		assign_stored_string(str_data, str_data.data(), str_data.size());
 	}
 }
@@ -496,7 +419,7 @@ template<size_t N>
 inline void String::store(const char (&str)[N])
 {
 	dispose();
-	assign_stored_string(str_data, str, (N - 1));
+	assign_string_literal(str_data, str, (N - 1));
 }
 
 inline void String::store(const String& str)
@@ -616,319 +539,8 @@ inline String format_str(const String& fmt, const Ts&... args)
 	return builder.to_str();
 }
 
-
-#if 0
-
-// SubString
-inline SubString::~SubString()
+inline String cstr_to_str(const char* cstr)
 {
-	if (str_data.is_persistent_allocated())
-	{
-		release_string_ref(str_data);
-	}
+	return String{cstr, std::strlen(cstr)};
 }
 
-inline SubString& SubString::operator=(SubString&& other)
-{
-	std::swap(str_data, other.str_data);
-	return *this;
-}
-
-
-// StringStore
-
-
-inline void assign_string_store(StringData& str_data, const char* start, size_t size)
-{
-	if (size <= max_short_string_size)
-	{
-		release_string_ref(str_data);
-		assign_short_string(str_data, start, size);
-	}
-	else if (string_ref_count(str_data) == 1)
-	{
-		// single self reference, we can change the content of the string freely
-
-		AllocatorGlobals& alloc_globals = engine().allocators;
-		size_t alloc_size = sizeof(StringHeader) + size + 1;
-		if (size > str_data.normal_data.size && 
-			alloc_size > str_data.normal_data.alloc_handle.capacity(alloc_globals))
-		{
-			// TODO: this should be a unique reallocation as no other StringStore would reference it 
-			//  ( NOTE: String would not share copy of this, as String can only hold a const ref of the StringStore itself, 
-			//    so any change to the StringStore would apply to the String as well)
-			// so an optimization would be the allocator does not need bump its min valid id nor giving out new reg id
-			const size_t new_size = std::min(alloc_size * string_grow_factor, alloc_size + string_max_grow);
-			alloc_globals.reallocate(str_data.normal_data.alloc_handle, new_size);
-		}
-
-		auto ptr = reinterpret_cast<uint8_t*>(str_data.normal_data.alloc_handle.get(alloc_globals));
-		auto buffer = (ptr + sizeof(StringHeader));
-		std::memcpy(buffer, start, size);
-		buffer[size] = 0;
-
-		str_data.normal_data.size = static_cast<decltype(str_data.normal_data.size)>(size);
-	}
-	else
-	{
-		// TODO: maybe check if the str is the same, to avoid an extra copy
-
-		release_string_ref(str_data);
-		assign_normal_string(str_data, start, size, Allocator::string);
-
-		// persistent stored string starts with ref count 1 (default string starts and remains at 0)
-		str_data.header()->ref_count = 1;
-	}
-}
-
-template<size_t N>
-inline StringStore::StringStore(const char (&str)[N])
-{
-	assign_string_store(str_data, str, (N - 1));
-}
-
-inline StringStore::~StringStore()
-{
-	release_string_ref(str_data);
-}
-
-template<size_t N>
-inline StringStore& StringStore::operator=(const char (&str)[N])
-{
-	assign_string_store(str_data, str, (N - 1));
-	return *this;
-}
-
-inline StringStore& StringStore::operator=(const String& str)
-{
-	// since str is const ref, it can be either String, SubString or StringStore
-	// perform copy if it is StringStore by checking if it is normal and persistently allocated
-	if (str.str_data.is_normal() && str.str_data.is_persistent_allocated())
-	{
-		add_string_ref(str.str_data);
-		release_string_ref(str_data);
-		str_data = str.str_data;
-	}
-	else
-	{
-		assign_string_store(str_data, str.str_data.data(), str.str_data.size());
-	}
-	return *this;
-}
-
-inline StringStore& StringStore::operator=(const SubString& str)
-{
-	// NOTE: even though the str is a SubString type, it doesn't mean it's always sub string
-	// (i.e. is_sub() returns true). The SubString only represents a string that can be either 
-	// temporarily or persistently allocated string, but doesn't mean it may not be a full string
-	// (see comments for SubString class above)
-	if (str.str_data.is_normal() && str.str_data.is_persistent_allocated())
-	{
-		add_string_ref(str.str_data);
-		release_string_ref(str_data);
-		str_data = str.str_data;
-	}
-	else
-	{
-		assign_string_store(str_data, str.str_data.data(), str.str_data.size());
-	}
-	return *this;
-}
-
-inline StringStore& StringStore::operator=(const StringStore& other)
-{
-	add_string_ref(other.str_data);
-	release_string_ref(str_data);
-	str_data = other.str_data;
-	return *this;
-}
-
-inline StringStore& StringStore::operator=(StringStore&& other)
-{
-	std::swap(str_data, other.str_data);
-	return *this;
-}
-
-
-// namespace attribute_serialization
-// {
-// 	inline void load(const Buffer& buffer, size_t ptr, const String*& out_val)
-// 	{
-// 		trivial_load(buffer, ptr, out_val);
-// 	}
-
-// 	inline void store(Buffer& buffer, const String& val)
-// 	{
-// 		if (val.str_data.is_persistent_allocated())
-// 		{
-// 			// if persistently allocated, must store it into a temp string
-// 			// that's because we do not keep reference and the persistent string
-// 			// may change or released because not ref counted
-// 			String temp = val;
-// 			trivial_store(buffer, temp);
-// 		}
-// 		else
-// 		{
-// 			trivial_store(buffer, val);
-// 		}
-// 	}
-// }
-
-
-
-
-
-
-template<bool Temp>
-inline void add_string_ref(const StringData& str_data)
-{
-	auto header = str_data.header();
-	if (header)
-	{
-		header->ref_count++;
-		asserts(header->ref_count > 1);
-	}
-}
-
-template<bool Temp>
-inline void release_string_ref(StringData& str_data)
-{
-	auto header = str_data.header();
-	if (header)
-	{
-		asserts(header->ref_count >= 1);
-		header->ref_count--;
-		if (header->ref_count == 0)
-		{
-			engine().allocators.deallocate(str_data.normal_data.alloc_handle);
-		}
-		str_data.clear();
-	}
-}
-
-// TODO: we don't need this to be a function, put it back into the caller
-template<bool Temp>
-inline bool reuse_allocation_on_write(const StringData& str_data)
-{
-	// if header is null, then it's short string and has no existing allocation (thus cannot be reused)
-	auto header = str_data.header();
-
-	// we can resuse the allocation if:
-	// only referenced by 1 (the current string itself), so the modification won't be reflected in other strings
-	// not referenced by StringView, since StringView does not keep track of ref count, we do not want the change reflected in any views as well
-	return (header && header->ref_count == 1 && !header->ref_by_view);
-}
-
-// String
-
-template<bool Temp>
-template<size_t N>
-inline StringBase<Temp>::StringBase(const char (&str)[N])
-{
-	assign(str);
-}
-
-template<bool Temp>
-inline StringBase<Temp>::~StringBase()
-{
-	release_string_ref<Temp>(str_data);
-}
-
-template<bool Temp>
-template<size_t N>
-inline StringBase<Temp>& StringBase<Temp>::operator=(const char (&str)[N])
-{
-	assign(str);
-	return *this;
-}
-
-template<bool Temp>
-inline StringBase<Temp>& StringBase<Temp>::operator=(const StringBase<Temp>& other)
-{
-	add_string_ref<Temp>(other.str_data);
-	release_string_ref<Temp>(str_data);
-	str_data = other.str_data;
-	return *this;
-}
-
-template<bool Temp>
-inline StringBase<Temp>& StringBase<Temp>::operator=(const StringBase<!Temp>& other)
-{
-	assign(other.c_str());
-	return *this;
-}
-
-template<bool Temp>
-inline StringBase<Temp>& StringBase<Temp>::operator=(StringBase<Temp>&& other)
-{
-	std::swap(str_data, other.str_data);
-}
-
-template<bool Temp>
-inline StringBase<Temp>::operator const StringView&() const
-{
-	return *reinterpret_cast<const StringView*>(this);
-}
-
-// TODO: we should take both a const char* ptr and the length, so a string view can be assigned
-template<bool Temp>
-void StringBase<Temp>::assign(const char* str)
-{
-	const auto len = std::strlen(str);
-	if (len <= max_short_string_size)
-	{
-		release_string_ref<Temp>(str_data);
-		std::memcpy(&str_data, str, len + 1);
-		str_data.short_data.remaining_capacity = (max_short_string_size - len);
-		str_data.short_data.layout = static_cast<uint8_t>(StringLayout::short_string);
-	}
-	else if (reuse_allocation_on_write<Temp>(str_data))
-	{
-		AllocatorGlobals& alloc_globals = engine().allocators;
-		size_t alloc_size = sizeof(StringHeader) + len + 1;
-		if (len > str_data.normal_data.size && 
-			alloc_size > str_data.normal_data.alloc_handle.capacity(alloc_globals))
-		{
-			// TODO: this should be a unique reallocation as no other string or stringView would reference it 
-			// so an optimization would be the allocator does not need bump its min valid id nor giving out new reg id
-			const size_t new_size = std::min(alloc_size * string_grow_factor, alloc_size + string_max_grow);
-			alloc_globals.reallocate(str_data.normal_data.alloc_handle, new_size);
-		}
-
-		auto ptr = reinterpret_cast<uint8_t*>(str_data.normal_data.alloc_handle.get(alloc_globals));
-		std::memcpy((ptr + sizeof(StringHeader)), str, len + 1);
-
-		str_data.normal_data.size = static_cast<decltype(str_data.normal_data.size)>(len);
-	}
-	else
-	{
-		// TODO: maybe check if the str is the same, to avoid an extra copy
-
-		release_string_ref<Temp>(str_data);
-		size_t alloc_size = sizeof(StringHeader) + len + 1; // allocate strict size for the first time since majority of the time it will just get referenced around and not rewritten because of copy on write rule
-		AllocatorGlobals& alloc_globals = engine().allocators;
-
-		Allocator allocator = Allocator::string;
-		if constexpr (Temp)
-		{
-			allocator = alloc_globals.current_temp_allocator;
-		}
-		
-		str_data.normal_data.alloc_handle = alloc_globals.allocate(allocator, alloc_size);
-		
-		auto ptr = reinterpret_cast<uint8_t*>(str_data.normal_data.alloc_handle.get(alloc_globals));
-		auto header = reinterpret_cast<StringHeader*>(ptr);
-		//header->capacity = len;
-		header->ref_count = 1;
-		std::memcpy((ptr + sizeof(StringHeader)), str, len + 1);
-
-		str_data.normal_data.size = static_cast<decltype(str_data.normal_data.size)>(len);
-		str_data.normal_data.start = 0;
-		str_data.normal_data.layout = static_cast<uint8_t>(StringLayout::normal_string);
-	}
-}
-
-
-
-
-#endif

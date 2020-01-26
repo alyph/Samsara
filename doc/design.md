@@ -42,24 +42,24 @@
   - infrustructure, housing, sanitation, health, leisure
   - more income
   - more building slots
-  - more production and demand
+  - higher production and demand
 - agricultural/rural development
   - including farming, minding, wood cutting, hunting and any other resource gathering activities
   - rural population and infrustructure
   - raw resource gathering, food, material production
 - commerce level
   - merchant population
-  - trade infrustructure, market, ports, werehouse, trading post, roads, ships
+  - trade infrustructure, market, ports, werehouse, trading post, banks, guilds, roads, ships
   - more income
   - more trade power
 - industrial level
   - worker, craftsman, blacksmith, mason, carpenter, population
   - industrial infrustructure, workshop, factory, manufacturer
   - consumes raw goods and produce manufactured goods
-  - increases infrustructural build up of other areas
-  - provide tools for other area (e.g. agriculture, mining)
+  - accelerates infrustructural build up
+  - providing tools for other fields (e.g. agriculture, mining)
 - cultural level
-  - population involved in academic/scientific research, philosophic/religious thinking, art creation etc.
+  - population involved in academic/scientific research, philosophic/religious/social study, art creation etc.
   - facilities supporting these actiities, schools, monesteries, temples, theatres
   - generating culture and research points which (together with the technology points from pratical work) eventually lead to discoveries
 - military level
@@ -99,6 +99,11 @@
 - demography
   - class, culture, religion, origin, language
 - technology
+- public health and sanitation
+- satisfaction, happiness
+  - different demographic groups have different needs and desires
+  - this is to measure how each of their needs are satisfied
+- order/disorder
 
 
 ### Stats

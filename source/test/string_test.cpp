@@ -10,17 +10,21 @@ int main()
 	asserts(str1.str_data.is_short());
 	asserts(str1.size() == 20);
 
-	String str2 = "It was of no use to demonstrate to such opponents that the Vermont myths differed but little in essence from those universal legends of natural personification which filled the ancient world with fauns and dryads and satyrs, suggested the kallikanzarai of modern Greece, and gave to wild Wales and Ireland their dark hints of strange, small, and terrible hidden races of troglodytes and burrowers. No use, either, to point out the even more startlingly similar belief of the Nepalese hill tribes in the dreaded Mi-Go or \"Abominable Snow-Men\" who lurk hideously amidst the ice and rock pinnacles of the Himalayan summits. When I brought up this evidence, my opponents turned it against me by claiming that it must imply some actual historicity for the ancient tales; that it must argue the real existence of some queer elder earth-race, driven to hiding after the advent and dominance of mankind, which might very conceivably have survived in reduced numbers to relatively recent times—or even to the present.";
+	String str2 = cstr_to_str("It was of no use to demonstrate to such opponents that the Vermont myths differed but little in essence from those universal legends of natural personification which filled the ancient world with fauns and dryads and satyrs, suggested the kallikanzarai of modern Greece, and gave to wild Wales and Ireland their dark hints of strange, small, and terrible hidden races of troglodytes and burrowers. No use, either, to point out the even more startlingly similar belief of the Nepalese hill tribes in the dreaded Mi-Go or \"Abominable Snow-Men\" who lurk hideously amidst the ice and rock pinnacles of the Himalayan summits. When I brought up this evidence, my opponents turned it against me by claiming that it must imply some actual historicity for the ancient tales; that it must argue the real existence of some queer elder earth-race, driven to hiding after the advent and dominance of mankind, which might very conceivably have survived in reduced numbers to relatively recent times—or even to the present.");
 	asserts(str2.str_data.is_normal());
 
-	String str3 = "another fairly long string, but not as crazy";
+	String str3 = cstr_to_str("another fairly long string, but not as crazy");
 	asserts(str3.str_data.is_normal());
+
+	String str9 = "string literal is normally stored as simple pointer and size";
+	asserts(str9.str_data.is_literal());
 
 	printf("first string: %s\n", str1.c_str());
 	printf("second string: %s\n", str2.c_str());
 	printf("third string: %s\n", str3.c_str());
+	printf("literal string: %s\n", str9.c_str());
 
-	String temp_str = "temporarily allocated string is awesome, am I right?";
+	String temp_str = cstr_to_str("temporarily allocated string is awesome, am I right?");
 	printf("temp string: %s\n", temp_str.c_str());
 	asserts(temp_str.str_data.normal_data.alloc_handle.allocator_type() == engine().allocators.current_temp_allocator);
 
@@ -48,7 +52,7 @@ int main()
 		asserts(string_ref_count(str4.str_data) == 2);
 		asserts(string_ref_count(str2.str_data) == 2);
 
-		str2 = "second string gets asigned to new one";
+		str2 = cstr_to_str("second string gets asigned to new one");
 		asserts(string_ref_count(str4.str_data) == 1);
 		asserts(str2.str_data.normal_data.alloc_handle.allocator_type() == engine().allocators.current_temp_allocator);
 		printf("second string now : %s\n", str2.c_str());
@@ -69,7 +73,7 @@ int main()
 	// and the memory can go away when the allocator shrinks
 	asserts(string_ref_count(str4_view.str_data) == 0);
 
-	String reloc_str = "first long enough string to relocate actually";
+	String reloc_str = cstr_to_str("first long enough string to relocate actually");
 	reloc_str.store();
 	asserts(reloc_str.str_data.is_normal());
 	asserts(reloc_str.str_data.normal_data.alloc_handle.allocator_type() == Allocator::string);
@@ -79,7 +83,7 @@ int main()
 
 	StringView reloc_str_view = reloc_str;
 
-	reloc_str.store("first long enough string to relocate actually -- need more");
+	reloc_str.store(cstr_to_str("first long enough string to relocate actually -- need more"));
 
 	auto new_ptr = validate_and_get_string_buffer(reloc_str.str_data);
 

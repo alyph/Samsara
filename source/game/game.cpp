@@ -29,7 +29,7 @@ Game::Game()
 	// tile_types.alloc_stored(0, 64);
 	tile_types.push_back({"empty", 0, 0_rgb, 0_rgb});
 	tile_types.push_back({"forest", 0x05, 0x30ff50_rgb, 0x60b010_rgb});
-	tile_types.push_back({"hill", 0x0118, 0x404060_rgb, 0x60b010_rgb});
+	tile_types.push_back({"hill", 0x0118, 0x606070_rgb, 0x60b010_rgb});
 
 	map_vp.x = map_vp.y = (map_chunk_size / 2);
 	map.chunks.alloc_stored(0, 1024);
