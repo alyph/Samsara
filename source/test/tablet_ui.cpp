@@ -34,8 +34,7 @@ TabletUIApp::TabletUIApp()
 
 	// TODO: the atlas texture should probably use nearest filter 
 	// since we are drawing into pixel perfect render buffer
-	auto tex_desc = load_texture("../../data/fonts/cp437_20x20.png");
-	atlas_texture = Texture::create(tex_desc);
+	atlas_texture = load_texture_array({"../../data/fonts/cp437_20x20.png"});
 
 	FT_Library  ft_lib;
 	FT_Error error = FT_Init_FreeType(&ft_lib);
@@ -171,8 +170,9 @@ TabletUIApp::TabletUIApp()
 			tex_desc.height = image.height;
 			tex_desc.format = image.format;
 			tex_desc.data = std::move(image.data);
+			tex_desc.layers = 1;
 
-			atlas_texture = Texture::create(tex_desc);
+			atlas_texture = create_texture(tex_desc);
 		}
 		else
 		{
@@ -201,7 +201,7 @@ void TabletUIApp::present(const Context& ctx)
 
 	const int tablet_width = 160;
 	const int tablet_height = 80;
-	const Vec2 tablet_size = calc_tablet_size(tablet_width, tablet_height, atlas_texture.id());
+	const Vec2 tablet_size = calc_tablet_size(tablet_width, tablet_height, atlas_texture);
 
 	const float vp_width = (float)tablet_width;
 	const float vp_height = vp_width / aspect;
@@ -225,7 +225,7 @@ void TabletUIApp::present(const Context& ctx)
 		_attr(attrs::transform, Mat44::identity());
 		_attr(attrs::width, tablet_width);
 		_attr(attrs::height, tablet_height);
-		_attr(attrs::texture, atlas_texture.id());
+		_attr(attrs::texture, atlas_texture);
 		_attr(attrs::shader, tablet_shader);
 		_attr(attrs::quad_shader, tablet_screen_shader);
 
