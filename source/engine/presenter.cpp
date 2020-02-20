@@ -61,6 +61,7 @@ namespace attrs
 	Attribute<FinalizerFunc> finalizer{nullptr};
 	Attribute<RaycasterFunc> raycaster{nullptr};
 	Attribute<RendererFunc> renderer{nullptr};
+	Attribute<ElementPlacement> placement{ElementPlacement::structured};
 	Attribute<Scalar> top{undefined_scalar};
 	Attribute<Scalar> bottom{undefined_scalar};
 	Attribute<Scalar> left{undefined_scalar};

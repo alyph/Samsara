@@ -75,6 +75,7 @@ struct TabletElemWorker
 	Id id{};
 	TabletLayout layout;
 	int child_x{}, child_y{}, child_max_w{}, child_max_h{}; // potential child zone for current child if pushed, or next one if not pushed
+	bool has_loose_children{};
 };
 
 struct TabletWorkState
@@ -594,6 +595,49 @@ static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, 
 	set_elem_post_attr(frame, elem_id, attrs::tablet_layout, layout);
 }
 
+static void finalize_parent_after_structured_children(TabletRenderBuffer& render_buffer, Frame& frame, Id elem_id, Id before_child_id, TabletLayout& layout, int max_width, int max_height)
+{
+	// TODO: simplify code here with a Rect type
+	bool bounds_set = false;
+	TabletLayout bounds;
+	Id child_id = get_first_child(frame, elem_id);
+	Id end_id = (before_child_id ? before_child_id : -1);
+	while (child_id && (child_id < end_id))
+	{
+		const auto& child_layout = get_elem_attr_or_assert(frame, child_id, attrs::tablet_layout);
+		if (bounds_set)
+		{
+			bounds.width = std::max(bounds.left + bounds.width, child_layout.left + child_layout.width) - bounds.left;
+			bounds.height = std::max(bounds.top + bounds.height, child_layout.top + child_layout.height) - bounds.top;
+			bounds.left = std::min(bounds.left, child_layout.left);
+			bounds.top = std::min(bounds.top, child_layout.top);
+		}
+		else
+		{
+			bounds = child_layout;
+		}					
+		child_id = get_next_sibling(frame, child_id);
+	}
+
+	// if bounds not set (no children), will take last chance in the render step next
+	if (bounds_set)
+	{
+		if (layout.width < 0)
+		{
+			layout.left = bounds.left;
+			layout.width = bounds.width;
+		}
+		if (layout.height < 0)
+		{
+			layout.top = bounds.top;
+			layout.height = bounds.height;
+		}
+	}
+
+	// render and finalize layout
+	render_and_layout_common_element(render_buffer, frame, elem_id, layout, max_width, max_height);
+}
+
 static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_id, Id last_elem_id)
 {
 	TabletWorkState& state = get_mutable_elem_attr_or_assert(frame, root_elem_id, attrs::tablet_work_state);
@@ -613,6 +657,9 @@ static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_i
 		render_and_layout_common_element(render_buffer, frame, root_elem_id, worker.layout, worker.layout.width, worker.layout.height);
 	}
 
+	int tw = stack[0].layout.width;
+	int th = stack[0].layout.height;
+
 	Id curr_id = first_elem_id;
 	while (curr_id <= last_elem_id || stack.size() > 1)
 	{
@@ -629,7 +676,7 @@ static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_i
 			const bool all_children_processed =
 				(prev_elem.tree_offset > 0 && 
 				(prev_id + prev_elem.tree_offset - 1 <= last_elem_id || // either all descendants in range (cheap check)
-				get_last_child(frame, prev_id) <= last_elem_id)); // or all immediate children in range (expensive check)
+				get_last_child(frame, prev_id) <= last_elem_id)); // or all immediate children in range (expensive check), for cases of sub sections within this tree
 			if (all_children_processed) { advance = false; } // if all completed, pop
 			else { break; } // otherwise end finalization and wait until next finalize cal
 		}
@@ -645,33 +692,51 @@ static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_i
 			auto& parent = stack.back();
 			TabletElemWorker worker;
 			worker.id = curr_id;
-			// TODO: top, left attributes
-			worker.child_x = worker.layout.left = parent.child_x;
-			worker.child_y = worker.layout.top = parent.child_y;
-			// TODO: horizontal layout
+			const auto placement = get_elem_attr_or_default(frame, curr_id, attrs::placement);
+			const auto& left = get_elem_attr_or_default(frame, curr_id, attrs::left);
+			const auto& top = get_elem_attr_or_default(frame, curr_id, attrs::top);
 			const auto& width = get_elem_attr_or_default(frame, curr_id, attrs::width);
-			if (width.undefined())
+			const auto& height = get_elem_attr_or_default(frame, curr_id, attrs::height);
+
+			if (placement == ElementPlacement::loose)
 			{
-				worker.layout.width = -1;
-				worker.child_max_w = parent.child_max_w;
+				if (!parent.has_loose_children)
+				{
+					if (!layout_done(parent.layout))
+					{
+						// finalize parent layout now
+						const auto& grand_parent = stack[stack.size() - 2];
+						finalize_parent_after_structured_children(render_buffer, frame, parent.id, curr_id, parent.layout, grand_parent.child_max_w, grand_parent.child_max_h);
+					}
+					parent.has_loose_children = true;
+				}
+				auto& layout = worker.layout;
+				layout.left = parent.layout.left + (left.undefined() ? 0 : left.to_int());
+				layout.top = parent.layout.top + (top.undefined() ? 0 : top.to_int());
+				layout.width = (width.undefined() ? -1 : width.to_int());
+				layout.height = (height.undefined() ? -1 : height.to_int());
+				worker.child_x = layout.left;
+				worker.child_y = layout.top;
+				worker.child_max_w = (layout.width < 0 ? (tw - layout.left) : layout.width);
+				worker.child_max_h = (layout.height < 0 ? (th - layout.top) : layout.height);
 			}
-			else
+			else // ElementPlacement::structured
 			{
+				// all loose elems must come after the structured siblings
+				asserts(!parent.has_loose_children);
+				auto& layout = worker.layout;
+				// TODO: top, left attributes
+				worker.child_x = worker.layout.left = parent.child_x;
+				worker.child_y = worker.layout.top = parent.child_y;
+				// TODO: horizontal layout
 				// TODO: % values
 				// TODO: should always take >= value, maybe add a to_pos_int()
-				worker.child_max_w = worker.layout.width = width.to_int();
+				layout.width = (width.undefined() ? -1 : width.to_int());
+				layout.height = (height.undefined() ? -1 : height.to_int());
+				worker.child_max_w = (layout.width < 0 ? parent.child_max_w : layout.width);
+				worker.child_max_h = (layout.height < 0 ? parent.child_max_h : layout.height);
 			}
-			const auto& height = get_elem_attr_or_default(frame, curr_id, attrs::height);
-			if (height.undefined())
-			{
-				worker.layout.height = -1;
-				worker.child_max_h = parent.child_max_h;
-			}
-			else
-			{
-				// TODO: % values
-				worker.child_max_h = worker.layout.height = height.to_int();
-			}
+
 			// render now if all layout is already done
 			if (layout_done(worker.layout))
 			{
@@ -683,68 +748,33 @@ static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_i
 		else
 		{
 			auto& worker = stack.back();
-			auto& parent_worker = stack[stack.size() - 2];
+			auto& parent = stack[stack.size() - 2];
 
-			// if has children, fill in missing layout based on children bounding box
+			// if layout still not done, it must not have any loose children, finalize layout now
 			if (!layout_done(worker.layout))
 			{
-				// TODO: simplify code here with a Rect type
-				bool bounds_set = false;
-				TabletLayout bounds;
-				Id child_id = get_first_child(frame, worker.id);
-				while (child_id)
-				{
-					const auto& child_layout = get_elem_attr_or_assert(frame, child_id, attrs::tablet_layout);
-					if (bounds_set)
-					{
-						bounds.width = std::max(bounds.left + bounds.width, child_layout.left + child_layout.width) - bounds.left;
-						bounds.height = std::max(bounds.top + bounds.height, child_layout.top + child_layout.height) - bounds.top;
-						bounds.left = std::min(bounds.left, child_layout.left);
-						bounds.top = std::min(bounds.top, child_layout.top);
-					}
-					else
-					{
-						bounds = child_layout;
-					}					
-					child_id = get_next_sibling(frame, child_id);
-				}
+				asserts(!worker.has_loose_children);
+				finalize_parent_after_structured_children(render_buffer, frame, worker.id, null_id, worker.layout, parent.child_max_w, parent.child_max_h);
+			}
 
-				// if bounds not set (no children), will take last chance in the render step next
-				if (bounds_set)
-				{
-					if (worker.layout.width < 0)
-					{
-						worker.layout.left = bounds.left;
-						worker.layout.width = bounds.width;
-					}
-					if (worker.layout.height < 0)
-					{
-						worker.layout.top = bounds.top;
-						worker.layout.height = bounds.height;
-					}
-				}
-
-				// render and finalize layout
-				render_and_layout_common_element(render_buffer, frame, worker.id, worker.layout, parent_worker.child_max_w, parent_worker.child_max_h);
-			}			
-
-			// update parent's child box
-			// only height is adjusted for vertical stacking
-			// TODO: handle horizontal stacking and any other layout options
-			// also need to handle pull down or pull right cases
-			const auto occupied_height = std::min(worker.layout.top + worker.layout.height - parent_worker.child_y, parent_worker.child_max_h);
-			parent_worker.child_y += occupied_height;
-			parent_worker.child_max_h -= occupied_height;
+			// update parent's child box if this is not a loose child
+			// NOTE: elements always popped before the next sibling pushed, so if the parent is
+			// marked with has loose children, then this child and some of the previous siblings
+			// must be loose children 
+			if (!parent.has_loose_children)
+			{
+				// only height is adjusted for vertical stacking
+				// TODO: handle horizontal stacking and any other layout options
+				// also need to handle pull down or pull right cases
+				const auto occupied_height = std::min(worker.layout.top + worker.layout.height - parent.child_y, parent.child_max_h);
+				parent.child_y += occupied_height;
+				parent.child_max_h -= occupied_height;
+			}
 
 			// pop
 			stack.pop_back();
 		}
 	}
-
-	// if (stack.size() == 1)
-	// {
-	// 	render_buffer.streamline_blocks();
-	// }
 }
 
 #if 0
@@ -971,6 +1001,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		create_tablet_cache(new_cache, width, height, texture, shader, quad_shader);
 	}
 
+	// TODO: recreate the cache if the dimensions or any other attributes changed
 	const auto& tablet_cache = globals.tablet_caches[cache_index];
 	asserts(tablet_cache.width == width && tablet_cache.height == height);
 	asserts(tablet_cache.texture == texture && tablet_cache.shader_id == shader && tablet_cache.quad_shader_id == quad_shader);

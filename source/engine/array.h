@@ -134,7 +134,7 @@ public:
 	inline ConstSimpleArrayIterator<T> begin() const;
 	inline SimpleArrayIterator<T> end();
 	inline ConstSimpleArrayIterator<T> end() const;
-	inline T& back() { return back_impl(); }
+	inline T& back() { return back_impl(); } // TODO: add a version that takes a num to return n to the last item
 	inline const T& back() const { return back_impl(); }
 	inline void resize(size_t new_size);
 	inline void push_back(const T& value);

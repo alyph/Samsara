@@ -37,6 +37,14 @@ constexpr inline Color to_color(const Color32 color)
 	};
 }
 
+constexpr Color32 operator"" _rgb32(unsigned long long v)
+{
+	uint8_t r = (v >> 16 & 0xff);
+	uint8_t g = (v >> 8 & 0xff);
+	uint8_t b = (v & 0xff);
+	return Color32{ r, g, b, 255 };
+}
+
 constexpr Color operator"" _rgb(unsigned long long v)
 {
 	uint8_t r = (v >> 16 & 0xff);

@@ -28,11 +28,18 @@ using RaycasterFunc = RaycastResult(*)(const Frame& frame, Id elem_id, double x,
 using RendererFunc = void(*)(const Frame& frame, Id elem_id);
 using ElemTypeInitFunc = std::function<void(ElementTypeSetup&)>;
 
+enum class ElementPlacement
+{
+	structured,
+	loose,
+};
+
 namespace attrs
 {
 	extern Attribute<FinalizerFunc> finalizer;
 	extern Attribute<RaycasterFunc> raycaster;
 	extern Attribute<RendererFunc> renderer;
+	extern Attribute<ElementPlacement> placement;
 	extern Attribute<Scalar> top;
 	extern Attribute<Scalar> bottom;
 	extern Attribute<Scalar> left;

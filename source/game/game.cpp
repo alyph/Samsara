@@ -22,14 +22,15 @@ Game::Game()
 	// atlas_texture = Texture::create(tex_desc);
 	atlas_texture = load_texture_array(
 	{
+		"../../data/fonts/cp437_24x24.png",
 		"../../data/fonts/anikki_square_24x24.png",
 		"../../data/fonts/urr_a_24x24.png",
 	});
 
 	// tile_types.alloc_stored(0, 64);
 	tile_types.push_back({"empty", 0, 0_rgb, 0_rgb});
-	tile_types.push_back({"forest", 0x05, 0x30ff50_rgb, 0x60b010_rgb});
-	tile_types.push_back({"hill", 0x0118, 0x606070_rgb, 0x60b010_rgb});
+	tile_types.push_back({"forest", 0x0105, 0x30ff50_rgb, 0x60b010_rgb});
+	tile_types.push_back({"hill", 0x0218, 0x606070_rgb, 0x60b010_rgb});
 
 	map_vp.x = map_vp.y = (map_chunk_size / 2);
 	map.chunks.alloc_stored(0, 1024);
@@ -104,6 +105,58 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 	return elem_id;
 }
 
+static void tile_palette(const Context ctx, const std::vector<TileType>& tile_types)
+{
+	int size = 3;
+	int cols = 2;
+
+	for (int i = 0; i < tile_types.size(); i++)
+	{
+		int row = (i / cols);
+		int col = (i % cols);
+
+		const Id button_id = elem::node(_ctx_id(i));
+		_attr(attrs::placement, ElementPlacement::loose);
+		_attr(attrs::left, col * size);
+		_attr(attrs::top, row * size);
+		_attr(attrs::width, size);
+		_attr(attrs::height, size);
+
+		// TODO: we should make a helper to get both render buffer and layout
+		// otherwise user can cache a render_buffer outside of the loop and reuse it
+		// while the layout has not been properly finalized
+		TabletRenderBuffer& render_buffer = access_tablet_render_buffer(ctx);
+		const TabletLayout& layout = get_elem_attr_or_assert(*ctx.frame, button_id, attrs::tablet_layout);
+
+		const TileType& type_data = tile_types[i];
+		GlyphData glyph;
+		int x{layout.left}, y{layout.top};
+
+		auto draw = [&](uint16_t code, const IVec2& coords)
+		{
+			glyph.code = code;
+			glyph.coords = coords;
+			render_buffer.push_glyph(button_id, glyph);
+		};
+
+		// TODO: maybe allow pushing a static array of glyphs
+		// center glyph
+		glyph.color2 = to_color32(type_data.color_a);
+		draw(type_data.glyph, {x + 1, y + 1});
+
+		// border
+		glyph.color2 = 0xd0d0d0_rgb32;
+		draw(0x00da, {x, y});
+		draw(0x00c4, {x + 1, y});
+		draw(0x00bf, {x + 2, y});
+		draw(0x00b3, {x + 2, y + 1});
+		draw(0x00d9, {x + 2, y + 2});
+		draw(0x00c4, {x + 1, y + 2});
+		draw(0x00c0, {x, y + 2});
+		draw(0x00b3, {x, y + 1});
+	}
+}
+
 void Game::present(const Context& ctx)
 {
 	using namespace elem;
@@ -113,18 +166,18 @@ void Game::present(const Context& ctx)
 	const float aspect = window->aspect();
 
 	int tablet_width = 100;
-	int tablet_height = 64;
+	int tablet_height = 80;
 	const Vec2 tablet_size = calc_tablet_size(tablet_width, tablet_height, atlas_texture);
 
 	const float vp_width = (float)tablet_width;
 	const float vp_height = vp_width / aspect;
 
-	// tablet_height = (int)std::floor(vp_height / (tablet_size.y / tablet_height));
+	int map_height = std::min(tablet_height, (int)std::ceil(vp_height / (tablet_size.y / tablet_height)));
 
 	// TODO: use othographic projection
 	Viewpoint vp;
 	vp.projection = make_orthographic(vp_width / 2, aspect, 0.f, 100.f);
-	vp.pose.pos.y = 0.f; //((float)tablet_size.y - vp_height) / 2;
+	vp.pose.pos.y = ((float)tablet_size.y - vp_height) / 2;
 
 	viewport(_ctx);
 	_attr(attrs::width, window->width());
@@ -146,7 +199,8 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			map_view(_ctx, map, tile_types, map_vp, tablet_width, tablet_height);
+			map_view(_ctx, map, tile_types, map_vp, tablet_width, map_height);
+			tile_palette(_ctx, tile_types);
 		}
 	}
 }

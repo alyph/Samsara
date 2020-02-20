@@ -4,6 +4,10 @@ static const constexpr size_t sb_page_size = 1024;
 
 void sb_expand_buffer(StringData& str_data, size_t size)
 {
+	// TODO: maybe attempt greedy method (greedy as in not allocate more than we need) first such that only 
+	// expand for the given size if this is the last allocation of the allocator. we will not using paging 
+	// until we are forced to move and copy memory once we are moved and at the end of the allocation then
+	//  we can expand greedily again
 	const auto curr_size = str_data.size();
 	const size_t total_buffer_size = (sizeof(StringHeader) + curr_size + size);
 	const size_t alloc_size = ((total_buffer_size + sb_page_size - 1) / sb_page_size) * sb_page_size;
