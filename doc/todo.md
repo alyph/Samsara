@@ -20,7 +20,7 @@
   - [x] finalizer processing
     - finalizer to fill in derived attributes (e.g. layout)
     - finalizer also collects renderable buffers for common elements (e.g. text, image, colored boxes)
-  - [ ] allow elements to find its section root
+  - [x] allow elements to find its section root
     - so it can access the shared renderable buffer and add custom buffer data to it
   - [x] impl tablet finalizer with layout and render buffer
 - [x] text should influence width if not determine it (perhaps should determine max width?), 
@@ -39,7 +39,7 @@
 - [x] string store should probably be immutible too, so copy that into normal string or string attribute would work fine
   - we need be careful since if we have frequent changing strings that will cause the main allocator to expand quickly and will require reclaiming unused memory more often
 - [x] string builder, string format
-- [ ] perf: add a string layout which points directly to the pointer of a string literal
+- [x] perf: add a string layout which points directly to the pointer of a string literal
 - [ ] have custom allocator (declared as static variable and auto assign an allocator id, limited number 16 right now), the custom allocator should also be configurable (e.g. temp or not, reclaimation strategy)
 - [ ] bucket array?
 
@@ -47,5 +47,9 @@
 
 ## game
 - [ ] basic map painting
+  - [ ] ocean, coast
+  - [ ] city wall
+  - [ ] road
+  - [ ] houses (some of these will be replaced by template or auto gen)
 
 

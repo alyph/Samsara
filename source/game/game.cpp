@@ -32,7 +32,8 @@ Game::Game()
 	tile_types.push_back({"forest", 0x0105, 0x30ff50_rgb, 0x60b010_rgb});
 	tile_types.push_back({"hill", 0x0218, 0x606070_rgb, 0x60b010_rgb});
 
-	map_vp.x = map_vp.y = (map_chunk_size / 2);
+	editor_state.selected_tile_type = 1;
+	editor_state.map_vp.x = editor_state.map_vp.y = (map_chunk_size / 2);
 	map.chunks.alloc_stored(0, 1024);
 	map.tiles.alloc_stored(0, 512 * 512);
 	map.set_tile({0, 0}, {1});
@@ -47,7 +48,7 @@ void Game::update()
 {
 }
 
-static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& tile_types, const IVec2& viewpoint, const Scalar& width, const Scalar& height)
+static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& tile_types, const EditorState& state, const Scalar& width, const Scalar& height)
 {
 	const Id elem_id = make_element(ctx, null_id);
 	_attr(attrs::width, width);
@@ -55,8 +56,8 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 
 	TabletRenderBuffer& render_buffer = access_tablet_render_buffer(ctx);
 	const TabletLayout& layout = get_elem_attr_or_assert(*ctx.frame, elem_id, attrs::tablet_layout);
-	int map_x = viewpoint.x - layout.width / 2;
-	int map_y = viewpoint.y - layout.height / 2;
+	int map_x = state.map_vp.x - layout.width / 2;
+	int map_y = state.map_vp.y - layout.height / 2;
 
 	for (int y = 0; y < layout.height; y++)
 	{
@@ -86,12 +87,12 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 		if (cursor.x >= layout.left && cursor.x < (layout.left + layout.width) &&
 			cursor.y >= layout.top && cursor.y < (layout.top + layout.height))
 		{
-			const uint16_t tile_type_idx = 2;
+			const uint16_t tile_type_idx = state.selected_tile_type;
 			const TileType& tile_type = tile_types[tile_type_idx];
 			GlyphData glyph;
 			glyph.code = tile_type.glyph;
 			glyph.color2 = to_color32(tile_type.color_a);
-			glyph.color1 = to_color32(0x606060_rgb);
+			glyph.color1 = to_color32(0x303030_rgb);
 			glyph.coords = { cursor.x, cursor.y };
 			render_buffer.push_glyph(elem_id, glyph);
 
@@ -105,7 +106,7 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 	return elem_id;
 }
 
-static void tile_palette(const Context ctx, const std::vector<TileType>& tile_types)
+static void tile_palette(const Context ctx, const std::vector<TileType>& tile_types, EditorState& state)
 {
 	int size = 3;
 	int cols = 2;
@@ -121,6 +122,8 @@ static void tile_palette(const Context ctx, const std::vector<TileType>& tile_ty
 		_attr(attrs::top, row * size);
 		_attr(attrs::width, size);
 		_attr(attrs::height, size);
+
+		const bool selected = (state.selected_tile_type == i);
 
 		// TODO: we should make a helper to get both render buffer and layout
 		// otherwise user can cache a render_buffer outside of the loop and reuse it
@@ -144,16 +147,26 @@ static void tile_palette(const Context ctx, const std::vector<TileType>& tile_ty
 		glyph.color2 = to_color32(type_data.color_a);
 		draw(type_data.glyph, {x + 1, y + 1});
 
+		uint16_t normal_border[] = { 0x00da, 0x00c4, 0x00bf, 0x00b3, 0x00d9, 0x00c0 };
+		uint16_t selected_border[] = { 0x00c9, 0x00cd, 0x00bb, 0x00ba, 0x00bc, 0x00c8 };
+		uint16_t* border_codes = selected? selected_border : normal_border;
+
 		// border
 		glyph.color2 = 0xd0d0d0_rgb32;
-		draw(0x00da, {x, y});
-		draw(0x00c4, {x + 1, y});
-		draw(0x00bf, {x + 2, y});
-		draw(0x00b3, {x + 2, y + 1});
-		draw(0x00d9, {x + 2, y + 2});
-		draw(0x00c4, {x + 1, y + 2});
-		draw(0x00c0, {x, y + 2});
-		draw(0x00b3, {x, y + 1});
+		draw(border_codes[0], {x, y});
+		draw(border_codes[1], {x + 1, y});
+		draw(border_codes[2], {x + 2, y});
+		draw(border_codes[3], {x + 2, y + 1});
+		draw(border_codes[4], {x + 2, y + 2});
+		draw(border_codes[1], {x + 1, y + 2});
+		draw(border_codes[5], {x, y + 2});
+		draw(border_codes[3], {x, y + 1});
+
+		// happen next frame
+		if (_clicked)
+		{
+			state.selected_tile_type = i;
+		}
 	}
 }
 
@@ -199,8 +212,8 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			map_view(_ctx, map, tile_types, map_vp, tablet_width, map_height);
-			tile_palette(_ctx, tile_types);
+			map_view(_ctx, map, tile_types, editor_state, tablet_width, map_height);
+			tile_palette(_ctx, tile_types, editor_state);
 		}
 	}
 }

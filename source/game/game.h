@@ -4,6 +4,13 @@
 #include "engine/texture.h"
 #include "map.h"
 
+
+struct EditorState
+{
+	uint16_t selected_tile_type{};
+	IVec2 map_vp;
+};
+
 class Game
 {
 public:
@@ -20,7 +27,7 @@ private:
 
 	Map map;
 	std::vector<TileType> tile_types;
-	IVec2 map_vp;
+	EditorState editor_state;
 };
 
 
