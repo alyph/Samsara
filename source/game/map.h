@@ -6,12 +6,19 @@
 #include "engine/color.h"
 #include "engine/math_types.h"
 
+enum TileTypeFlags: uint32_t
+{
+	water = 0x0001,
+};
+
 struct TileType
 {
 	String name;
 	uint16_t glyph;
 	Color color_a;
 	Color color_b;
+	uint32_t flags{};
+	uint32_t ex_glyph_start{};
 };
 
 struct Tile

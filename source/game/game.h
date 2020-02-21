@@ -11,6 +11,12 @@ struct EditorState
 	IVec2 map_vp;
 };
 
+struct WorldMeta
+{
+	std::vector<TileType> tile_types;
+	std::vector<uint16_t> ex_tile_glyphes;
+};
+
 class Game
 {
 public:
@@ -25,8 +31,8 @@ private:
 	Id tablet_screen_shader;
 	Id atlas_texture;
 
+	WorldMeta world_meta;
 	Map map;
-	std::vector<TileType> tile_types;
 	EditorState editor_state;
 };
 

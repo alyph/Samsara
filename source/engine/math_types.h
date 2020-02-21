@@ -101,6 +101,10 @@ inline Vec4 to_vec4(const Vec3& v3, float w);
 inline Vec4 operator+(const Vec4& v0, const Vec4& v1);
 inline Vec4 operator*(const Vec4& v, float s);
 
+// IVec2
+inline IVec2 operator+(const IVec2& v0, const IVec2& v1);
+inline IVec2 operator-(const IVec2& v0, const IVec2& v1);
+
 // Mat33
 inline Quat to_quat(const Mat33& m);
 
@@ -257,6 +261,17 @@ inline Vec4 operator*(const Vec4& v, float s)
 	return { v.x * s, v.y * s, v.z * s, v.w * s };
 }
 
+// IVec2 Impl
+
+inline IVec2 operator+(const IVec2& v0, const IVec2& v1)
+{
+	return { v0.x + v1.x, v0.y + v1.y };
+}
+
+inline IVec2 operator-(const IVec2& v0, const IVec2& v1)
+{
+	return { v0.x - v1.x, v0.y - v1.y };
+}
 
 // Mat33 Impl
 

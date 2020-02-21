@@ -5,6 +5,33 @@
 #include "engine/shader.h"
 #include "engine/image_utils.h"
 
+struct WaterTileMask
+{
+	uint8_t codes[256];
+	constexpr WaterTileMask(): codes{}
+	{
+		for (unsigned int i = 0; i < 256; i++)
+		{
+			uint8_t code = 0;
+			uint8_t mask = (uint8_t)i;
+			if (mask & 0x01) { code |= (0x02 | 0x08); }
+			if (mask & 0x02) { code |= (0x01 | 0x02); }
+			if (mask & 0x04) { code |= (0x01 | 0x04); }
+			if (mask & 0x08) { code |= (0x02 | 0x04); }
+			if (mask & 0x10) { code |= (0x02 | 0x08); }
+			if (mask & 0x20) { code |= (0x04 | 0x08); }
+			if (mask & 0x40) { code |= (0x01 | 0x04); }
+			if (mask & 0x80) { code |= (0x01 | 0x08); }
+			if (mask & 0x01) { code &= ~(0x01); }
+			if (mask & 0x04) { code &= ~(0x02); }
+			if (mask & 0x10) { code &= ~(0x04); }
+			if (mask & 0x40) { code &= ~(0x08); }
+			codes[i] = code;
+		}
+	}
+};
+static const constexpr WaterTileMask water_tile_mask{};
+
 Game::Game()
 {
 	// TODO: move to asset manager or something
@@ -27,10 +54,22 @@ Game::Game()
 		"../../data/fonts/urr_a_24x24.png",
 	});
 
+	world_meta.ex_tile_glyphes = 
+	{ 
+		0x0200, 0x02ba, 0x02cd, 0x02c8,
+		0x02ba, 0x02ba, 0x02c9, 0x02cc,
+		0x02cd, 0x02bc, 0x02cd, 0x02ca,
+		0x02bb, 0x02b9, 0x02cb, 0x02ce,
+	};
+
 	// tile_types.alloc_stored(0, 64);
-	tile_types.push_back({"empty", 0, 0_rgb, 0_rgb});
-	tile_types.push_back({"forest", 0x0105, 0x30ff50_rgb, 0x60b010_rgb});
-	tile_types.push_back({"hill", 0x0218, 0x606070_rgb, 0x60b010_rgb});
+	world_meta.tile_types = 
+	{
+		{"empty", 0, 0_rgb, 0_rgb},
+		{"forest", 0x0105, 0x30ff50_rgb, 0x30ff50_rgb},
+		{"hill", 0x0218, 0x606070_rgb, 0x606070_rgb},
+		{"coast", 0x027e, 0x80c0f0_rgb, 0x80c0f0_rgb, TileTypeFlags::water},
+	};
 
 	editor_state.selected_tile_type = 1;
 	editor_state.map_vp.x = editor_state.map_vp.y = (map_chunk_size / 2);
@@ -48,7 +87,23 @@ void Game::update()
 {
 }
 
-static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& tile_types, const EditorState& state, const Scalar& width, const Scalar& height)
+static inline uint8_t calc_neighbor_water_mask(const Map& map, const std::vector<TileType>& tile_types, const IVec2& tile_coords)
+{
+	const IVec2 offsets[] = { {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1} };
+	uint8_t mask = 0;
+	for (int i = 0; i < 8; i++)
+	{
+		const Id id = map.tile_id(tile_coords + offsets[i]);
+		const uint16_t type = (id ? map.tiles[id_to_index(id)].type : 0);
+		if (!(tile_types[type].flags & TileTypeFlags::water))
+		{
+			mask |= (1 << i);
+		}
+	}
+	return mask;
+}
+
+static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, const EditorState& state, const Scalar& width, const Scalar& height)
 {
 	const Id elem_id = make_element(ctx, null_id);
 	_attr(attrs::width, width);
@@ -70,9 +125,19 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 				const Tile& tile = map.tiles[id_to_index(tile_id)];
 				if (tile.type)
 				{
-					const TileType& tile_type = tile_types[tile.type];
+					const TileType& tile_type = meta.tile_types[tile.type];					
+					uint16_t glyph_code = tile_type.glyph;
+					if (tile_type.flags & TileTypeFlags::water)
+					{
+						const auto mask = calc_neighbor_water_mask(map, meta.tile_types, tile_coords);
+						if (mask)
+						{
+							glyph_code = meta.ex_tile_glyphes[tile_type.ex_glyph_start + water_tile_mask.codes[mask]];
+						}
+					}
+
 					GlyphData glyph;
-					glyph.code = tile_type.glyph;
+					glyph.code = glyph_code;
 					glyph.color2 = to_color32(tile_type.color_a);
 					glyph.coords = { layout.left + x, layout.top + y };
 					render_buffer.push_glyph(elem_id, glyph);
@@ -88,7 +153,7 @@ static Id map_view(const Context ctx, Map& map, const std::vector<TileType>& til
 			cursor.y >= layout.top && cursor.y < (layout.top + layout.height))
 		{
 			const uint16_t tile_type_idx = state.selected_tile_type;
-			const TileType& tile_type = tile_types[tile_type_idx];
+			const TileType& tile_type = meta.tile_types[tile_type_idx];
 			GlyphData glyph;
 			glyph.code = tile_type.glyph;
 			glyph.color2 = to_color32(tile_type.color_a);
@@ -212,8 +277,8 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			map_view(_ctx, map, tile_types, editor_state, tablet_width, map_height);
-			tile_palette(_ctx, tile_types, editor_state);
+			map_view(_ctx, map, world_meta, editor_state, tablet_width, map_height);
+			tile_palette(_ctx, world_meta.tile_types, editor_state);
 		}
 	}
 }
