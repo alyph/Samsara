@@ -47,10 +47,13 @@
 
 ## game
 - [ ] basic map painting
-  - [ ] ocean, coast
+  - [x] coast
+  - [ ] ocean
   - [ ] city wall
   - [ ] road
   - [ ] houses (some of these will be replaced by template or auto gen)
   - [ ] map panning
-
+  - [ ] river
+  - [ ] brushes
+- [ ] action mechanics
 

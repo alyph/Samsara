@@ -106,6 +106,171 @@
 - order/disorder
 
 
+### Action Mechanics
+- Option A: limited ongoing actions, pick new action when there is empty action slot. events don't count towards action limit
+- Option B: pick new action(s) every fixed number of turns, do not have hard action limit but may apply soft limit, certain actions may be instantanous and do not take action slots
+- Option C: no centralized action selection list, each category will prompt action selection by itself, e.g. when builds complete, pop up to select new building
+
+### Actions
+
+#### Economy
+
+- build or upgrade buildings
+- designate production (HOI4)
+- improve development/infrustructure level
+- enact or change state/provincial economical policies
+- tax adjustment (one of the policy change)
+- found new city/colony
+- merchant missions
+- protect trade fleet mission (EU4)
+- manage trade policies (tariffs, protectism, mercantilism)
+- manage center of trade (EU4)
+- manage and give province to trade company (EU4)
+- control inflation (EU4)
+
+#### Administration
+- government reform
+- government policy change
+- change government
+- revolution
+- move capital
+- manage ruler ambitions and national focus
+- control stability (e.g. raise) (EU4)
+- enact state or provincial edicts
+- national decisions and event choices
+- manage (hire, fire, promote, change) advisors
+- make core province (EU4)
+- convert culture (EU4)
+- estate management (EU4)
+- grant or retract privileges and holdings
+- grant province to estate (EU4)
+- abdicate the throne
+- disinherit heir
+- influence election
+- change local autonomy (EU4)
+- parliament interaction (EU4)
+- HRE interactions (EU4)
+- faction management and interactions
+- harsh treatment (quell rebels, rule with iron fist) (EU4)
+- grant state and territory status to provinces (EU4)
+- gain splendor abilities when achieving age objectives (EU4)
+- encourage/discourage immigrations
+
+#### Advancement
+- discover and advance technologies/culture etc.
+- establish national ideas and traditions
+- embrace institutions (EU4)
+
+#### Diplomacy
+- improve relationship
+- maintain diplomatic ties
+- royal marriage
+- insult
+- offer alliance
+- negotiate treaties
+- guarantee country
+- influence country
+- make treaty
+- trade agreement
+- trade embargo
+- support independence
+- call to arm
+- ask for military support
+- declare rivalry (EU4)
+- diplomatic stance and policy
+- build up spy network
+- espionage
+- share intelligence with other countries
+- support rebels/resistence
+- fabricate claim
+- covert strategy (e.g. break relation of two other countries)
+- form personal union (EU4)
+- annex vassals or personal union partners
+- strengthen government (EU4) (https://eu4.paradoxwikis.com/Government#Strengthen_government)
+
+#### Religion
+- convert populace
+- papacy control and influence (EU4)
+- claim defender of the faith (EU4)
+- misc religious influence and benefits actions (EU4)
+
+#### Millitary
+- recruite troops
+- hire mercenaries
+- build ships
+- manage generals
+- declare war
+- claim the throne (EU4)
+- involved in war
+- condottieri (EU4)
+- maneuver armies/fleets
+- forced march
+- field battle
+- lay siege
+- assault stronghold
+- sortie
+- pirate missions
+- raid, loot, pillage
+- raze cities
+- fight civil war, (against/as) revolt/rebellions
+- scorch the earth (EU4)
+- make peace (peace treaty, armistice)
+- manage war exhaustion
+- raise war taxes
+- call crusade (or other holy wars)
+
+#### Others
+- exploration (new world etc.)
+
+
+### Missions
+- mission can originate from ruler's ambition, which may be persistent for aspiring rulers, which will stay in the agenda, and players can select exact direction which forms the mission (e.g. conqure land, build prosperous land) (or maybe it doesn't transform into but generate the new actions, the ambition stays there until proper conditions are met and can occationally provide aid to those actions), those by itself will transform into different actions and once complete it will go back to form new missions
+- ruling classes (e.g. council, senate etc.) can also propose directional missions, which will show up in the mission list, these are not persistent and must be picked within the time limit
+- the bigger missions of the game are the legacies which are meta challenges similar to achievements (more for meta progression and game mode specifics)
+
+
+### Resources
+- grain *
+- seafood *
+- fruit
+- dairy *-
+- produce *-
+- livestock *-
+- hourse
+
+- sugar
+- salt
+- spice
+
+- wine
+- tea
+- coffee
+
+- flax *
+- wool *-
+- silk
+- cotton *-
+- leather *-
+- fur *-
+
+- wood *
+- clay *
+- stone *-
+- marble
+
+- iron
+- copper
+- gold
+- gem
+
+- pottery *
+- textile *
+- cloth *-
+- clothing
+- paper
+- chinaware
+- dyes
+
 ### Stats
 
 Quantitative values associated with each entity. The entities can be stars, systems, planets, cities, settlements, population, characters, fleets, ships, equipment etc.

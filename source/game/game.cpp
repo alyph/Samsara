@@ -75,11 +75,6 @@ Game::Game()
 	editor_state.map_vp.x = editor_state.map_vp.y = (map_chunk_size / 2);
 	map.chunks.alloc_stored(0, 1024);
 	map.tiles.alloc_stored(0, 512 * 512);
-	map.set_tile({0, 0}, {1});
-	map.set_tile({16, 16}, {1});
-	map.set_tile({10, 10}, {1});
-	map.set_tile({10, 12}, {2});
-	map.set_tile({11, 12}, {2});
 }
 
 
