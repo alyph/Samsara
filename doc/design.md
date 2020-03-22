@@ -127,20 +127,24 @@
 - manage center of trade (EU4)
 - manage and give province to trade company (EU4)
 - control inflation (EU4)
+- construct great projects
 
 #### Administration
 - government reform
 - government policy change
 - change government
+- improve government rank (duchy -> kingdom -> empire etc.)
 - revolution
 - move capital
 - manage ruler ambitions and national focus
 - control stability (e.g. raise) (EU4)
 - enact state or provincial edicts
-- national decisions and event choices
+- national decisions and event choices (EU4 decision list, can be replaced with specific actions)
 - manage (hire, fire, promote, change) advisors
 - make core province (EU4)
 - convert culture (EU4)
+- promote accepted culture (EU4)
+- recover the lost culture (e.g. roman culture)
 - estate management (EU4)
 - grant or retract privileges and holdings
 - grant province to estate (EU4)
@@ -152,9 +156,11 @@
 - HRE interactions (EU4)
 - faction management and interactions
 - harsh treatment (quell rebels, rule with iron fist) (EU4)
+- accept rebel demands
 - grant state and territory status to provinces (EU4)
 - gain splendor abilities when achieving age objectives (EU4)
 - encourage/discourage immigrations
+- root out corruption
 
 #### Advancement
 - discover and advance technologies/culture etc.
@@ -227,7 +233,7 @@
 - mission can originate from ruler's ambition, which may be persistent for aspiring rulers, which will stay in the agenda, and players can select exact direction which forms the mission (e.g. conqure land, build prosperous land) (or maybe it doesn't transform into but generate the new actions, the ambition stays there until proper conditions are met and can occationally provide aid to those actions), those by itself will transform into different actions and once complete it will go back to form new missions
 - ruling classes (e.g. council, senate etc.) can also propose directional missions, which will show up in the mission list, these are not persistent and must be picked within the time limit
 - the bigger missions of the game are the legacies which are meta challenges similar to achievements (more for meta progression and game mode specifics)
-
+- there is also smaller missions like bring properity to a city, which act like a side plot line which bring some speical actions and trigger events
 
 ### Resources
 - grain *

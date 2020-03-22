@@ -104,6 +104,8 @@ inline Vec4 operator*(const Vec4& v, float s);
 // IVec2
 inline IVec2 operator+(const IVec2& v0, const IVec2& v1);
 inline IVec2 operator-(const IVec2& v0, const IVec2& v1);
+inline bool operator==(const IVec2& v0, const IVec2& v1);
+inline bool operator!=(const IVec2& v0, const IVec2& v1);
 
 // Mat33
 inline Quat to_quat(const Mat33& m);
@@ -271,6 +273,16 @@ inline IVec2 operator+(const IVec2& v0, const IVec2& v1)
 inline IVec2 operator-(const IVec2& v0, const IVec2& v1)
 {
 	return { v0.x - v1.x, v0.y - v1.y };
+}
+
+inline bool operator==(const IVec2& v0, const IVec2& v1)
+{
+	return (v0.x == v1.x) && (v0.y == v1.y);
+}
+
+inline bool operator!=(const IVec2& v0, const IVec2& v1)
+{
+	return !(v0 == v1);
 }
 
 // Mat33 Impl

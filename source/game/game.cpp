@@ -68,7 +68,7 @@ Game::Game()
 		{"empty", 0, 0_rgb, 0_rgb},
 		{"forest", 0x0105, 0x30ff50_rgb, 0x30ff50_rgb},
 		{"hill", 0x0218, 0x606070_rgb, 0x606070_rgb},
-		{"coast", 0x027e, 0x80c0f0_rgb, 0x80c0f0_rgb, TileTypeFlags::water},
+		{"coast", 0x027e, 0x103060_rgb, 0x80c0f0_rgb, TileTypeFlags::water},
 	};
 
 	editor_state.selected_tile_type = 1;
@@ -98,7 +98,30 @@ static inline uint8_t calc_neighbor_water_mask(const Map& map, const std::vector
 	return mask;
 }
 
-static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, const EditorState& state, const Scalar& width, const Scalar& height)
+static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const IVec2& end)
+{
+	// https://en.wikipedia.org/wiki/Bresenham's_line_algorithm#All_cases
+	// http://members.chello.at/~easyfilter/Bresenham.pdf
+
+	const Tile tile{tile_type};
+	const auto dx = std::abs(end.x - start.x);
+	const auto dy = -std::abs(end.y - start.y);
+	const auto sx = (start.x < end.x ? 1 : -1);
+	const auto sy = (start.y < end.y ? 1 : -1);
+	auto err = (dx + dy);
+	auto x = start.x;
+	auto y = start.y;
+	map.set_tile({x, y}, tile);
+	while (!((x == end.x && y == end.y)))
+	{
+		const auto e2 = err * 2;
+		if (e2 >= dy) { err += dy; x += sx; }
+		if (e2 <= dx) { err += dx; y += sy; }
+		map.set_tile({x, y}, tile);
+	}
+}
+
+static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorState& state, const Scalar& width, const Scalar& height)
 {
 	const Id elem_id = make_element(ctx, null_id);
 	_attr(attrs::width, width);
@@ -120,22 +143,22 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, const Edi
 				const Tile& tile = map.tiles[id_to_index(tile_id)];
 				if (tile.type)
 				{
-					const TileType& tile_type = meta.tile_types[tile.type];					
-					uint16_t glyph_code = tile_type.glyph;
+					const TileType& tile_type = meta.tile_types[tile.type];
+					GlyphData glyph;
+					glyph.code = tile_type.glyph;
+					glyph.color2 = to_color32(tile_type.color_a);
+					glyph.coords = { layout.left + x, layout.top + y };			
 					if (tile_type.flags & TileTypeFlags::water)
 					{
 						const auto mask = calc_neighbor_water_mask(map, meta.tile_types, tile_coords);
 						if (mask)
 						{
-							glyph_code = meta.ex_tile_glyphes[tile_type.ex_glyph_start + water_tile_mask.codes[mask]];
+							glyph.code = meta.ex_tile_glyphes[tile_type.ex_glyph_start + water_tile_mask.codes[mask]];
+							// glyph.color2 = 0x4070a0_rgb32;
 						}
 					}
 
-					GlyphData glyph;
-					glyph.code = glyph_code;
-					glyph.color2 = to_color32(tile_type.color_a);
-					glyph.coords = { layout.left + x, layout.top + y };
-					render_buffer.push_glyph(elem_id, glyph);
+				render_buffer.push_glyph(elem_id, glyph);
 				}
 			}
 		}
@@ -147,6 +170,7 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, const Edi
 		if (cursor.x >= layout.left && cursor.x < (layout.left + layout.width) &&
 			cursor.y >= layout.top && cursor.y < (layout.top + layout.height))
 		{
+			const IVec2 map_cursor{map_x + cursor.x - layout.left, map_y + cursor.y - layout.top};
 			const uint16_t tile_type_idx = state.selected_tile_type;
 			const TileType& tile_type = meta.tile_types[tile_type_idx];
 			GlyphData glyph;
@@ -158,9 +182,30 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, const Edi
 
 			if (_down)
 			{
-				map.set_tile({map_x + cursor.x - layout.left, map_y + cursor.y - layout.top}, {tile_type_idx});
+				if (!state.painting)
+				{
+					state.painting = true;
+					state.paint_cursor = map_cursor;
+					map.set_tile(map_cursor, {tile_type_idx});
+				}
+				else if (state.paint_cursor != map_cursor)
+				{
+					paint_line(map, tile_type_idx, state.paint_cursor, map_cursor);
+					state.paint_cursor = map_cursor;
+				}				
 			}
 		}
+	}
+
+	// TODO: we won't be able to clear this state if we are not rendered
+	// have a reliable way from the presenter for initializing and cleaning up
+	// states, maybe this should be the internal states of the elements?
+	// another way is asking the presenter if this element was rendered last frame
+	// or similarly whether an initialization action should run because element
+	// wasn't there last frame
+	if (!_down)
+	{
+		state.painting = false;
 	}
 
 	return elem_id;

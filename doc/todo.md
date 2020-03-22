@@ -25,6 +25,7 @@
   - [x] impl tablet finalizer with layout and render buffer
 - [x] text should influence width if not determine it (perhaps should determine max width?), 
   - one work around for now is to let the high level function (like button()) preset width based on the length of the text
+- [ ] accurate mouse button and key down states (even if mouse leave the window or app lost focus)
 - [ ] text wrap?
 - [ ] more layout options (padding, margin), horizontal stack
 - [ ] border
@@ -48,12 +49,13 @@
 ## game
 - [ ] basic map painting
   - [x] coast
+  - [ ] brushes
+  - [ ] save/load map
   - [ ] ocean
   - [ ] city wall
   - [ ] road
   - [ ] houses (some of these will be replaced by template or auto gen)
   - [ ] map panning
   - [ ] river
-  - [ ] brushes
 - [ ] action mechanics
 
