@@ -77,6 +77,7 @@ template<typename T, typename ValT> void set_elem_post_attr(Frame& frame, Id ele
 // TODO: can maybe inline these context functions
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count);
 extern Context create_scoped_context(const Context& parent_scope_context, uint64_t count, uint64_t user_id);
+extern Id get_working_elem_id(const Context& context);
 extern Element& get_working_elem(const Context& context);
 extern void finalize(const Context& context, bool open_tree=false); // run finalize (attributes) on all unfinalized elements
 extern Id get_section_root(const Context& context);

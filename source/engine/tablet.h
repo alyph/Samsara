@@ -10,25 +10,17 @@
 
 struct GlyphData;
 
-struct TabletLayout
-{
-	int left{}, top{}, width{}, height{};
-};
-
 namespace attrs
 {
 	// extern Attribute<Id> tablet_id; // TODO: remove
 	extern Attribute<Id> quad_shader;
 	extern Attribute<SimpleArray<GlyphData>> glyphs;
-	extern Attribute<TabletLayout> tablet_layout;
 }
 
 namespace elem
 {
 	extern Id tablet(const Context ctx);
 }
-
-extern Vec2 calc_tablet_size(int width, int height, Id texture);
 
 struct GlyphData
 {
@@ -58,8 +50,13 @@ struct TabletRenderBuffer
 	inline void pop_glyph(size_t idx);
 };
 
-extern TabletRenderBuffer& access_tablet_render_buffer(const Context& context);
+struct TabletLayout
+{
+	int left{}, top{}, width{}, height{};
+};
 
+extern Vec2 calc_tablet_size(int width, int height, Id texture);
+extern TabletRenderBuffer& access_tablet_render_buffer_and_layout(const Context& context, TabletLayout& out_layout);
 
 // TabletRenderBuffer
 

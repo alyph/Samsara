@@ -46,16 +46,28 @@
 
 
 
-## game
+## editor
 - [ ] basic map painting
-  - [x] coast
   - [ ] brushes
+    - [x] square brush
+    - [ ] round bursh
+    - [x] brush size
   - [ ] save/load map
-  - [ ] ocean
-  - [ ] city wall
-  - [ ] road
-  - [ ] houses (some of these will be replaced by template or auto gen)
+  - [ ] tile types
+    - [x] coast
+    - [ ] ocean
+    - [ ] city wall
+    - [ ] road
+    - [ ] houses (some of these will be replaced by template or auto gen)
+    - [ ] river
+  - [ ] city placement
+    - [ ] city expansion
+    - [ ] road connection
+    - [ ] rural devs (simple placement outside of the city)
+    - [ ] resource sites
   - [ ] map panning
-  - [ ] river
+
+## game
+- [ ] basic economic model
 - [ ] action mechanics
 

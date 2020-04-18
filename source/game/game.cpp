@@ -98,12 +98,24 @@ static inline uint8_t calc_neighbor_water_mask(const Map& map, const std::vector
 	return mask;
 }
 
-static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const IVec2& end)
+static void paint_square(Map& map, uint16_t tile_type, const IVec2& center, int radius)
+{
+	int r = (radius - 1);
+	const Tile tile{tile_type};
+	for (int dx = -r; dx <= r; dx++)
+	{
+		for (int dy = -r; dy <= r; dy++)
+		{
+			map.set_tile(center + IVec2{dx, dy}, tile);
+		}
+	}	
+}
+
+static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const IVec2& end, int radius)
 {
 	// https://en.wikipedia.org/wiki/Bresenham's_line_algorithm#All_cases
 	// http://members.chello.at/~easyfilter/Bresenham.pdf
 
-	const Tile tile{tile_type};
 	const auto dx = std::abs(end.x - start.x);
 	const auto dy = -std::abs(end.y - start.y);
 	const auto sx = (start.x < end.x ? 1 : -1);
@@ -111,13 +123,14 @@ static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const I
 	auto err = (dx + dy);
 	auto x = start.x;
 	auto y = start.y;
-	map.set_tile({x, y}, tile);
+	paint_square(map, tile_type, {x, y}, radius);
 	while (!((x == end.x && y == end.y)))
 	{
 		const auto e2 = err * 2;
 		if (e2 >= dy) { err += dy; x += sx; }
 		if (e2 <= dx) { err += dx; y += sy; }
-		map.set_tile({x, y}, tile);
+		// TODO: if this gets too expensive, can just draw the deltas
+		paint_square(map, tile_type, {x, y}, radius);
 	}
 }
 
@@ -127,8 +140,8 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 	_attr(attrs::width, width);
 	_attr(attrs::height, height);
 
-	TabletRenderBuffer& render_buffer = access_tablet_render_buffer(ctx);
-	const TabletLayout& layout = get_elem_attr_or_assert(*ctx.frame, elem_id, attrs::tablet_layout);
+	TabletLayout layout;
+	TabletRenderBuffer& render_buffer = access_tablet_render_buffer_and_layout(ctx, layout);
 	int map_x = state.map_vp.x - layout.width / 2;
 	int map_y = state.map_vp.y - layout.height / 2;
 
@@ -173,11 +186,14 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 			const IVec2 map_cursor{map_x + cursor.x - layout.left, map_y + cursor.y - layout.top};
 			const uint16_t tile_type_idx = state.selected_tile_type;
 			const TileType& tile_type = meta.tile_types[tile_type_idx];
+			const int r = state.brush_radius - 1;
+			const int d = r * 2 + 1;
 			GlyphData glyph;
 			glyph.code = tile_type.glyph;
 			glyph.color2 = to_color32(tile_type.color_a);
 			glyph.color1 = to_color32(0x303030_rgb);
-			glyph.coords = { cursor.x, cursor.y };
+			glyph.coords = { cursor.x - r, cursor.y - r };
+			glyph.size = { d, d };
 			render_buffer.push_glyph(elem_id, glyph);
 
 			if (_down)
@@ -186,11 +202,11 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 				{
 					state.painting = true;
 					state.paint_cursor = map_cursor;
-					map.set_tile(map_cursor, {tile_type_idx});
+					paint_square(map, tile_type_idx, map_cursor, state.brush_radius);
 				}
 				else if (state.paint_cursor != map_cursor)
 				{
-					paint_line(map, tile_type_idx, state.paint_cursor, map_cursor);
+					paint_line(map, tile_type_idx, state.paint_cursor, map_cursor, state.brush_radius);
 					state.paint_cursor = map_cursor;
 				}				
 			}
@@ -211,6 +227,65 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 	return elem_id;
 }
 
+static void palette_button(const Context ctx, int index, uint16_t glyph_code, const Color32& color, int val, int& selected_val)
+{
+	int size = 3;
+	int cols = 2;
+
+	int row = (index / cols);
+	int col = (index % cols);
+
+	const Id button_id = make_element(ctx, null_id);
+	_attr(attrs::placement, ElementPlacement::loose);
+	_attr(attrs::left, col * size);
+	_attr(attrs::top, row * size);
+	_attr(attrs::width, size);
+	_attr(attrs::height, size);
+
+	const bool selected = (selected_val == val);
+
+	// TODO: we should make a helper to get both render buffer and layout
+	// otherwise user can cache a render_buffer outside of the loop and reuse it
+	// while the layout has not been properly finalized
+	TabletLayout layout;
+	TabletRenderBuffer& render_buffer = access_tablet_render_buffer_and_layout(ctx, layout);
+	GlyphData glyph;
+	int x{layout.left}, y{layout.top};
+
+	auto draw = [&](uint16_t code, const IVec2& coords)
+	{
+		glyph.code = code;
+		glyph.coords = coords;
+		render_buffer.push_glyph(button_id, glyph);
+	};
+
+	// TODO: maybe allow pushing a static array of glyphs
+	// center glyph
+	glyph.color2 = color;
+	draw(glyph_code, {x + 1, y + 1});
+
+	uint16_t normal_border[] = { 0x00da, 0x00c4, 0x00bf, 0x00b3, 0x00d9, 0x00c0 };
+	uint16_t selected_border[] = { 0x00c9, 0x00cd, 0x00bb, 0x00ba, 0x00bc, 0x00c8 };
+	uint16_t* border_codes = selected? selected_border : normal_border;
+
+	// border
+	glyph.color2 = 0xd0d0d0_rgb32;
+	draw(border_codes[0], {x, y});
+	draw(border_codes[1], {x + 1, y});
+	draw(border_codes[2], {x + 2, y});
+	draw(border_codes[3], {x + 2, y + 1});
+	draw(border_codes[4], {x + 2, y + 2});
+	draw(border_codes[1], {x + 1, y + 2});
+	draw(border_codes[5], {x, y + 2});
+	draw(border_codes[3], {x, y + 1});
+
+	// happen next frame
+	if (_clicked)
+	{
+		selected_val = val;
+	}
+}
+
 static void tile_palette(const Context ctx, const std::vector<TileType>& tile_types, EditorState& state)
 {
 	int size = 3;
@@ -218,60 +293,20 @@ static void tile_palette(const Context ctx, const std::vector<TileType>& tile_ty
 
 	for (int i = 0; i < tile_types.size(); i++)
 	{
-		int row = (i / cols);
-		int col = (i % cols);
-
-		const Id button_id = elem::node(_ctx_id(i));
-		_attr(attrs::placement, ElementPlacement::loose);
-		_attr(attrs::left, col * size);
-		_attr(attrs::top, row * size);
-		_attr(attrs::width, size);
-		_attr(attrs::height, size);
-
-		const bool selected = (state.selected_tile_type == i);
-
-		// TODO: we should make a helper to get both render buffer and layout
-		// otherwise user can cache a render_buffer outside of the loop and reuse it
-		// while the layout has not been properly finalized
-		TabletRenderBuffer& render_buffer = access_tablet_render_buffer(ctx);
-		const TabletLayout& layout = get_elem_attr_or_assert(*ctx.frame, button_id, attrs::tablet_layout);
-
 		const TileType& type_data = tile_types[i];
-		GlyphData glyph;
-		int x{layout.left}, y{layout.top};
+		palette_button(_ctx_id(i), i, type_data.glyph, to_color32(type_data.color_a), i, state.selected_tile_type);
+	}
+}
 
-		auto draw = [&](uint16_t code, const IVec2& coords)
-		{
-			glyph.code = code;
-			glyph.coords = coords;
-			render_buffer.push_glyph(button_id, glyph);
-		};
-
-		// TODO: maybe allow pushing a static array of glyphs
-		// center glyph
-		glyph.color2 = to_color32(type_data.color_a);
-		draw(type_data.glyph, {x + 1, y + 1});
-
-		uint16_t normal_border[] = { 0x00da, 0x00c4, 0x00bf, 0x00b3, 0x00d9, 0x00c0 };
-		uint16_t selected_border[] = { 0x00c9, 0x00cd, 0x00bb, 0x00ba, 0x00bc, 0x00c8 };
-		uint16_t* border_codes = selected? selected_border : normal_border;
-
-		// border
-		glyph.color2 = 0xd0d0d0_rgb32;
-		draw(border_codes[0], {x, y});
-		draw(border_codes[1], {x + 1, y});
-		draw(border_codes[2], {x + 2, y});
-		draw(border_codes[3], {x + 2, y + 1});
-		draw(border_codes[4], {x + 2, y + 2});
-		draw(border_codes[1], {x + 1, y + 2});
-		draw(border_codes[5], {x, y + 2});
-		draw(border_codes[3], {x, y + 1});
-
-		// happen next frame
-		if (_clicked)
-		{
-			state.selected_tile_type = i;
-		}
+static void brush_size_palette(const Context ctx, const std::vector<TileType>& tile_types, EditorState& state)
+{
+	int brush_sizes[] = {1, 2, 4, 8};
+	int padding = (((int)tile_types.size() + 1) / 2) * 2; // TODO: hack until we have the proper layout implemented
+	for (int i = 0; i < LEN(brush_sizes); i++)
+	{
+		const int size = brush_sizes[i];
+		uint16_t code = ('0' + size);
+		palette_button(_ctx_id(i), padding + i, code, 0xffffff_rgb32, size, state.brush_radius);
 	}
 }
 
@@ -319,6 +354,7 @@ void Game::present(const Context& ctx)
 		{
 			map_view(_ctx, map, world_meta, editor_state, tablet_width, map_height);
 			tile_palette(_ctx, world_meta.tile_types, editor_state);
+			brush_size_palette(_ctx, world_meta.tile_types, editor_state);
 		}
 	}
 }

@@ -17,7 +17,6 @@ namespace attrs
 {
 	Attribute<Id> quad_shader{null_id};
 	Attribute<SimpleArray<GlyphData>> glyphs{SimpleArray<GlyphData>{}};
-	Attribute<TabletLayout> tablet_layout{TabletLayout{}};
 }
 
 static constexpr const char* uniform_mvp = "MVP";
@@ -88,6 +87,7 @@ namespace attrs
 	// internal state attribute used during a construction of a frame as well as rendering
 	Attribute<TabletWorkState> tablet_work_state{TabletWorkState{}};
 	Attribute<TabletRenderBuffer> tablet_render_buffer{TabletRenderBuffer{}};
+	Attribute<TabletLayout> tablet_layout{TabletLayout{}};
 }
 
 Vec2 calc_tablet_size(int width, int height, Id texture)
@@ -102,11 +102,12 @@ Vec2 calc_tablet_size(int width, int height, Id texture)
 	return Vec2{ (float)width, (float)height * tex_h / tex_w };
 }
 
-TabletRenderBuffer& access_tablet_render_buffer(const Context& context)
+extern TabletRenderBuffer& access_tablet_render_buffer_and_layout(const Context& context, TabletLayout& out_layout)
 {
-	finalize(context);
 	Id tablet_elem_id = get_section_root(context);
 	asserts(tablet_elem_id);
+	finalize(context);
+	out_layout = get_elem_attr_or_assert(*context.frame, get_working_elem_id(context), attrs::tablet_layout);
 	return get_mutable_elem_attr_or_assert(*context.frame, tablet_elem_id, attrs::tablet_render_buffer);
 }
 
@@ -640,6 +641,8 @@ static void finalize_parent_after_structured_children(TabletRenderBuffer& render
 
 static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_id, Id last_elem_id)
 {
+	// NOTE: It's only safe to keep a pointer to these attribute values because we are not messing with the elements'
+	// instance attribute buffer but only adding to the post attribute buffer
 	TabletWorkState& state = get_mutable_elem_attr_or_assert(frame, root_elem_id, attrs::tablet_work_state);
 	TabletRenderBuffer& render_buffer = get_mutable_elem_attr_or_assert(frame, root_elem_id, attrs::tablet_render_buffer);
 

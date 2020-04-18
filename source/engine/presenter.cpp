@@ -301,6 +301,18 @@ Context create_scoped_context(const Context& parent_scope_context, uint64_t coun
 	return create_scoped_context(intermediate_context, user_id);
 }
 
+Id get_working_elem_id(const Context& context)
+{
+	auto frame = context.frame;
+	auto worker = context.worker;
+
+	// right now we are just getting the current working element
+	// TODO: we may want to check the current scope make sure we are not setting attr of 
+	// the elements that are created in previously called functions
+	auto& elem_worker = worker->elem_worker_stack.back();
+	return elem_worker.elem_id;
+}
+
 Element& get_working_elem(const Context& context)
 {
 	auto frame = context.frame;

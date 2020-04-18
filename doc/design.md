@@ -37,6 +37,15 @@
 ## Mechanics
 
 ### Economic Model
+- key advancement
+  - more dev = more production & more demand
+  - more production to satisfy more demand
+  - through trade wealth is generated
+  - wealth is then redistributed among various classes of populations
+  - more wealth = higher ability to acquire goods produced
+  - more satisfied demands = more content population
+  - satisfied higher demands = more buff & idea generation
+  - satisfied demands = unlock more building options
 - overall development
   - population
   - infrustructure, housing, sanitation, health, leisure
@@ -44,7 +53,7 @@
   - more building slots
   - higher production and demand
 - agricultural/rural development
-  - including farming, minding, wood cutting, hunting and any other resource gathering activities
+  - including farming, mining, wood cutting, hunting and any other resource gathering activities
   - rural population and infrustructure
   - raw resource gathering, food, material production
 - commerce level
@@ -79,6 +88,22 @@
   - one downside of wealthiness is it can eventually lead to decadence due to long term life indulgement 
     - decadence will become a counter force to cultural and scientific development, slow down innovations
     - in general the goal is to improve wealth but in the meantime utilize ways to counter decadence, and when necessary break down the wealth with extreme means like wars or revolutions
+
+### Development Types
+- agriculture (farming, fishing, pasturing)
+  - common algricultral goods (converting to food++, goods+, materials-)
+- foresting
+  - common foresting goods (converting to materials+, goods-)
+- mining
+  - common minding goods (converting to materials++)
+- commerce
+  - trade
+- industry
+  - common artisan goods (converting to goods++, materials+)
+- culture (religion, school, art)
+  - education, ideas
+- governing/nobel
+  - ideas, administration
 
 ### Province Stats
 
@@ -236,46 +261,56 @@
 - there is also smaller missions like bring properity to a city, which act like a side plot line which bring some speical actions and trigger events
 
 ### Resources
-- grain *
-- seafood *
-- fruit
-- dairy *-
-- produce *-
-- livestock *-
-- hourse
+- food
+  - grain *
+  - seafood *
+  - fruit
+  - dairy *-
+  - produce *-
+  - meat
+  - livestock *-
+  - sugar
+  - salt
+  - spice
+  - wine
+  - tea
+  - coffee
+- civilian goods
+  - flax *
+  - wool *-
+  - silk
+  - cotton *-
+  - leather *-
+  - fur *-
+  - pottery *
+  - textile *
+  - cloth *-
+  - clothing
+  - paper
+  - chinaware
+  - dyes
+- industrial materials
+  - wood *
+  - clay *
+  - stone *-
+  - marble
+  - iron
+  - copper
+- luxury
+  - gold
+  - gem
+- millitary
+  - weapons
+  - hourse (also used in civilian and industrial needs)
+  - ship (also used in trading)
 
-- sugar
-- salt
-- spice
 
-- wine
-- tea
-- coffee
 
-- flax *
-- wool *-
-- silk
-- cotton *-
-- leather *-
-- fur *-
 
-- wood *
-- clay *
-- stone *-
-- marble
 
-- iron
-- copper
-- gold
-- gem
 
-- pottery *
-- textile *
-- cloth *-
-- clothing
-- paper
-- chinaware
-- dyes
+
+
 
 ### Stats
 

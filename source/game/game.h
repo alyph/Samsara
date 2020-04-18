@@ -7,11 +7,12 @@
 
 struct EditorState
 {
-	uint16_t selected_tile_type{};
 	IVec2 map_vp;
 	// TODO: maybe this should be the internal state of the map view
 	bool painting{};
 	IVec2 paint_cursor;
+	int selected_tile_type{};
+	int brush_radius = 1;
 };
 
 struct WorldMeta
