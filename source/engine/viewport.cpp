@@ -97,6 +97,7 @@ static RaycastResult raycast_viewport(const Frame& frame, Id elem_id, double x, 
 
 	// find out ndc for x, y
 	// TODO: do we need add 0.5 to calculate based on the center of the pixel?
+	// TODO: use calc_ndc()
 	double ndc_x = (x / width) * 2.0 - 1.0;
 	double ndc_y = (y / height) * -2.0 + 1.0;	
 

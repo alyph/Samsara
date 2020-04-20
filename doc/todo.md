@@ -65,7 +65,7 @@
     - [ ] road connection
     - [ ] rural devs (simple placement outside of the city)
     - [ ] resource sites
-  - [ ] map panning
+  - [x] map panning
 
 ## game
 - [ ] basic economic model

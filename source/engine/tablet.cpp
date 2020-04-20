@@ -1233,6 +1233,7 @@ static RaycastResult raycast_tablet(const Frame& frame, Id elem_id, const Mat44&
 		const int cy = std::clamp((int)std::floor(uv.y * height), 0, height-1);
 
 		hit_result.uv = uv;
+		hit_result.ruv = {uv.x * width, uv.y * height};
 		hit_result.iuv = {cx, cy};
 
 		// loop backwards to find the deepest hit descendent
@@ -1249,8 +1250,10 @@ static RaycastResult raycast_tablet(const Frame& frame, Id elem_id, const Mat44&
 			}
 		}
 
+		// TODO: add an attribute for whether or not the parent should receive raycast hit
+		// for now just default to no hit, if no children hit
 		// if no child hit, tablet itself is hit
-		if (!hit_result.hit_elem_id) { hit_result.hit_elem_id = elem_id; }
+		// if (!hit_result.hit_elem_id) { hit_result.hit_elem_id = elem_id; }
 	}
 
 	return hit_result;

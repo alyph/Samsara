@@ -38,4 +38,13 @@ struct TriangleRaycastResult
 // TODO: use array view
 // x, y in NDC (-1, 1)
 extern TriangleRaycastResult raycast_triangles(size_t num_triangles, const Vec3* verts, const uint32_t* indices, const Mat44& transform, double x, double y);
+inline DVec2 calc_ndc(const DVec2& pixel_coord, double vp_width, double vp_height);
 
+
+inline DVec2 calc_ndc(const DVec2& pixel_coord, double vp_width, double vp_height)
+{
+	// TODO: maybe should take left, top too
+	double ndc_x = (pixel_coord.x / vp_width) * 2.0 - 1.0;
+	double ndc_y = (pixel_coord.y / vp_height) * -2.0 + 1.0;
+	return {ndc_x, ndc_y};
+}

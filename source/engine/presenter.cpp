@@ -469,11 +469,11 @@ bool is_elem_hover(const Context& context)
 	return worker->is_mouse_currently(MouseInteraction::hover, elem);
 }
 
-bool is_elem_down(const Context& context)
+bool is_elem_down(const Context& context, MouseInteraction interaction)
 {
 	const auto& elem = get_working_elem(context);
 	auto worker = context.worker;
-	return worker->is_mouse_currently(MouseInteraction::left_down, elem);
+	return worker->is_mouse_currently(interaction, elem);
 }
 
 bool was_elem_clicked(const Context& context)
@@ -594,16 +594,16 @@ void Presenter::process_control(const std::vector<InputEvent>& events)
 			int idx{}, bit{};
 			if (event.type == InputEventType::key)
 			{
-				const int idx = (int)event.key / 64;
-				const int bit = (int)event.key % 64;
+				idx = (int)event.key / 64;
+				bit = (int)event.key % 64;
 			}
 			else if (event.type == InputEventType::mouse_button)
 			{
 				static_assert((int)Keys::max <= (256-8));
 				static_assert((int)MouseButtons::max <= 8);
 
-				const int idx = 3;
-				const int bit = 56 + (int)event.button;
+				idx = 3;
+				bit = 56 + (int)event.button;
 			}
 			else
 			{
@@ -614,7 +614,7 @@ void Presenter::process_control(const std::vector<InputEvent>& events)
 			uint64_t mask = (((uint64_t)1ull) << bit);
 			if (event.down) { latest_input.key_button_down[idx] |= mask; }
 			else { latest_input.key_button_down[idx] &= (~mask); }
-		}		
+		}
 
 		// always check mouse hover target
 		RaycastResult hit_result = raycast(curr_frame, latest_input.mouse_x, latest_input.mouse_y);
@@ -654,10 +654,12 @@ void Presenter::step_frame(double dt)
 	// state which may change: hover items
 	// if such state changed, present() again (but to a limited number of times: just once for now)
 	RaycastResult hit_result = raycast(curr_frame, latest_input.mouse_x, latest_input.mouse_y);
+	// always store the new hit result, so even if we don't re-present() right away
+	// we will get fresh values next time we present()
+	latest_input.mouse_hit = hit_result;
 	if (hit_result.hit_elem_id != latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover])
 	{
 		latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover] = hit_result.hit_elem_id;
-		latest_input.mouse_hit = hit_result;
 		present();
 	}
 
@@ -721,7 +723,7 @@ void Presenter::present()
 		}
 	}
 
-	{	
+	{
 		// Create a scoped children block to ensure all elements are children of this virtual root
 		// This will insert an empty entry into the worker stack for the top level elements,
 		// and when exiting the scope, this will also pop the last top level element, and set its

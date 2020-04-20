@@ -21,6 +21,8 @@ struct Element;
 struct ElementType;
 struct ElementTypeSetup;
 struct RaycastResult;
+enum class Keys : uint8_t;
+enum class MouseButtons : uint8_t;
 
 using FinalizerFunc = void(*)(Frame& frame, Id root_elem_id, Id first_elem_id, Id last_elem_id);
 // x, y in screen space (in pixels)
@@ -32,6 +34,15 @@ enum class ElementPlacement
 {
 	structured,
 	loose,
+};
+
+enum class MouseInteraction
+{
+	left_down,
+	right_down,
+	mid_down,
+	hover,
+	max
 };
 
 namespace attrs
@@ -84,16 +95,19 @@ extern Id get_section_root(const Context& context);
 
 // input related
 extern bool is_elem_hover(const Context& context);
-extern bool is_elem_down(const Context& context);
+extern bool is_elem_down(const Context& context, MouseInteraction interaction);
 extern bool was_elem_clicked(const Context& context);
 extern bool was_elem_pressed(const Context& context);
+inline bool is_key_down(const Context& context, Keys key);
+inline bool is_mouse_down(const Context& context, MouseButtons button);
 
 #define _ctx create_scoped_context(ctx, __COUNTER__)
 #define _ctx_id(user_id) create_scoped_context(ctx, __COUNTER__, user_id)
 #define _attr(attr, val) set_elem_instance_attr(ctx, attr, val)
 #define _children if (const ScopedChildrenBlock CONCAT(children_block_, __COUNTER__){ctx}; true)
 #define _hover (is_elem_hover(ctx))
-#define _down (is_elem_down(ctx))
+#define _down (is_elem_down(ctx, MouseInteraction::left_down))
+#define _right_down (is_elem_down(ctx, MouseInteraction::right_down))
 #define _clicked (was_elem_clicked(ctx))
 #define _pressed (was_elem_pressed(ctx))
 
@@ -159,7 +173,8 @@ struct RaycastResult
 {
 	Id hit_elem_id{};
 	Vec3 point; // in NDC space (-1, 1), smaller z means closer
-	Vec2 uv; // contextual 2d data
+	Vec2 uv; // contextual 2d data (always 0 ~ 1)
+	Vec2 ruv; // contextual 2d real number data (may be any value that makes sense)
 	IVec2 iuv; // contextual 2d integer data
 };
 
@@ -174,15 +189,6 @@ struct Context
 	Context(const Context& other) = delete;
 	Context(Context&& other) = default;
 	Context& operator=(const Context& other) = delete;
-};
-
-enum class MouseInteraction
-{
-	left_down,
-	right_down,
-	mid_down,
-	hover,
-	max
 };
 
 struct InputState
@@ -381,6 +387,22 @@ void set_elem_post_attr(Frame& frame, Id elem_id, const Attribute<T>& attr, cons
 {
 	Element& elem = frame.elements[id_to_index(elem_id)];
 	frame.post_attr_table.set_attr(elem.post_attrs, attr, val);
+}
+
+inline bool is_key_down(const Context& context, Keys key)
+{
+	const int idx = (int)key / 64;
+	const int bit = (int)key % 64;
+	uint64_t mask = (((uint64_t)1ull) << bit);
+	return (context.frame->curr_input.key_button_down[idx] & mask);
+}
+
+inline bool is_mouse_down(const Context& context, MouseButtons button)
+{
+	const int idx = 3;
+	const int bit = 56 + (int)button;
+	uint64_t mask = (((uint64_t)1ull) << bit);
+	return (context.frame->curr_input.key_button_down[idx] & mask);
 }
 
 namespace elem

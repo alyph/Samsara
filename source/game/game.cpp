@@ -5,6 +5,17 @@
 #include "engine/shader.h"
 #include "engine/image_utils.h"
 
+// mask encodes 1 for the directions that are not water
+// total 8 bits for 8 directions, ordered as follows:
+//     7 0 1    +Y
+//     6 - 2     ^
+//     5 4 3     | -> +X
+//
+// code encodes 1 for neighbors that need water connections
+// total 4 bits for 4 neighbors, ordered as follows:
+//       0      +Y
+//     3 - 1     ^
+//       2       | -> +X
 struct WaterTileMask
 {
 	uint8_t codes[256];
@@ -82,9 +93,15 @@ void Game::update()
 {
 }
 
+// This generates the mask that encodes the non-water directions (see above explanations of mask)
+// return 0 for water tile that has no blocking non-water directions, in which case a normal tile glyph should be used
 static inline uint8_t calc_neighbor_water_mask(const Map& map, const std::vector<TileType>& tile_types, const IVec2& tile_coords)
 {
-	const IVec2 offsets[] = { {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1} };
+	// remind of ordering:
+	//     7 0 1  +Y
+	//     6 - 2   ^
+	//     5 4 3   | -> +X
+	const IVec2 offsets[] = { {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1} };
 	uint8_t mask = 0;
 	for (int i = 0; i < 8; i++)
 	{
@@ -160,7 +177,7 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 					GlyphData glyph;
 					glyph.code = tile_type.glyph;
 					glyph.color2 = to_color32(tile_type.color_a);
-					glyph.coords = { layout.left + x, layout.top + y };			
+					glyph.coords = { layout.left + x, layout.top + layout.height - 1 - y };
 					if (tile_type.flags & TileTypeFlags::water)
 					{
 						const auto mask = calc_neighbor_water_mask(map, meta.tile_types, tile_coords);
@@ -183,7 +200,7 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 		if (cursor.x >= layout.left && cursor.x < (layout.left + layout.width) &&
 			cursor.y >= layout.top && cursor.y < (layout.top + layout.height))
 		{
-			const IVec2 map_cursor{map_x + cursor.x - layout.left, map_y + cursor.y - layout.top};
+			const IVec2 map_cursor{map_x + cursor.x - layout.left, map_y + (layout.top + layout.height - 1 - cursor.y)};
 			const uint16_t tile_type_idx = state.selected_tile_type;
 			const TileType& tile_type = meta.tile_types[tile_type_idx];
 			const int r = state.brush_radius - 1;
@@ -209,6 +226,14 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 					paint_line(map, tile_type_idx, state.paint_cursor, map_cursor, state.brush_radius);
 					state.paint_cursor = map_cursor;
 				}				
+			}
+
+			if (!state.dragging_map && _right_down)
+			{
+				state.dragging_map = true;
+				state.dragging_map_coord = map_cursor;
+				const auto& ruv = ctx.frame->curr_input.mouse_hit.ruv;
+				state.dragging_map_offset = {ruv.x - cursor.x, 1.f - (ruv.y - cursor.y)};
 			}
 		}
 	}
@@ -261,6 +286,7 @@ static void palette_button(const Context ctx, int index, uint16_t glyph_code, co
 
 	// TODO: maybe allow pushing a static array of glyphs
 	// center glyph
+	glyph.color1 = 0xd0_rgba32; // darkened translucent background
 	glyph.color2 = color;
 	draw(glyph_code, {x + 1, y + 1});
 
@@ -325,12 +351,9 @@ void Game::present(const Context& ctx)
 	const float vp_width = (float)tablet_width;
 	const float vp_height = vp_width / aspect;
 
-	int map_height = std::min(tablet_height, (int)std::ceil(vp_height / (tablet_size.y / tablet_height)));
-
 	// TODO: use othographic projection
 	Viewpoint vp;
 	vp.projection = make_orthographic(vp_width / 2, aspect, 0.f, 100.f);
-	vp.pose.pos.y = ((float)tablet_size.y - vp_height) / 2;
 
 	viewport(_ctx);
 	_attr(attrs::width, window->width());
@@ -340,10 +363,58 @@ void Game::present(const Context& ctx)
 
 	_children
 	{
-		tablet(_ctx);
-
+		// map view
+		float max_zoom = 2.0;
+		int map_size = (int)(tablet_width * max_zoom) + 4;
 		
-		_attr(attrs::transform, Mat44::identity());
+		if (editor_state.dragging_map)
+		{
+			if (is_mouse_down(ctx, MouseButtons::right))
+			{
+				const auto& input = ctx.frame->curr_input;
+				DVec2 ndc = calc_ndc({input.mouse_x, input.mouse_y}, window->width(), window->height());
+				double world_x = ndc.x * vp_width / 2 - editor_state.dragging_map_offset.x;
+				double world_y = ndc.y * vp_height / 2 - editor_state.dragging_map_offset.y;
+				int half_size = map_size / 2;
+				int tablet_x = std::clamp((int)std::floor(world_x), -half_size, half_size-1);
+				int tablet_y = std::clamp((int)std::floor(world_y), -half_size, half_size-1);
+				// TODO: since we are changing the map pose here, it will actually invalidate the iuv hit cell done by previous raycast
+				// which is stored in the curr_input.mouse_hit. When the later code is using that iuv (like in the map_view())
+				// the values there are no longer valid and will have 1 frame delay, so ideally we should calculate the hit 
+				// map coordinates right there, store and use it whenever needed consistently
+				editor_state.map_pose_offset = {(float)(world_x - tablet_x), (float)(world_y - tablet_y)};
+				editor_state.map_vp = (editor_state.dragging_map_coord - IVec2{tablet_x, tablet_y});
+			}
+			else
+			{
+				editor_state.dragging_map = false;
+			}
+		}
+
+		tablet(_ctx);
+		
+		Pose map_pose;
+		map_pose.pos.x = editor_state.map_pose_offset.x;
+		map_pose.pos.y = editor_state.map_pose_offset.y;
+		map_pose.pos.z = 1.f;
+		_attr(attrs::transform, to_mat44(map_pose));
+		_attr(attrs::width, map_size);
+		_attr(attrs::height, map_size);
+		_attr(attrs::texture, atlas_texture);
+		_attr(attrs::shader, tablet_shader);
+		_attr(attrs::quad_shader, tablet_screen_shader);
+
+		_children
+		{
+			map_view(_ctx, map, world_meta, editor_state, map_size, map_size);
+		}
+
+
+		// overlay
+		tablet(_ctx);
+		Pose overlay_tablet_pose;
+		overlay_tablet_pose.pos.y = (vp_height - tablet_size.y) / 2;
+		_attr(attrs::transform, to_mat44(overlay_tablet_pose));
 		_attr(attrs::width, tablet_width);
 		_attr(attrs::height, tablet_height);
 		_attr(attrs::texture, atlas_texture);
@@ -352,7 +423,6 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			map_view(_ctx, map, world_meta, editor_state, tablet_width, map_height);
 			tile_palette(_ctx, world_meta.tile_types, editor_state);
 			brush_size_palette(_ctx, world_meta.tile_types, editor_state);
 		}

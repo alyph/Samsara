@@ -45,6 +45,15 @@ constexpr Color32 operator"" _rgb32(unsigned long long v)
 	return Color32{ r, g, b, 255 };
 }
 
+constexpr Color32 operator"" _rgba32(unsigned long long v)
+{
+	uint8_t r = (v >> 24 & 0xff);
+	uint8_t g = (v >> 16 & 0xff);
+	uint8_t b = (v >> 8 & 0xff);
+	uint8_t a = (v & 0xff);
+	return Color32{ r, g, b, a };
+}
+
 constexpr Color operator"" _rgb(unsigned long long v)
 {
 	uint8_t r = (v >> 16 & 0xff);
@@ -52,3 +61,13 @@ constexpr Color operator"" _rgb(unsigned long long v)
 	uint8_t b = (v & 0xff);
 	return to_color(Color32{ r, g, b, 255 });
 }
+
+constexpr Color operator"" _rgba(unsigned long long v)
+{
+	uint8_t r = (v >> 24 & 0xff);
+	uint8_t g = (v >> 16 & 0xff);
+	uint8_t b = (v >> 8 & 0xff);
+	uint8_t a = (v & 0xff);
+	return to_color(Color32{ r, g, b, a });
+}
+

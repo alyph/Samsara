@@ -29,6 +29,11 @@ struct Vec4
 	inline const float* data() const;
 };
 
+struct DVec2
+{
+	double x{}, y{};
+};
+
 struct IVec2
 {
 	int32_t x{}, y{};
