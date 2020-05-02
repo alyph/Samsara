@@ -4,6 +4,18 @@
 #include "allocation.h"
 #include "engine.h"
 
+// Array
+// - Array is a dynamically expandable continguous ist of same typed elements
+// - default initialized Array is empty and not writable
+//    - it must be initailized with a designated allocator and optionally a capacity
+// - copy constructor and assignment performs deep of all items into target's allocator's allocated memory
+// - move constructor and assignment clones entire content to the target array and initialize the source array back to empty
+// - Array does not deconstruct its elements nor deallocate its memory upon destruction (as allocator does not require you to deallocate memory)
+// - Array can still be trivially copied (copy the pointer) in some occassions (like when used with attributes)
+//    - but users should take precaution when:
+//       1. giving out the trivial copy (knowing you should not modify the content during the known life time of such copy, e.g. for attribute it is until the next frame)
+//       2. storing a trivial copy (knowning such array may be modified and become stale since the original array may change in the foreseeable future)
+
 struct SimpleArrayHandle
 {
 	AllocHandle alloc_handle{};

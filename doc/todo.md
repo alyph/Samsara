@@ -33,6 +33,13 @@
 - [ ] find a way to prevent _ctx passing into const context& function which supposed to receive ctx...
 
 ### core
+- [ ] simplify allocator
+  - [ ] allocate memory in page so pointer never expire
+  - [ ] most of the user of the allocator should not check if handle still valid, instead provide function to check when necessary
+  - [ ] rethink shared array
+  - [ ] rethink reallocation and move allocation
+- [ ] bucket array?
+  - [ ] pooled bucket array, has a main pool and each array will get allocated buckets from that pool, and they will have access to a control block from the pool
 - [ ] make Id an actual type so it can't be used directly as index
 - [ ] replace all std::string with String
 - [ ] finish impl simple array
@@ -42,7 +49,10 @@
 - [x] string builder, string format
 - [x] perf: add a string layout which points directly to the pointer of a string literal
 - [ ] have custom allocator (declared as static variable and auto assign an allocator id, limited number 16 right now), the custom allocator should also be configurable (e.g. temp or not, reclaimation strategy)
-- [ ] bucket array?
+
+
+### input
+- [ ] mouse wheel event
 
 
 
@@ -56,16 +66,23 @@
   - [ ] tile types
     - [x] coast
     - [ ] ocean
-    - [ ] city wall
-    - [ ] road
-    - [ ] houses (some of these will be replaced by template or auto gen)
     - [ ] river
+  - [ ] map runtime visual data (these data are recreated when map loaded or new map created)
+    - [ ] global map glyph table
+    - [ ] terrain glyphs (index to glyph table)
+    - [ ] map object glyphs
   - [ ] city placement
+    - [ ] city data (and devs)
+    - [ ] button to create city (comes with intial set of devs)
+    - [ ] city wall (first pass, just rect wall bounding box encompassing all urban devs)
     - [ ] city expansion
     - [ ] road connection
     - [ ] rural devs (simple placement outside of the city)
     - [ ] resource sites
+    - [ ] houses (some of these will be replaced by template or auto gen)
+    - [ ] road (connects cities)
   - [x] map panning
+  - [ ] map zoom
 
 ## game
 - [ ] basic economic model

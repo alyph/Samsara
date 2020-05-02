@@ -15,8 +15,8 @@ struct TileType
 {
 	String name;
 	uint16_t glyph;
-	Color color_a;
-	Color color_b;
+	Color32 color_a;
+	Color32 color_b;
 	uint32_t flags{};
 	uint32_t ex_glyph_start{};
 };

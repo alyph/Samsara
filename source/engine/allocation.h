@@ -5,6 +5,21 @@
 #include <cstdint>
 #include <vector>
 
+// Design considerations:
+// - allocators give out memories (pointer + num of bytes)
+// - memory allocated by allocators are always valid (as allocators never move, or release the memory back to OS)
+// - allocated memories are gone and never reclaimed
+//    - it's not required for user to deallocate the memory (no deallocate function provided)
+//    - users can re-allocate to get a new block of memory
+//    - entire memory from an allocator will be released (and thus can be allocated again) as a whole based on its own specific timing
+// - each call to allocate memory must specify which allocator to use
+// - there are a few globally tagged generic allocators:
+//    - system allocator (used by system and the memeoy last the whole life time of the app)
+//    - app allocator (used by user and most likely last the whole life time of the app, but user will determine when to release)
+//    - stage allocator (used by user code, persistent across long time span, but may be released whenever user see fit)
+//    - temp allocator (used by user or system code, only valid for one frame, or any short interval that the user designates)
+// - custom allocators can be requested and assigned by user and be used and released according to user code
+
 
 // basic allocator functions
 

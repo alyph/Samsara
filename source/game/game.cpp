@@ -4,6 +4,7 @@
 #include "engine/tablet.h"
 #include "engine/shader.h"
 #include "engine/image_utils.h"
+#include "easy/profiler.h"
 
 // mask encodes 1 for the directions that are not water
 // total 8 bits for 8 directions, ordered as follows:
@@ -76,10 +77,10 @@ Game::Game()
 	// tile_types.alloc_stored(0, 64);
 	world_meta.tile_types = 
 	{
-		{"empty", 0, 0_rgb, 0_rgb},
-		{"forest", 0x0105, 0x30ff50_rgb, 0x30ff50_rgb},
-		{"hill", 0x0218, 0x606070_rgb, 0x606070_rgb},
-		{"coast", 0x027e, 0x103060_rgb, 0x80c0f0_rgb, TileTypeFlags::water},
+		{"empty", 0, 0_rgb32, 0_rgb32},
+		{"forest", 0x0105, 0x30ff50_rgb32, 0x30ff50_rgb32},
+		{"hill", 0x0218, 0x606070_rgb32, 0x606070_rgb32},
+		{"coast", 0x027e, 0x103060_rgb32, 0x80c0f0_rgb32, TileTypeFlags::water},
 	};
 
 	editor_state.selected_tile_type = 1;
@@ -153,6 +154,8 @@ static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const I
 
 static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorState& state, const Scalar& width, const Scalar& height)
 {
+	EASY_FUNCTION();
+
 	const Id elem_id = make_element(ctx, null_id);
 	_attr(attrs::width, width);
 	_attr(attrs::height, height);
@@ -165,7 +168,7 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 	for (int y = 0; y < layout.height; y++)
 	{
 		for (int x = 0; x < layout.width; x++)
-		{
+		{		
 			IVec2 tile_coords{ map_x + x, map_y + y };
 			Id tile_id = map.tile_id(tile_coords);
 			if (tile_id)
@@ -176,7 +179,7 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 					const TileType& tile_type = meta.tile_types[tile.type];
 					GlyphData glyph;
 					glyph.code = tile_type.glyph;
-					glyph.color2 = to_color32(tile_type.color_a);
+					glyph.color2 = tile_type.color_a;
 					glyph.coords = { layout.left + x, layout.top + layout.height - 1 - y };
 					if (tile_type.flags & TileTypeFlags::water)
 					{
@@ -188,7 +191,7 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 						}
 					}
 
-				render_buffer.push_glyph(elem_id, glyph);
+					render_buffer.push_glyph(elem_id, glyph);
 				}
 			}
 		}
@@ -207,8 +210,8 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 			const int d = r * 2 + 1;
 			GlyphData glyph;
 			glyph.code = tile_type.glyph;
-			glyph.color2 = to_color32(tile_type.color_a);
-			glyph.color1 = to_color32(0x303030_rgb);
+			glyph.color2 = tile_type.color_a;
+			glyph.color1 = 0x303030_rgb32;
 			glyph.coords = { cursor.x - r, cursor.y - r };
 			glyph.size = { d, d };
 			render_buffer.push_glyph(elem_id, glyph);
@@ -320,7 +323,7 @@ static void tile_palette(const Context ctx, const std::vector<TileType>& tile_ty
 	for (int i = 0; i < tile_types.size(); i++)
 	{
 		const TileType& type_data = tile_types[i];
-		palette_button(_ctx_id(i), i, type_data.glyph, to_color32(type_data.color_a), i, state.selected_tile_type);
+		palette_button(_ctx_id(i), i, type_data.glyph, type_data.color_a, i, state.selected_tile_type);
 	}
 }
 
