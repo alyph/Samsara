@@ -185,7 +185,7 @@ public:
 	inline const T& back() const { return back_impl(); }
 	inline void clear() { _size = 0; }
 	inline void resize(size_t new_size);
-	inline void push_back(const T& value);
+	inline void push_back(const T& value); // TODO: move version
 	inline void pop_back();
 	inline void insert(size_t pos, const T& value);
 	inline void insert_defaults(size_t pos, size_t count);
@@ -207,12 +207,12 @@ class Array: public ArrayBase<T>
 {
 public:
 	inline Array() = default;
-	inline Array(size_t size, Allocator allocator) { alloc_impl(size, size, allocator); }
-	inline Array(size_t size, size_t capacity, Allocator allocator) { alloc_impl(size, capacity, allocator); }
-	// inline Array(const Array<T>& other) { *this = other; }
-	inline Array(Array<T>&& other) { *this = std::move(other); }
-	// inline Array& operator=(const Array<T>& other);
-	inline Array& operator=(Array<T>&& other);
+	inline Array(size_t size, Allocator allocator) noexcept { alloc_impl(size, size, allocator); }
+	inline Array(size_t size, size_t capacity, Allocator allocator) noexcept { alloc_impl(size, capacity, allocator); }
+	inline Array(const Array<T>& other) noexcept { *this = other; }
+	inline Array(Array<T>&& other) noexcept { *this = std::move(other); }
+	inline Array& operator=(const Array<T>& other) noexcept;
+	inline Array& operator=(Array<T>&& other) noexcept; // TODO: not implemented yet, implement it if we actually need to deep copy the array
 
 	inline void alloc(size_t size, size_t capacity, Allocator allocator) { alloc_impl(size, capacity, allocator); }
 	inline void alloc_temp(size_t size, size_t capacity) { alloc_impl(size, capacity, temp_allocator()); }
@@ -223,8 +223,8 @@ class ArrayTemp: public ArrayBase<T>
 {
 public:
 	inline ArrayTemp() = default;
-	inline explicit ArrayTemp(size_t size) { alloc(size, size); }
-	inline ArrayTemp(size_t size, size_t capacity) { alloc(size, capacity); }
+	inline explicit ArrayTemp(size_t size) noexcept { alloc(size, size); }
+	inline ArrayTemp(size_t size, size_t capacity) noexcept { alloc(size, capacity); }
 	inline void alloc(size_t size) { alloc(size, size); }
 	inline void alloc(size_t size, size_t capacity) { alloc_impl(size, capacity, temp_allocator()); }
 };
@@ -360,6 +360,7 @@ inline void ArrayBase<T>::push_back(const T& value)
 	{
 		ensure_capacity(_size + 1);
 	}
+	// TODO: perform copy construction if the type is not trivial
 	*(data_ptr() + _size) = value;
 	_size++;
 }
@@ -441,9 +442,9 @@ inline void ArrayBase<T>::init_data(size_t first, size_t count)
 {
 	T* d = data_ptr();
 	// TODO: user provided constructor is ignored
-	// becauase there's no way to distinguish between user constructor
+	// becauase there's no way to distinguish between user defined constructor
 	// and default member initalizer
-	// maybe we should now stop using 0 initalization on memeber init 
+	// maybe we should now stop using 0 initalization (e.g. foo{};) on memeber init 
 	// and just rely on zero initalization in code everywhere
 	constexpr const bool trivial = 
 		(std::is_trivial_v<T> || 
@@ -472,7 +473,7 @@ inline void ArrayBase<T>::init_data(size_t first, size_t count)
 // }
 
 template<typename T>
-inline Array<T>& Array<T>::operator=(Array<T>&& other)
+inline Array<T>& Array<T>::operator=(Array<T>&& other) noexcept
 {
 	handle = other.handle;
 	_size = other._size;

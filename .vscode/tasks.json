@@ -27,6 +27,11 @@
             "label": "build tablet ui",
             "args": ["tablet_ui"],
             "group": "build"
+        },
+        {
+            "label": "build tablet test",
+        "args": ["tablet_test"],
+            "group": "build"
         }
     ]
 }
