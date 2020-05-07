@@ -14,26 +14,28 @@ public:
 
 	Buffer() = default;
 	~Buffer();
-	inline Buffer(const Buffer& other);
+	inline Buffer(const Buffer& other) = delete;
 	inline Buffer(Buffer&& other);
 
-	inline Buffer& operator=(const Buffer& other);
+	inline Buffer& operator=(const Buffer& other) = delete;
 	inline Buffer& operator=(Buffer&& other);
 
 	inline uint8_t* get(size_t ptr) const;
-	inline size_t size() const { return buffer_size; }
+	inline size_t size() const { return _size; }
+	inline size_t capacity() const { return _capacity; }
 	inline bool empty() const { return size() == 0; }
-	inline void clear() { buffer_size = 0; }
+	inline void clear() { _size = 0; }
 	inline void resize(size_t new_size) { resize(new_size, 0); }
 	void resize(size_t new_size, size_t min_grow_size);
+	void reserve(size_t new_capacity);
 
 	inline static bool is_aligned(size_t ptr);
 	inline static size_t get_next_aligned(size_t ptr);
 
 private:
 	uint8_t* data{};
-	size_t buffer_size{};
-	size_t capacity{};
+	size_t _size{};
+	size_t _capacity{};
 };
 
 #if 0
@@ -59,28 +61,16 @@ public:
 };
 #endif
 
-inline Buffer::Buffer(const Buffer& other)
-{
-	*this = other;
-}
-
 inline Buffer::Buffer(Buffer&& other)
 {
 	*this = std::move(other);
 }
 
-inline Buffer& Buffer::operator=(const Buffer& other)
-{
-	resize(other.size());
-	std::memcpy(data, other.data, other.size());
-	return *this;
-}
-
 inline Buffer& Buffer::operator=(Buffer&& other)
 {
 	std::swap(data, other.data);
-	std::swap(buffer_size, other.buffer_size);
-	std::swap(capacity, other.capacity);
+	std::swap(_size, other._size);
+	std::swap(_capacity, other._capacity);
 	return *this;
 }
 

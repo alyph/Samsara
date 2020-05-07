@@ -14,7 +14,7 @@ namespace attrs
 {
 	// extern Attribute<Id> tablet_id; // TODO: remove
 	extern Attribute<Id> quad_shader;
-	extern Attribute<SimpleArray<GlyphData>> glyphs;
+	extern Attribute<ArrayView<GlyphData>> glyphs;
 }
 
 namespace elem
@@ -41,8 +41,8 @@ struct TabletRenderBuffer
 		size_t buffer_idx;
 	};
 
-	SimpleArray<GlyphData> glyphs;
-	SimpleArray<Block> blocks;
+	ArrayTemp<GlyphData> glyphs;
+	ArrayTemp<Block> blocks;
 	Id last_pushed_elem_id{};
 
 	inline size_t push_glyph(Id elem_id, const GlyphData& glyph); // TODO: optimization: maybe allow emplace to avoid copy

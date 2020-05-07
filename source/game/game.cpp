@@ -85,8 +85,8 @@ Game::Game()
 
 	editor_state.selected_tile_type = 1;
 	editor_state.map_vp.x = editor_state.map_vp.y = (map_chunk_size / 2);
-	map.chunks.alloc_stored(0, 1024);
-	map.tiles.alloc_stored(0, 512 * 512);
+	map.chunks.alloc(0, 1024, stage_allocator());
+	map.tiles.alloc(0, 512 * 512, stage_allocator());
 }
 
 

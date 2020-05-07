@@ -45,6 +45,12 @@ struct AttrTable
 namespace attribute_serialization
 {
 	template<typename T>
+	struct can_be_trivially_stored
+	{
+		static const constexpr bool value = (::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>);
+	};
+
+	template<typename T>
 	inline void trivial_load(const Buffer& buffer, size_t ptr, const T*& out_val)
 	{
 		asserts((ptr + sizeof(T) <= buffer.size()) && buffer.is_aligned(ptr));
@@ -62,14 +68,14 @@ namespace attribute_serialization
 	}
 
 	template<typename T>
-	inline ::std::enable_if_t<::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>, void>
+	inline ::std::enable_if_t<can_be_trivially_stored<T>::value, void>
 	load(const Buffer& buffer, size_t ptr, const T*& out_val)
 	{
 		trivial_load(buffer, ptr, out_val);
 	}
 
 	template<typename T>
-	inline ::std::enable_if_t<::std::is_standard_layout_v<T> && ::std::is_trivially_copyable_v<T>, void>
+	inline ::std::enable_if_t<can_be_trivially_stored<T>::value, void>
 	store(Buffer& buffer, const T& val)
 	{
 		trivial_store(buffer, val);

@@ -41,3 +41,20 @@ struct ScopedEngineInitializer
 };
 
 #define scoped_engine_init() ScopedEngineInitializer CONCAT(_engine_init_, __COUNTER__){}
+
+inline Allocator system_allocator() {
+	return Allocator::system;
+}
+
+inline Allocator app_allocator() {
+	return Allocator::app;
+}
+
+inline Allocator stage_allocator() {
+	return Allocator::stage;
+}
+
+inline Allocator temp_allocator() {
+	return engine().allocators.current_temp_allocator;
+}
+

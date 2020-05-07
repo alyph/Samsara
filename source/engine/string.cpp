@@ -21,10 +21,7 @@ void sb_expand_buffer(StringData& str_data, size_t size)
 		// block here is at the end
 		assign_normal_string(str_data, str_data.data(), curr_size, alloc_globals.current_temp_allocator);
 	}
-	// transallocation here is cheap if the buffer is at the end (which is the case most of the time)
-	// don't use reallocation since reallocation will bump the alloc id as it needs to notify other
-	// shared handles of the changed ptr, however in our case, there is no sharing of this handle
-	alloc_globals.transallocate(str_data.normal_data.alloc_handle, alloc_size);
+	alloc_globals.reallocate(str_data.normal_data.alloc_handle, alloc_size);
 }
 
 

@@ -98,8 +98,8 @@ struct StringData
 	inline bool is_short() const { return (layout() == StringLayout::short_string); }
 	inline bool is_normal() const { return (layout() == StringLayout::normal_string); }
 	inline bool is_literal() const { return (layout() == StringLayout::literal); }
-	inline bool is_persistent_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() == Allocator::string; }
-	inline bool is_temp_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() != Allocator::string; }
+	inline bool is_persistent_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() == Allocator::app; }
+	inline bool is_temp_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() != Allocator::app; }
 	inline StringHeader* header() const;
 };
 
@@ -222,7 +222,7 @@ inline void assign_stored_string(StringData& str_data, const char* start, size_t
 	}
 	else
 	{
-		assign_normal_string(str_data, start, size, Allocator::string);
+		assign_normal_string(str_data, start, size, Allocator::app);
 		str_data.header()->ref_count = 1;
 	}
 }
@@ -245,7 +245,7 @@ inline void assign_string_literal(StringData& str_data, const char* start, size_
 
 inline void* validate_and_get_string_buffer(const StringData& str_data)
 {
-	auto ptr = str_data.normal_data.alloc_handle.get(engine().allocators);
+	auto ptr = str_data.normal_data.alloc_handle.get();
 	asserts(ptr);
 
 	// latched String or StringStore, must make sure the buffer is still somewhat valid
@@ -465,6 +465,8 @@ inline size_t sb_buffer_remaining(const StringData& str_data)
 	else
 	{
 		const auto& normal_data = str_data.normal_data;
+		// TODO: maybe we could cache this capacity during sb_expand_buffer()
+		// to avoid constantly querying the alloc header
 		const auto capacity = normal_data.alloc_handle.capacity(engine().allocators);
 		asserts(capacity > 0);
 		const auto occupied = normal_data.start + normal_data.size;

@@ -26,6 +26,7 @@
 - [x] text should influence width if not determine it (perhaps should determine max width?), 
   - one work around for now is to let the high level function (like button()) preset width based on the length of the text
 - [ ] accurate mouse button and key down states (even if mouse leave the window or app lost focus)
+- [ ] a potential optimization: only perform rendering related code (like inserting glyphs to the buffer) when we actualy performing the final present before rendering rather than for all the steps including process input, may require the presenter passing a flag (probably thru variable in the context)
 - [ ] text wrap?
 - [ ] more layout options (padding, margin), horizontal stack
 - [ ] border
@@ -33,12 +34,23 @@
 - [ ] find a way to prevent _ctx passing into const context& function which supposed to receive ctx...
 
 ### core
+- [ ] refactor array
+  - [x] perform construction
+  - [ ] perform copy
+  - [ ] provide a func for trivial copy
+  - [x] remove constant checking of alloc handle, just access the pointer
+  - [x] allow alloc array in specified allocator
+- [ ] refactor string
+  - [ ] remove ref counting, deallocation, string header
+  - [ ] allow storing string in specified allocator
+  - [ ] do we still need stringview in that case?
 - [ ] simplify allocator
-  - [ ] allocate memory in page so pointer never expire
-  - [ ] most of the user of the allocator should not check if handle still valid, instead provide function to check when necessary
+  - [x] allocate memory in page so pointer never expire
+  - [x] no more deallocation
+  - [x] alloc id only used for when allocator bulk release
   - [ ] rethink shared array
-  - [ ] rethink reallocation and move allocation
-- [ ] bucket array?
+  - [x] rethink reallocation and move allocation
+- [ ] bucket array? (maybe call it paged array)
   - [ ] pooled bucket array, has a main pool and each array will get allocated buckets from that pool, and they will have access to a control block from the pool
 - [ ] make Id an actual type so it can't be used directly as index
 - [ ] replace all std::string with String

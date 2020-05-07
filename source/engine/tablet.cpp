@@ -16,7 +16,7 @@
 namespace attrs
 {
 	Attribute<Id> quad_shader{null_id};
-	Attribute<SimpleArray<GlyphData>> glyphs{SimpleArray<GlyphData>{}};
+	Attribute<ArrayView<GlyphData>> glyphs{ArrayView<GlyphData>{}};
 }
 
 static constexpr const char* uniform_mvp = "MVP";
@@ -79,7 +79,7 @@ struct TabletElemWorker
 
 struct TabletWorkState
 {
-	SimpleArray<TabletElemWorker> finalizing_stack;
+	ArrayTemp<TabletElemWorker> finalizing_stack;
 };
 
 namespace attrs
@@ -330,7 +330,7 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
-		printf("tablet framebuffer is not ready!");
+		printf("tablet framebuffer is not ready!\n");
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); 
@@ -1044,7 +1044,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		// insert each block index into a temp array sorted by elem id
 		// TODO: maybe more cache friendly if we just insert all block data in instead of just index?
 		const auto& blocks = render_buffer.blocks;
-		auto sorted_block_indices = alloc_simple_array<size_t>(0, blocks.size(), true);
+		Array<size_t> sorted_block_indices{0, blocks.size(), temp_allocator()};
 		for (size_t block_idx = 0; block_idx < blocks.size(); block_idx++)
 		{
 			const Id block_elem_id = blocks[block_idx].elem_id;
@@ -1277,13 +1277,13 @@ namespace elem
 
 		// TODO: set self layout
 		TabletWorkState work_state;
-		work_state.finalizing_stack.alloc_temp(0, 16);
+		work_state.finalizing_stack.alloc(0, 16);
 		_attr(attrs::tablet_work_state, work_state);
 
 		TabletRenderBuffer render_buffer;
 		// TODO: ideally if we could store the last frame's allocated size in a persistent state, then we could inherit that size
-		render_buffer.glyphs.alloc_temp(0, 32 * 1024); // 32k preallocated buffer size
-		render_buffer.blocks.alloc_temp(0, 1024); // 1k blocks (roughly how many sub elements in the tablet)
+		render_buffer.glyphs.alloc(0, 32 * 1024); // 32k preallocated buffer size
+		render_buffer.blocks.alloc(0, 1024); // 1k blocks (roughly how many sub elements in the tablet)
 		_attr(attrs::tablet_render_buffer, render_buffer);
 		
 		return tablet_id;

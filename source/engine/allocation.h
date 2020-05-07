@@ -38,12 +38,13 @@ struct AllocatorGlobals;
 
 using AllocId = uint32_t;
 
-enum class Allocator
+enum class Allocator: uint8_t
 {
-	persistent,
-	temp1,
-	temp2,
-	string,
+	none,
+	system,
+	app,
+	stage,
+	temp,
 	max,
 };
 
@@ -52,7 +53,7 @@ static const constexpr size_t num_allocators = static_cast<size_t>(Allocator::ma
 struct AllocHeader
 {
 	AllocId alloc_id{};
-	AllocId max_reg_id{};
+	uint32_t page{};
 	size_t ptr{};
 	size_t size{};
 };
@@ -64,30 +65,28 @@ struct AllocHandle
 	uint32_t header{};
 
 	inline Allocator allocator_type() const;
-	inline void* get(AllocatorGlobals& globals) const;
+	inline void* get() const { return ptr; }
 	inline size_t capacity(AllocatorGlobals& globals) const;
-	inline void validate(AllocatorGlobals& globals) const;
-	void refresh(AllocatorGlobals& globals);
+	inline bool valid(AllocatorGlobals& globals) const;
 };
 
 struct AllocatorData
 {
-	Buffer buffer;
+	std::vector<Buffer> pages;
 	std::vector<AllocHeader> headers;
 	size_t num_headers{};
 	size_t free_header{};
-	AllocId max_reg_id{};
+	size_t curr_page{};
+	AllocId curr_alloc_id = 1;
 };
 
 struct AllocatorGlobals
 {
-	AllocId min_valid_ids[num_allocators]{};
 	AllocatorData allocators[num_allocators]{};
-	Allocator current_temp_allocator = Allocator::temp1;
+	Allocator current_temp_allocator = Allocator::temp;
 
 	AllocHandle allocate(Allocator allocator, size_t size);
 	void reallocate(AllocHandle& handle, size_t size);
-	void transallocate(AllocHandle& handle, size_t size);
 	void deallocate(AllocHandle& handle);
 	void regular_cleanup();
 };
@@ -108,28 +107,31 @@ inline Allocator AllocHandle::allocator_type() const
 	return static_cast<Allocator>(allocator_idx);
 }
 
-inline void AllocHandle::validate(AllocatorGlobals& globals) const
+inline bool AllocHandle::valid(AllocatorGlobals& globals) const
 {
 	if (alloc_id != 0)
 	{
 		const size_t allocator = ((header >> 28) & 0x0000000F);
 		asserts(allocator < num_allocators);
-		if (alloc_id < globals.min_valid_ids[allocator])
+		if (alloc_id == globals.allocators[allocator].curr_alloc_id)
 		{
-			const_cast<AllocHandle*>(this)->refresh(globals);
+			return true;
 		}
 	}
+	return false;
 }
 
+#if 0
 inline void* AllocHandle::get(AllocatorGlobals& globals) const
 {
 	validate(globals);
 	return ptr;
 }
+#endif
 
 inline size_t AllocHandle::capacity(AllocatorGlobals& globals) const
 {
-	validate(globals);
-	return (alloc_id != 0 ? access_alloc_header(globals, header).size : 0);
+	asserts(valid(globals));
+	return access_alloc_header(globals, header).size;
 }
 

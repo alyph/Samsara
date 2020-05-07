@@ -118,7 +118,8 @@ TabletUIApp::TabletUIApp()
 			asserts(num_glyphs % sheet_width == 0);
 			const int pixels_per_row = (sheet_width * glyph_width);	
 			const int pixel_height = (sheet_height * glyph_height);
-			auto bitmap = alloc_simple_array<uint8_t>(pixels_per_row * pixel_height, true);
+			ArrayTemp<uint8_t> bitmap;
+			bitmap.alloc(pixels_per_row * pixel_height);
 
 			memset(bitmap.data(), 0, bitmap.size());
 

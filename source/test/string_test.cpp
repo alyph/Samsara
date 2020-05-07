@@ -42,7 +42,7 @@ int main()
 		str3.store();
 		String str4 = str3;
 		printf("forth string is : %s\n", str4.c_str());
-		asserts(str4.str_data.normal_data.alloc_handle.allocator_type() == Allocator::string);
+		asserts(str4.str_data.normal_data.alloc_handle.allocator_type() == Allocator::app);
 		asserts(string_ref_count(str4.str_data) == 2);
 		asserts(string_ref_count(str3.str_data) == 2);
 
@@ -59,7 +59,7 @@ int main()
 		printf("forth string now : %s\n", str4.c_str());
 
 		String str5 = str4;
-		asserts(str5.str_data.normal_data.alloc_handle.allocator_type() == Allocator::string);
+		asserts(str5.str_data.normal_data.alloc_handle.allocator_type() == Allocator::app);
 		asserts(string_ref_count(str5.str_data) == 2);
 		asserts(string_ref_count(str4.str_data) == 2);
 		asserts(validate_and_get_string_buffer(str5.str_data) == validate_and_get_string_buffer(str4.str_data));
@@ -76,7 +76,7 @@ int main()
 	String reloc_str = cstr_to_str("first long enough string to relocate actually");
 	reloc_str.store();
 	asserts(reloc_str.str_data.is_normal());
-	asserts(reloc_str.str_data.normal_data.alloc_handle.allocator_type() == Allocator::string);
+	asserts(reloc_str.str_data.normal_data.alloc_handle.allocator_type() == Allocator::app);
 
 	auto old_ptr = validate_and_get_string_buffer(reloc_str.str_data);
 	auto old_size = reloc_str.size();

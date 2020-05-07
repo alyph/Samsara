@@ -36,8 +36,8 @@ static constexpr const int map_chunk_size = 32;
 struct Map
 {
 	IRect chunk_bounds;
-	SimpleArray<MapChunk> chunks;
-	SimpleArray<Tile> tiles;
+	Array<MapChunk> chunks;
+	Array<Tile> tiles;
 
 	inline Id tile_id(const IVec2& coords) const;
 	inline int chunk_coords_to_idx(const IVec2& coords) const;
@@ -102,7 +102,7 @@ inline void Map::set_tile(const IVec2& coords, const Tile& tile)
 	{
 		// add tiles for the chunk
 		first_tile_id = index_to_id(tiles.size());
-		tiles.insert_zeroes(tiles.size(), map_chunk_size * map_chunk_size);
+		tiles.resize(tiles.size() + (map_chunk_size * map_chunk_size));
 	}
 
 	Id tile_id = first_tile_id + (coords.x - chunk_first_tile(chunk_coords.x)) +

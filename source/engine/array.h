@@ -9,13 +9,15 @@
 // - default initialized Array is empty and not writable
 //    - it must be initailized with a designated allocator and optionally a capacity
 // - copy constructor and assignment performs deep of all items into target's allocator's allocated memory
+//    - if the target array is default initialized and no allocator assigned, it will be assigned to temp allocator
 // - move constructor and assignment clones entire content to the target array and initialize the source array back to empty
 // - Array does not deconstruct its elements nor deallocate its memory upon destruction (as allocator does not require you to deallocate memory)
 // - Array can still be trivially copied (copy the pointer) in some occassions (like when used with attributes)
 //    - but users should take precaution when:
 //       1. giving out the trivial copy (knowing you should not modify the content during the known life time of such copy, e.g. for attribute it is until the next frame)
-//       2. storing a trivial copy (knowning such array may be modified and become stale since the original array may change in the foreseeable future)
+//       2. storing a trivial copy (knowning such array may be modified and become stale or even invalid since the original array may change in the foreseeable future)
 
+#if 0
 struct SimpleArrayHandle
 {
 	AllocHandle alloc_handle{};
@@ -29,34 +31,35 @@ struct SimpleArrayHandle
 	bool operator !=(const SimpleArrayHandle& other) const { return !(*this == other); }
 };
 
-
 template<typename T>
 inline T& access_simple_array_item(const SimpleArrayHandle& handle, size_t index);
+#endif
 
 template<typename T>
-class SimpleArrayIteratorImpl
+class ArrayIteratorImpl
 {
 public:
-	SimpleArrayHandle handle;
+	T* data{};
 	size_t ptr{};
 	size_t size{};
 
 	T& operator*() const
 	{
-		return access_simple_array_item<T>(handle, ptr);
+		asserts(ptr < size);
+		return *(data + ptr);
 	}
 
-	SimpleArrayIteratorImpl& operator++()
+	ArrayIteratorImpl& operator++()
 	{
 		asserts(ptr < size);
 		++ptr;
 		return *this;
 	}
 
-	bool operator==(const SimpleArrayIteratorImpl& other) const
+	bool operator==(const ArrayIteratorImpl& other) const
 	{
 		// must point to the same array
-		if (handle != other.handle)
+		if (data != other.data)
 			return false;
 
 		// all end() are the same
@@ -79,30 +82,31 @@ public:
 };
 
 template<typename T>
-class SimpleArrayIterator
+class ArrayIterator
 {
 public:
-	SimpleArrayIteratorImpl<T> impl;
+	ArrayIteratorImpl<T> impl;
 	
 	T& operator*() const { return *impl; }
-	SimpleArrayIterator& operator++() { ++impl; return *this; }
-	bool operator==(const SimpleArrayIterator& other) const { return impl == other.impl; }
-	bool operator!=(const SimpleArrayIterator& other) const { return !(impl == other.impl); }
+	ArrayIterator& operator++() { ++impl; return *this; }
+	bool operator==(const ArrayIterator& other) const { return impl == other.impl; }
+	bool operator!=(const ArrayIterator& other) const { return !(impl == other.impl); }
 };
 
 template<typename T>
-class ConstSimpleArrayIterator
+class ConstArrayIterator
 {
 public:
-	SimpleArrayIteratorImpl<T> impl;
+	ArrayIteratorImpl<T> impl;
 	
 	const T& operator*() const { return *impl; }
-	ConstSimpleArrayIterator& operator++() { ++impl; return *this; }
-	bool operator==(const ConstSimpleArrayIterator& other) const { return impl == other.impl; }
-	bool operator!=(const ConstSimpleArrayIterator& other) const { return !(impl == other.impl); }
+	ConstArrayIterator& operator++() { ++impl; return *this; }
+	bool operator==(const ConstArrayIterator& other) const { return impl == other.impl; }
+	bool operator!=(const ConstArrayIterator& other) const { return !(impl == other.impl); }
 };
 
 
+#if 0
 struct SimpleArrayHeader
 {
 	uint32_t size{};
@@ -112,6 +116,37 @@ struct SimpleArrayHeader
 // make sure it s pow of 2, so it will be at alignment boundary, and then see below alignment check
 // basically we can't have the header affect the alignment of the array items
 static_assert((sizeof(SimpleArrayHeader) & (sizeof(SimpleArrayHeader) - 1)) == 0);
+#endif
+
+template<typename T>
+class ArrayView
+{
+public:
+	static_assert(std::is_trivial_v<T> || std::is_trivially_destructible_v<T>);
+	static_assert(alignof(T) <= alignof(std::max_align_t));
+
+	AllocHandle handle;
+	size_t _first{};
+	size_t _size{};
+
+	inline bool empty() const { return size() == 0; }
+	inline size_t size() const { return _size; }
+	inline T& operator[](size_t idx) { return at(idx); }
+	inline const T& operator[](size_t idx) const { return at(idx); }
+	inline T* data() { return empty() ? nullptr : data_ptr(); }
+	inline const T* data() const { return empty() ? nullptr : data_ptr(); }
+	inline ArrayIterator<T> begin() { return {{ data_ptr(), 0, size() }}; }
+	inline ConstArrayIterator<T> begin() const { return {{ data_ptr(), 0, size() }}; }
+	inline ArrayIterator<T> end() { return {{ data_ptr(), size(), size() }}; }
+	inline ConstArrayIterator<T> end() const { return {{ data_ptr(), size(), size() }}; }
+	inline T& back() { return back_impl(); } // TODO: add a version that takes a num to return n to the last item
+	inline const T& back() const { return back_impl(); }
+
+private:
+	inline T& at(size_t idx) const { asserts(idx < size()); return *(data_ptr() + idx); }
+	inline T* data_ptr() const { return (reinterpret_cast<T*>(handle.get()) + _first); }
+	inline T& back_impl() const { asserts(!empty()); return *(data_ptr() + _size - 1); }
+};
 
 // custom allocated
 // trivially copyable and sharable
@@ -124,50 +159,79 @@ static_assert((sizeof(SimpleArrayHeader) & (sizeof(SimpleArrayHeader) - 1)) == 0
 // so maybe worth making a non-sharable array first, then figure out a different
 // way to handle sharing, e.g. allocating a separate shared control block
 // just like how shared pointer is implemented
+
 template<typename T>
-class SimpleArray
+class ArrayBase
 {
 public:
-	static_assert(std::is_trivially_copyable_v <T>);
-	static_assert(alignof(T) <= sizeof(SimpleArrayHeader));
+	static_assert(std::is_trivial_v<T> || std::is_trivially_destructible_v<T>);
+	static_assert(alignof(T) <= alignof(std::max_align_t));
 
-	SimpleArrayHandle handle;
+	AllocHandle handle;
+	size_t _size{};
+	size_t _capacity{};
 
-	inline void alloc_stored(size_t size, size_t capacity);
-	inline void alloc_temp(size_t size, size_t capacity);
 	inline bool empty() const { return size() == 0; }
-	inline size_t size() const;
-	inline void zero();
+	inline size_t size() const { return _size; }
 	inline T& operator[](size_t idx) { return at(idx); }
 	inline const T& operator[](size_t idx) const { return at(idx); }
-	inline T* data() { return data_impl(); }
-	inline const T* data() const { return data_impl(); }
-	inline SimpleArrayIterator<T> begin();
-	inline ConstSimpleArrayIterator<T> begin() const;
-	inline SimpleArrayIterator<T> end();
-	inline ConstSimpleArrayIterator<T> end() const;
+	inline T* data() { return empty() ? nullptr : data_ptr(); }
+	inline const T* data() const { return empty() ? nullptr : data_ptr(); }
+	inline ArrayIterator<T> begin();
+	inline ConstArrayIterator<T> begin() const;
+	inline ArrayIterator<T> end();
+	inline ConstArrayIterator<T> end() const;
 	inline T& back() { return back_impl(); } // TODO: add a version that takes a num to return n to the last item
 	inline const T& back() const { return back_impl(); }
+	inline void clear() { _size = 0; }
 	inline void resize(size_t new_size);
 	inline void push_back(const T& value);
 	inline void pop_back();
 	inline void insert(size_t pos, const T& value);
-	inline void insert_zeroes(size_t pos, size_t count);
+	inline void insert_defaults(size_t pos, size_t count);
+	inline ArrayView<T> view() { return { handle, 0, size() }; }
 
-private:
+protected:
+	inline void alloc_impl(size_t size, size_t capacity, Allocator allocator);
+	inline void init_data(size_t first, size_t count);
 	inline T& at(size_t idx) const;
-	inline T* data_impl() const;
+	inline T* data_ptr() const { return reinterpret_cast<T*>(handle.get()); }
 	inline T& back_impl() const;
-	inline SimpleArrayHeader* access_header() const;
 	inline void ensure_capacity(size_t size);
 };
 
-template<typename T>
-constexpr size_t total_simple_array_buffer_size(size_t num_items)
-{
-	return sizeof(SimpleArrayHeader) + sizeof(T) * num_items;
-}
 
+
+template<typename T>
+class Array: public ArrayBase<T>
+{
+public:
+	inline Array() = default;
+	inline Array(size_t size, Allocator allocator) { alloc_impl(size, size, allocator); }
+	inline Array(size_t size, size_t capacity, Allocator allocator) { alloc_impl(size, capacity, allocator); }
+	// inline Array(const Array<T>& other) { *this = other; }
+	inline Array(Array<T>&& other) { *this = std::move(other); }
+	// inline Array& operator=(const Array<T>& other);
+	inline Array& operator=(Array<T>&& other);
+
+	inline void alloc(size_t size, size_t capacity, Allocator allocator) { alloc_impl(size, capacity, allocator); }
+	inline void alloc_temp(size_t size, size_t capacity) { alloc_impl(size, capacity, temp_allocator()); }
+};
+
+template<typename T>
+class ArrayTemp: public ArrayBase<T>
+{
+public:
+	inline ArrayTemp() = default;
+	inline explicit ArrayTemp(size_t size) { alloc(size, size); }
+	inline ArrayTemp(size_t size, size_t capacity) { alloc(size, capacity); }
+	inline void alloc(size_t size) { alloc(size, size); }
+	inline void alloc(size_t size, size_t capacity) { alloc_impl(size, capacity, temp_allocator()); }
+};
+
+
+
+#if 0
 template<typename T>
 SimpleArray<T> alloc_simple_array(size_t size, size_t capacity, bool temp=false)
 {
@@ -196,9 +260,29 @@ inline T& access_simple_array_item(const SimpleArrayHandle& handle, size_t index
 	auto data = reinterpret_cast<T*>(alloc_data + sizeof(SimpleArrayHeader));
 	return *(data + index);
 }
+#endif
 
-// SimpleArray<T>
+// Array<T>
 
+template<typename T>
+constexpr size_t total_array_buffer_size(size_t num_items)
+{
+	return sizeof(T) * num_items;
+}
+
+template<typename T>
+inline void ArrayBase<T>::alloc_impl(size_t size, size_t capacity, Allocator allocator)
+{
+	asserts(size <= capacity && capacity > 0);
+	const size_t num_bytes = total_array_buffer_size<T>(capacity);
+	auto& allocators = engine().allocators;
+	handle = allocators.allocate(allocator, num_bytes);
+	_capacity = capacity;
+	_size = size;
+	init_data(0, size);
+}
+
+#if 0
 template<typename T>
 inline void SimpleArray<T>::alloc_stored(size_t size, size_t capacity)
 {
@@ -223,132 +307,179 @@ inline void SimpleArray<T>::zero()
 	// TODO: safe null pointer when size is also 0?
 	memset(data(), 0, sizeof(T) * size());
 }
+#endif
 
 template<typename T>
-inline SimpleArrayIterator<T> SimpleArray<T>::begin()
+inline ArrayIterator<T> ArrayBase<T>::begin()
 {
-	return { { handle, 0, size() } };
+	return { { data_ptr(), 0, size() } };
 }
 
 template<typename T>
-inline ConstSimpleArrayIterator<T> SimpleArray<T>::begin() const
+inline ConstArrayIterator<T> ArrayBase<T>::begin() const
 {
-	return { { handle, 0, size() } };
+	return { { data_ptr(), 0, size() } };
 }
 
 template<typename T>
-inline SimpleArrayIterator<T> SimpleArray<T>::end()
+inline ArrayIterator<T> ArrayBase<T>::end()
 {
-	return { { handle, 0, 0 } };
+	return { { data_ptr(), size(), size() } };
 }
 
 template<typename T>
-inline ConstSimpleArrayIterator<T> SimpleArray<T>::end() const
+inline ConstArrayIterator<T> ArrayBase<T>::end() const
 {
-	return { { handle, 0, 0 } };
+	return { { data_ptr(), size(), size() } };
 }
 
+#if 0
 template<typename T>
 constexpr T* data_adddress_from_header(SimpleArrayHeader* header)
 {
 	return reinterpret_cast<T*>(header + 1); // the bytes after header is the data
 }
+#endif
 
 template<typename T>
-inline void SimpleArray<T>::resize(size_t new_size)
+inline void ArrayBase<T>::resize(size_t new_size)
 {
 	ensure_capacity(new_size);
-	auto header = access_header();
-	header->size = static_cast<decltype(header->size)>(new_size);
-}
-
-template<typename T>
-inline void SimpleArray<T>::push_back(const T& value)
-{
-	auto header = access_header();
-	asserts(header); // cannot call push_back before allocate an array
-	if (header->size >= header->capacity)
+	const size_t old_size = _size;
+	_size = new_size;
+	if (old_size < new_size)
 	{
-		ensure_capacity(header->size + 1);
-		header = access_header();
+		init_data(old_size, (new_size - old_size));
 	}
-	*(data_adddress_from_header<T>(header) + header->size) = value;
-	header->size++;
 }
 
 template<typename T>
-inline void SimpleArray<T>::pop_back()
+inline void ArrayBase<T>::push_back(const T& value)
 {
-	auto header = access_header();
-	asserts(header && header->size > 0); // cannot call pop_back if array is empty
-	header->size--;
+	if (_size >= _capacity)
+	{
+		ensure_capacity(_size + 1);
+	}
+	*(data_ptr() + _size) = value;
+	_size++;
 }
 
 template<typename T>
-inline void SimpleArray<T>::insert(size_t pos, const T& value)
+inline void ArrayBase<T>::pop_back()
+{
+	asserts(_size > 0); // cannot call pop_back if array is empty
+	_size--;
+}
+
+template<typename T>
+inline void ArrayBase<T>::insert(size_t pos, const T& value)
 {
 	const auto s = size();
 	asserts(pos <= s);
-	resize(s + 1);
-	auto d = data();
+	ensure_capacity(s + 1);
+	_size = (s + 1);
+	auto d = data_ptr();
 	memmove(d + pos + 1, d + pos, (s - pos) * sizeof(T));
 	*(d + pos) = value;
 }
 
 template<typename T>
-inline void SimpleArray<T>::insert_zeroes(size_t pos, size_t count)
+inline void ArrayBase<T>::insert_defaults(size_t pos, size_t count)
 {
 	const auto s = size();
 	asserts(pos <= s);
-	resize(s + count);
-	auto d = data();
+	ensure_capacity(s + count);
+	_size = (s + count);
+	auto d = data_ptr();
 	memmove(d + pos + count, d + pos, (s - pos) * sizeof(T));
-	memset(d + pos, 0, count * sizeof(T));
+	init_data(pos, count);
 }
 
 template<typename T>
-inline T& SimpleArray<T>::at(size_t idx) const
+inline T& ArrayBase<T>::at(size_t idx) const
 {
 	asserts(idx < size());
-	return access_simple_array_item<T>(handle, idx);
+	return *(data_ptr() + idx);
+}
+
+#if 0
+template<typename T>
+inline T* ArrayBase<T>::data_impl() const
+{
+	// const auto header = access_header();
+	// if (header && header->size > 0)
+	// {
+	// 	return data_adddress_from_header<T>(header);
+	// }
+	// return nullptr;
+	return empty() ? nullptr : (reinterpret_cast<T*>(handle.get()));
+}
+#endif
+
+template<typename T>
+inline T& ArrayBase<T>::back_impl() const
+{
+	asserts(!empty());
+	return *(data_ptr() + size() - 1);
 }
 
 template<typename T>
-inline T* SimpleArray<T>::data_impl() const
+inline void ArrayBase<T>::ensure_capacity(size_t size)
 {
-	const auto header = access_header();
-	if (header && header->size > 0)
+	if (size > _capacity)
 	{
-		return data_adddress_from_header<T>(header);
-	}
-	return nullptr;
-}
-
-template<typename T>
-inline T& SimpleArray<T>::back_impl() const
-{
-	const auto header = access_header();
-	asserts(header && header->size > 0);
-	return *(data_adddress_from_header<T>(header) + header->size - 1);
-}
-
-template<typename T>
-inline SimpleArrayHeader* SimpleArray<T>::access_header() const
-{
-	return reinterpret_cast<SimpleArrayHeader*>(handle.alloc_handle.get(engine().allocators));
-}
-
-template<typename T>
-inline void SimpleArray<T>::ensure_capacity(size_t size)
-{
-	auto header = access_header();
-	asserts(header);
-	if (size > header->capacity)
-	{
+		// TODO: we may be dangerously increasing the size too much later on
+		// for large data storage it might be too much
 		size_t new_capacity = (size * 2);
-		engine().allocators.reallocate(handle.alloc_handle, new_capacity);
-		header = access_header();
-		header->capacity = (decltype(header->capacity))new_capacity;
+		engine().allocators.reallocate(handle, new_capacity);
+		_capacity = new_capacity;
 	}
+}
+
+template<typename T>
+inline void ArrayBase<T>::init_data(size_t first, size_t count)
+{
+	T* d = data_ptr();
+	// TODO: user provided constructor is ignored
+	// becauase there's no way to distinguish between user constructor
+	// and default member initalizer
+	// maybe we should now stop using 0 initalization on memeber init 
+	// and just rely on zero initalization in code everywhere
+	constexpr const bool trivial = 
+		(std::is_trivial_v<T> || 
+		(std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>));
+	if constexpr (trivial)
+	{
+		memset(d + first, 0, sizeof(T) * count);
+	}
+	else
+	{
+		const size_t end = (first + count);
+		for (size_t i = first; i < end; i++)
+		{
+			new(d + i) T;
+		}
+	}
+}
+
+// namespace attribute_serialization
+// {
+// 	template<typename T>
+// 	struct can_be_trivially_stored<Array<T>>
+// 	{
+// 		static const constexpr bool value = true;
+// 	};
+// }
+
+template<typename T>
+inline Array<T>& Array<T>::operator=(Array<T>&& other)
+{
+	handle = other.handle;
+	_size = other._size;
+	_capacity = other._capacity;
+	other.handle = {};
+	other._size = 0;
+	other._capacity = 0;
+	return *this;
 }
 

@@ -72,8 +72,7 @@ TabletTestApp::TabletTestApp()
 
 	// TODO: the atlas texture should probably use nearest filter 
 	// since we are drawing into pixel perfect render buffer
-	auto tex_desc = load_texture("../../data/fonts/cp437_20x20.png");
-	store.atlas_texture = Texture::create(tex_desc);
+	store.atlas_texture = load_texture_array({"../../data/fonts/cp437_20x20.png"});
 
 	int width = 120;
 	int height = 80;
@@ -84,11 +83,8 @@ TabletTestApp::TabletTestApp()
 
 	// create a item
 	model.cam_pose = make_lookat(Vec3{0, 0, -60}, Vec3{0, 0, 0}, Vec3{0, 1, 0});
-	model.tablets = 
-	{ 
-		{ Pose{}, width, height, {}, alloc_simple_array<GlyphData>(width * height) },
-		{ Pose{}, 16, 16, {}, alloc_simple_array<GlyphData>(16 * 16) },
-	};
+	model.tablets.push_back({ Pose{}, width, height, {}, Array<GlyphData>(width * height, app_allocator()) });
+	model.tablets.push_back({ Pose{}, 16, 16, {}, Array<GlyphData>(16 * 16, app_allocator()) });
 
 	for (auto& tablet : model.tablets)
 	{
@@ -175,10 +171,10 @@ void TabletTestApp::present(const Context& ctx)
 			auto& tablet_model = model.tablets[i];
 			tablet(_ctx_id(i));
 			_attr(attrs::transform, to_mat44(tablet_model.pose));
-			_attr(attrs::glyphs, tablet_model.glyphs);
+			_attr(attrs::glyphs, tablet_model.glyphs.view());
 			_attr(attrs::width, static_cast<double>(tablet_model.width));
 			_attr(attrs::height, static_cast<double>(tablet_model.height));			
-			_attr(attrs::texture, store.atlas_texture.id());
+			_attr(attrs::texture, store.atlas_texture);
 			_attr(attrs::shader, store.tablet_shader);
 			_attr(attrs::quad_shader, store.tablet_screen_shader);
 		}

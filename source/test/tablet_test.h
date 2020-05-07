@@ -26,7 +26,7 @@ public:
 		int height;
 
 		std::vector<IVec2> extra_coords;
-		SimpleArray<GlyphData> glyphs;
+		Array<GlyphData> glyphs;
 	};
 
 	Pose cam_pose;
@@ -39,7 +39,7 @@ class TabletTestStore
 public:
 	Id tablet_shader;
 	Id tablet_screen_shader;
-	Texture atlas_texture;
+	Id atlas_texture;
 	// TabletStore tablet_store;
 };
 
