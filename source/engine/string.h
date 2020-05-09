@@ -8,6 +8,9 @@
 #include <utility>
 #include <algorithm>
 
+#define STRING_REF_COUNT 0
+#define STRING_VIEW STRING_REF_COUNT
+
 // Strings are immutable
 // By default all Strings are allocated in temp memory
 // Use store() to store and allocate the given string in a persistent memory
@@ -116,16 +119,20 @@ public:
 	template<size_t N>
 	inline String(char (&str)[N]) = delete;
 	inline String(const char* start, size_t size);
+#if STRING_REF_COUNT
 	inline String(const String& other) { *this = other; }
 	inline String(String&& other);
 	inline ~String();
+#endif
 
 	template<size_t N>
 	inline String& operator=(const char (&str)[N]);
 	template<size_t N>
 	inline String& operator=(char (&str)[N]) = delete;
+#if STRING_REF_COUNT
 	inline String& operator=(const String& other);
 	inline String& operator=(String&& other);
+#endif
 
 	inline void store();
 	template<size_t N>
@@ -138,10 +145,13 @@ public:
 	inline size_t size() const { return str_data.size(); }
 	inline const char* data() const { return str_data.data(); }
 
+#if STRING_REF_COUNT
 private:
 	inline void dispose();
+#endif
 };
 
+#if STRING_VIEW
 class StringView final
 {
 public:
@@ -152,6 +162,7 @@ public:
 	inline StringView& operator=(const String& str) { str_data = str.str_data; return *this; }
 	inline const String& str() const { return *reinterpret_cast<const String*>(this); }
 };
+#endif
 
 class StringBuilder final
 {
@@ -191,6 +202,7 @@ inline void assign_normal_string(StringData& str_data, const char* start, size_t
 	auto ptr = reinterpret_cast<uint8_t*>(handle.ptr);
 	auto header = reinterpret_cast<StringHeader*>(ptr);
 
+	// TODO: remove this if we are not doing ref counted strings
 	header->ref_count = 0;
 	auto buffer = (ptr + sizeof(StringHeader));
 	std::memcpy(buffer, start, size);
@@ -265,6 +277,7 @@ inline void* validate_and_get_string_buffer(const StringData& str_data)
 	return ptr;
 }
 
+#if STRING_REF_COUNT
 inline uint32_t string_ref_count(const StringData& str_data)
 {
 	auto header = str_data.header();
@@ -295,6 +308,7 @@ inline void release_string_ref(StringData& str_data)
 		str_data.clear();
 	}
 }
+#endif
 
 
 // StringData
@@ -371,6 +385,7 @@ inline String::String(const char* start, size_t size)
 	assign_temp_string(str_data, start, size);
 }
 
+#if STRING_REF_COUNT
 inline String::String(String&& other)
 {
 	std::swap(str_data, other.str_data);
@@ -380,15 +395,19 @@ inline String::~String()
 {
 	dispose();
 }
+#endif
 
 template<size_t N>
 inline String& String::operator=(const char (&str)[N])
 {
+#if STRING_REF_COUNT	
 	dispose();
+#endif
 	assign_string_literal(str_data, str, (N - 1));
 	return *this;
 }
 
+#if STRING_REF_COUNT
 inline String& String::operator=(const String& other)
 {
 	if (other.str_data.is_persistent_allocated())
@@ -405,6 +424,7 @@ inline String& String::operator=(String&& other)
 	std::swap(str_data, other.str_data);
 	return *this;
 }
+#endif
 
 inline void String::store()
 {
@@ -418,7 +438,9 @@ inline void String::store()
 template<size_t N>
 inline void String::store(const char (&str)[N])
 {
+#if STRING_REF_COUNT	
 	dispose();
+#endif
 	assign_string_literal(str_data, str, (N - 1));
 }
 
@@ -428,7 +450,7 @@ inline void String::store(const String& str)
 	store();
 }
 
-
+#if STRING_REF_COUNT
 inline void String::dispose()
 {
 	if (str_data.is_persistent_allocated())
@@ -436,6 +458,7 @@ inline void String::dispose()
 		release_string_ref(str_data);
 	}
 }
+#endif
 
 // StringBuilder
 

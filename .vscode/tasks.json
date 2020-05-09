@@ -30,7 +30,12 @@
         },
         {
             "label": "build tablet test",
-        "args": ["tablet_test"],
+            "args": ["tablet_test"],
+            "group": "build"
+        },
+        {
+            "label": "build string test",
+            "args": ["string_test"],
             "group": "build"
         }
     ]

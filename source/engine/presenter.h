@@ -62,7 +62,7 @@ namespace attrs
 	extern Attribute<Color> foreground_color;
 	extern Attribute<Id> texture;
 	extern Attribute<Id> shader;
-	extern Attribute<StringView> text;
+	extern Attribute<String> text;
 }
 
 extern Id register_elem_type(ElemTypeInitFunc init_func);

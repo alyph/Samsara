@@ -73,7 +73,7 @@ namespace attrs
 	Attribute<Color> foreground_color{Color{1.f, 1.f, 1.f, 1.f}};
 	Attribute<Id> texture{null_id};
 	Attribute<Id> shader{null_id};
-	Attribute<StringView> text{StringView{}};
+	Attribute<String> text{String{}};
 }
 
 static std::vector<ElemTypeInitFunc>& registered_elem_type_funcs()

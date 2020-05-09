@@ -37,31 +37,43 @@ int main()
 	printf("temp string is long now: %s\n", temp_str.c_str());
 	asserts(temp_str.str_data.normal_data.alloc_handle.allocator_type() == engine().allocators.current_temp_allocator);
 
+#if STRING_VIEW
 	StringView str4_view;
+#else
+	String str4_view;
+#endif
 	{
 		str3.store();
 		String str4 = str3;
 		printf("forth string is : %s\n", str4.c_str());
 		asserts(str4.str_data.normal_data.alloc_handle.allocator_type() == Allocator::app);
+#if STRING_REF_COUNT
 		asserts(string_ref_count(str4.str_data) == 2);
 		asserts(string_ref_count(str3.str_data) == 2);
+#endif
 
 		str2.store();
 		str4 = str2;
+#if STRING_REF_COUNT
 		asserts(string_ref_count(str3.str_data) == 1);
 		asserts(string_ref_count(str4.str_data) == 2);
 		asserts(string_ref_count(str2.str_data) == 2);
+#endif
 
 		str2 = cstr_to_str("second string gets asigned to new one");
+#if STRING_REF_COUNT
 		asserts(string_ref_count(str4.str_data) == 1);
+#endif
 		asserts(str2.str_data.normal_data.alloc_handle.allocator_type() == engine().allocators.current_temp_allocator);
 		printf("second string now : %s\n", str2.c_str());
 		printf("forth string now : %s\n", str4.c_str());
 
 		String str5 = str4;
 		asserts(str5.str_data.normal_data.alloc_handle.allocator_type() == Allocator::app);
+#if STRING_REF_COUNT
 		asserts(string_ref_count(str5.str_data) == 2);
 		asserts(string_ref_count(str4.str_data) == 2);
+#endif
 		asserts(validate_and_get_string_buffer(str5.str_data) == validate_and_get_string_buffer(str4.str_data));
 
 		// str4 will be deallocated, however it is still safe to access its data
@@ -69,9 +81,11 @@ int main()
 		str4_view = str4;
 	}
 
+#if STRING_REF_COUNT
 	// although we can still access this data, but we can confirm the ref count is now 0 
 	// and the memory can go away when the allocator shrinks
 	asserts(string_ref_count(str4_view.str_data) == 0);
+#endif
 
 	String reloc_str = cstr_to_str("first long enough string to relocate actually");
 	reloc_str.store();
@@ -81,24 +95,28 @@ int main()
 	auto old_ptr = validate_and_get_string_buffer(reloc_str.str_data);
 	auto old_size = reloc_str.size();
 
+#if STRING_VIEW
 	StringView reloc_str_view = reloc_str;
+#else
+	String reloc_str_view = reloc_str;
+#endif
 
 	reloc_str.store(cstr_to_str("first long enough string to relocate actually -- need more"));
 
 	auto new_ptr = validate_and_get_string_buffer(reloc_str.str_data);
 
-	printf("before relocation: %s\n", reloc_str_view.str().c_str());
+	printf("before relocation: %s\n", reloc_str_view.c_str());
 	printf("after relocation: %s\n", reloc_str.c_str());
 
 	asserts(validate_and_get_string_buffer(reloc_str_view.str_data) == old_ptr);
-	asserts(reloc_str_view.str().size() == old_size);
+	asserts(reloc_str_view.size() == old_size);
 	asserts(new_ptr == reinterpret_cast<uint8_t*>(old_ptr) + reloc_str_view.str_data.normal_data.alloc_handle.capacity(engine().allocators));
 	
 	StringBuilder builder1;
-	builder1.append_format(str4_view.str());
-	builder1.append_format(str4_view.str());
+	builder1.append_format(str4_view);
+	builder1.append_format(str4_view);
 	String built_str = builder1.to_str();
-	asserts(built_str.size() == str4_view.str().size() * 2);
+	asserts(built_str.size() == str4_view.size() * 2);
 	printf("built string: %s\n", built_str.c_str());
 
 

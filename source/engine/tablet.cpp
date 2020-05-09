@@ -462,7 +462,7 @@ static int compute_elem_self_height(const Frame& frame, Id elem_id, int width)
 		{
 			// TODO: utf8
 			// TODO: text wrap
-			height = ((int)text->str().size() + width - 1) / width;
+			height = ((int)text->size() + width - 1) / width;
 		}
 		else
 		{
@@ -507,7 +507,7 @@ static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, 
 	// draw text, predict width height based on text length, wrapping etc.
 	if (auto text = get_elem_defined_attr(frame, elem_id, attrs::text))
 	{
-		const auto& str = text->str();
+		const auto& str = *text;
 		// TODO: provide a character iterator to avoid caching these things
 		const auto str_size = str.size();
 		const auto str_data = str.data();

@@ -40,6 +40,7 @@
   - [ ] provide a func for trivial copy
   - [x] remove constant checking of alloc handle, just access the pointer
   - [x] allow alloc array in specified allocator
+  - [ ] arrayview should be just like stringview, let it implicitly construct from array
 - [ ] refactor string
   - [ ] remove ref counting, deallocation, string header
   - [ ] allow storing string in specified allocator
