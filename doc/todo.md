@@ -42,9 +42,9 @@
   - [x] allow alloc array in specified allocator
   - [ ] arrayview should be just like stringview, let it implicitly construct from array
 - [ ] refactor string
-  - [ ] remove ref counting, deallocation, string header
+  - [x] remove ref counting, deallocation, string header
   - [ ] allow storing string in specified allocator
-  - [ ] do we still need stringview in that case?
+  - [x] do we still need stringview in that case? (DONE: removed)
 - [ ] simplify allocator
   - [x] allocate memory in page so pointer never expire
   - [x] no more deallocation
@@ -63,6 +63,9 @@
 - [x] perf: add a string layout which points directly to the pointer of a string literal
 - [ ] have custom allocator (declared as static variable and auto assign an allocator id, limited number 16 right now), the custom allocator should also be configurable (e.g. temp or not, reclaimation strategy)
 
+### allocator
+- [ ] handle Allocator::none, maybe we should get idx = (allocator - 1)
+- [ ] allow allocate 0 bytes data, which will return an empty handle but record the allocator and later can use reallocate to get real memory
 
 ### input
 - [ ] mouse wheel event

@@ -1,34 +1,27 @@
 #pragma once
 
-#include <cstdint>
-#include "engine/array.h"
-#include "engine/string.h"
-#include "engine/color.h"
-#include "engine/math_types.h"
+#include "globals.h"
 
 enum TileTypeFlags: uint32_t
 {
 	water = 0x0001,
 };
 
-struct TileType
-{
-	String name;
-	uint16_t glyph;
-	Color32 color_a;
-	Color32 color_b;
-	uint32_t flags{};
-	uint32_t ex_glyph_start{};
-};
-
 struct Tile
 {
-	uint16_t type{};
+	uint32_t terrain{};
+	uint32_t structure{};
 };
 
 struct MapChunk
 {
 	Id first_tile_id{};
+};
+
+struct TileGlyph
+{
+	uint16_t code;
+	Color32 color;
 };
 
 static constexpr const int map_chunk_size = 32;
@@ -39,11 +32,14 @@ struct Map
 	Array<MapChunk> chunks;
 	Array<Tile> tiles;
 
+	Array<TileGlyph> ground_glyphs;
+
 	inline Id tile_id(const IVec2& coords) const;
 	inline int chunk_coords_to_idx(const IVec2& coords) const;
 	inline IVec2 chunk_idx_to_coords(int idx) const;
-	inline void set_tile(const IVec2& coords, const Tile& tile);
-	void expand_to_fit_chunk(const IVec2 coords);
+	inline void set_tile(const IVec2& coords, const Tile& tile, const Globals& globals);
+	void expand_to_fit_chunk(const IVec2& coords);
+	void update_glyphs(const IVec2& coords, const IVec2& dims, const Globals& globals);
 };
 
 inline int tile_to_chunk(int tile_coord)
@@ -86,7 +82,7 @@ inline IVec2 Map::chunk_idx_to_coords(int idx) const
 	};
 }
 
-inline void Map::set_tile(const IVec2& coords, const Tile& tile)
+inline void Map::set_tile(const IVec2& coords, const Tile& tile, const Globals& globals)
 {
 	IVec2 chunk_coords{ tile_to_chunk(coords.x), tile_to_chunk(coords.y) };
 	if (chunk_coords.x < chunk_bounds.x || chunk_coords.x >= (chunk_bounds.x + chunk_bounds.width) ||
@@ -102,12 +98,16 @@ inline void Map::set_tile(const IVec2& coords, const Tile& tile)
 	{
 		// add tiles for the chunk
 		first_tile_id = index_to_id(tiles.size());
+		asserts(tiles.size() == ground_glyphs.size());
 		tiles.resize(tiles.size() + (map_chunk_size * map_chunk_size));
+		ground_glyphs.resize(tiles.size());
 	}
 
 	Id tile_id = first_tile_id + (coords.x - chunk_first_tile(chunk_coords.x)) +
 		(coords.y - chunk_first_tile(chunk_coords.y)) * map_chunk_size;
 	tiles[id_to_index(tile_id)] = tile;
-}
 
+	// TODO: maybe we should separate this and call it explicitly?
+	update_glyphs(coords - IVec2{1, 1}, {3, 3}, globals);
+}
 

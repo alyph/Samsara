@@ -2,8 +2,7 @@
 
 #include "engine/presenter.h"
 #include "engine/texture.h"
-#include "map.h"
-
+#include "world.h"
 
 struct EditorState
 {
@@ -20,11 +19,6 @@ struct EditorState
 	Vec2 dragging_map_offset{};
 };
 
-struct WorldMeta
-{
-	std::vector<TileType> tile_types;
-	std::vector<uint16_t> ex_tile_glyphes;
-};
 
 class Game
 {
@@ -40,8 +34,8 @@ private:
 	Id tablet_screen_shader;
 	Id atlas_texture;
 
-	WorldMeta world_meta;
-	Map map;
+	Globals globals;
+	World world;
 	EditorState editor_state;
 };
 

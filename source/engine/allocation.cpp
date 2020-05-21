@@ -61,6 +61,7 @@ static size_t allocate_bytes(AllocatorData& alloc, size_t size)
 
 AllocHandle AllocatorGlobals::allocate(Allocator allocator, size_t size)
 {
+	// TODO: handle Allocator::none, maybe we should get idx = (allocator - 1)
 	const auto allocator_idx = static_cast<size_t>(allocator);
 	asserts(allocator_idx < num_allocators);
 	auto& allocator_data = allocators[allocator_idx];

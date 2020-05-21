@@ -190,9 +190,11 @@ public:
 	inline void insert(size_t pos, const T& value);
 	inline void insert_defaults(size_t pos, size_t count);
 	inline ArrayView<T> view() { return { handle, 0, size() }; }
+	static constexpr bool is_trivial() { return (std::is_trivial_v<T> || (std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>)); }
 
 protected:
 	inline void alloc_impl(size_t size, size_t capacity, Allocator allocator);
+	inline void alloc_impl(Allocator allocator, std::initializer_list<T> il);
 	inline void init_data(size_t first, size_t count);
 	inline T& at(size_t idx) const;
 	inline T* data_ptr() const { return reinterpret_cast<T*>(handle.get()); }
@@ -215,7 +217,11 @@ public:
 	inline Array& operator=(Array<T>&& other) noexcept; // TODO: not implemented yet, implement it if we actually need to deep copy the array
 
 	inline void alloc(size_t size, size_t capacity, Allocator allocator) { alloc_impl(size, capacity, allocator); }
+	inline void alloc(Allocator allocator, std::initializer_list<T> il) { alloc_impl(allocator, il); }
+	inline void alloc_perm(size_t size, size_t capacity) { alloc_impl(size, capacity, perm_allocator()); }
+	inline void alloc_perm(std::initializer_list<T> il) { alloc_impl(perm_allocator(), il); }
 	inline void alloc_temp(size_t size, size_t capacity) { alloc_impl(size, capacity, temp_allocator()); }
+	inline void alloc_temp(std::initializer_list<T> il) { alloc_impl(temp_allocator(), il); }
 };
 
 template<typename T>
@@ -225,8 +231,10 @@ public:
 	inline ArrayTemp() = default;
 	inline explicit ArrayTemp(size_t size) noexcept { alloc(size, size); }
 	inline ArrayTemp(size_t size, size_t capacity) noexcept { alloc(size, capacity); }
+	// TODO: maybe rename these to alloc_temp just to make it clear and explicit
 	inline void alloc(size_t size) { alloc(size, size); }
 	inline void alloc(size_t size, size_t capacity) { alloc_impl(size, capacity, temp_allocator()); }
+	inline void alloc(std::initializer_list<T> il) { alloc_impl(temp_allocator(), il); }
 };
 
 
@@ -280,6 +288,27 @@ inline void ArrayBase<T>::alloc_impl(size_t size, size_t capacity, Allocator all
 	_capacity = capacity;
 	_size = size;
 	init_data(0, size);
+}
+
+template<typename T>
+inline void ArrayBase<T>::alloc_impl(Allocator allocator, std::initializer_list<T> il)
+{
+	const size_t num = il.size();
+	alloc_impl(il.size(), num, allocator);
+	if constexpr (is_trivial())
+	{
+		memcpy(data_ptr(), il.begin(), num * sizeof(T));
+	}
+	else
+	{
+		// TODO: use copy constructor instead of default construction then assignment
+		auto ptr = data_ptr();
+		auto begin = il.begin();
+		for (size_t i = 0; i < num; i++)
+		{
+			*(ptr + i) = *(begin + i);
+		}
+	}
 }
 
 #if 0
@@ -446,10 +475,7 @@ inline void ArrayBase<T>::init_data(size_t first, size_t count)
 	// and default member initalizer
 	// maybe we should now stop using 0 initalization (e.g. foo{};) on memeber init 
 	// and just rely on zero initalization in code everywhere
-	constexpr const bool trivial = 
-		(std::is_trivial_v<T> || 
-		(std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>));
-	if constexpr (trivial)
+	if constexpr (is_trivial())
 	{
 		memset(d + first, 0, sizeof(T) * count);
 	}

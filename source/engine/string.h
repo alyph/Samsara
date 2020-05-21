@@ -101,8 +101,8 @@ struct StringData
 	inline bool is_short() const { return (layout() == StringLayout::short_string); }
 	inline bool is_normal() const { return (layout() == StringLayout::normal_string); }
 	inline bool is_literal() const { return (layout() == StringLayout::literal); }
-	inline bool is_persistent_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() == Allocator::app; }
-	inline bool is_temp_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() != Allocator::app; }
+	inline bool is_persistent_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() < Allocator::temp; }
+	inline bool is_temp_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() >= Allocator::temp; }
 	inline StringHeader* header() const;
 };
 
@@ -234,7 +234,7 @@ inline void assign_stored_string(StringData& str_data, const char* start, size_t
 	}
 	else
 	{
-		assign_normal_string(str_data, start, size, Allocator::app);
+		assign_normal_string(str_data, start, size, perm_allocator());
 		str_data.header()->ref_count = 1;
 	}
 }
@@ -259,21 +259,6 @@ inline void* validate_and_get_string_buffer(const StringData& str_data)
 {
 	auto ptr = str_data.normal_data.alloc_handle.get();
 	asserts(ptr);
-
-	// latched String or StringStore, must make sure the buffer is still somewhat valid
-	// e.g. size matches (we won't be validate content doesn't change, as long as the size match, 
-	// nothing horrible will be happening)
-	// reason why we must validate is because unlike String a StringStore may reuse the 
-	// allocated block to place in the new string content or move the whole block to new location
-	// via reallocation
-	// if (str_data.normal_data.alloc_handle.allocator_type() == Allocator::string)
-	// {
-	// 	auto header = reinterpret_cast<const StringHeader*>(ptr);
-	// 	asserts((str_data.is_sub() ? 
-	// 		(str_data.normal_data.start + str_data.normal_data.size <= header->size) : 
-	// 		(str_data.normal_data.size == header->size)));		
-	// }
-
 	return ptr;
 }
 

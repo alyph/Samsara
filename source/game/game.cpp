@@ -6,44 +6,6 @@
 #include "engine/image_utils.h"
 #include "easy/profiler.h"
 
-// mask encodes 1 for the directions that are not water
-// total 8 bits for 8 directions, ordered as follows:
-//     7 0 1    +Y
-//     6 - 2     ^
-//     5 4 3     | -> +X
-//
-// code encodes 1 for neighbors that need water connections
-// total 4 bits for 4 neighbors, ordered as follows:
-//       0      +Y
-//     3 - 1     ^
-//       2       | -> +X
-struct WaterTileMask
-{
-	uint8_t codes[256];
-	constexpr WaterTileMask(): codes{}
-	{
-		for (unsigned int i = 0; i < 256; i++)
-		{
-			uint8_t code = 0;
-			uint8_t mask = (uint8_t)i;
-			if (mask & 0x01) { code |= (0x02 | 0x08); }
-			if (mask & 0x02) { code |= (0x01 | 0x02); }
-			if (mask & 0x04) { code |= (0x01 | 0x04); }
-			if (mask & 0x08) { code |= (0x02 | 0x04); }
-			if (mask & 0x10) { code |= (0x02 | 0x08); }
-			if (mask & 0x20) { code |= (0x04 | 0x08); }
-			if (mask & 0x40) { code |= (0x01 | 0x04); }
-			if (mask & 0x80) { code |= (0x01 | 0x08); }
-			if (mask & 0x01) { code &= ~(0x01); }
-			if (mask & 0x04) { code &= ~(0x02); }
-			if (mask & 0x10) { code &= ~(0x04); }
-			if (mask & 0x40) { code &= ~(0x08); }
-			codes[i] = code;
-		}
-	}
-};
-static const constexpr WaterTileMask water_tile_mask{};
-
 Game::Game()
 {
 	// TODO: move to asset manager or something
@@ -64,29 +26,23 @@ Game::Game()
 		"../../data/fonts/cp437_24x24.png",
 		"../../data/fonts/anikki_square_24x24.png",
 		"../../data/fonts/urr_a_24x24.png",
+		"../../data/fonts/path_24x24.png",
 	});
 
-	world_meta.ex_tile_glyphes = 
-	{ 
-		0x0200, 0x02ba, 0x02cd, 0x02c8,
-		0x02ba, 0x02ba, 0x02c9, 0x02cc,
-		0x02cd, 0x02bc, 0x02cd, 0x02ca,
-		0x02bb, 0x02b9, 0x02cb, 0x02ce,
-	};
-
-	// tile_types.alloc_stored(0, 64);
-	world_meta.tile_types = 
+	globals.terrain_types.alloc_perm( 
 	{
 		{"empty", 0, 0_rgb32, 0_rgb32},
 		{"forest", 0x0105, 0x30ff50_rgb32, 0x30ff50_rgb32},
 		{"hill", 0x0218, 0x606070_rgb32, 0x606070_rgb32},
-		{"coast", 0x027e, 0x103060_rgb32, 0x80c0f0_rgb32, TileTypeFlags::water},
-	};
+		{"coast", 0x0300, 0x103060_rgb32, 0x80c0f0_rgb32, TileTypeFlags::water},
+	});
 
 	editor_state.selected_tile_type = 1;
 	editor_state.map_vp.x = editor_state.map_vp.y = (map_chunk_size / 2);
-	map.chunks.alloc(0, 1024, stage_allocator());
-	map.tiles.alloc(0, 512 * 512, stage_allocator());
+	// TODO: maybe should be in Map's constructor
+	world.map.chunks.alloc(0, 1024, stage_allocator());
+	world.map.tiles.alloc(0, 512 * 512, stage_allocator());
+	world.map.ground_glyphs.alloc(0, 512 * 512, stage_allocator());
 }
 
 
@@ -94,42 +50,23 @@ void Game::update()
 {
 }
 
-// This generates the mask that encodes the non-water directions (see above explanations of mask)
-// return 0 for water tile that has no blocking non-water directions, in which case a normal tile glyph should be used
-static inline uint8_t calc_neighbor_water_mask(const Map& map, const std::vector<TileType>& tile_types, const IVec2& tile_coords)
-{
-	// remind of ordering:
-	//     7 0 1  +Y
-	//     6 - 2   ^
-	//     5 4 3   | -> +X
-	const IVec2 offsets[] = { {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1} };
-	uint8_t mask = 0;
-	for (int i = 0; i < 8; i++)
-	{
-		const Id id = map.tile_id(tile_coords + offsets[i]);
-		const uint16_t type = (id ? map.tiles[id_to_index(id)].type : 0);
-		if (!(tile_types[type].flags & TileTypeFlags::water))
-		{
-			mask |= (1 << i);
-		}
-	}
-	return mask;
-}
 
-static void paint_square(Map& map, uint16_t tile_type, const IVec2& center, int radius)
+
+static void paint_square(Map& map, uint16_t tile_type, const IVec2& center, int radius, const Globals& globals)
 {
+	// TODO: move this function to map and let it do less glyph update
 	int r = (radius - 1);
 	const Tile tile{tile_type};
 	for (int dx = -r; dx <= r; dx++)
 	{
 		for (int dy = -r; dy <= r; dy++)
 		{
-			map.set_tile(center + IVec2{dx, dy}, tile);
+			map.set_tile(center + IVec2{dx, dy}, tile, globals);
 		}
 	}	
 }
 
-static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const IVec2& end, int radius)
+static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const IVec2& end, int radius, const Globals& globals)
 {
 	// https://en.wikipedia.org/wiki/Bresenham's_line_algorithm#All_cases
 	// http://members.chello.at/~easyfilter/Bresenham.pdf
@@ -141,18 +78,18 @@ static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const I
 	auto err = (dx + dy);
 	auto x = start.x;
 	auto y = start.y;
-	paint_square(map, tile_type, {x, y}, radius);
+	paint_square(map, tile_type, {x, y}, radius, globals);
 	while (!((x == end.x && y == end.y)))
 	{
 		const auto e2 = err * 2;
 		if (e2 >= dy) { err += dy; x += sx; }
 		if (e2 <= dx) { err += dx; y += sy; }
 		// TODO: if this gets too expensive, can just draw the deltas
-		paint_square(map, tile_type, {x, y}, radius);
+		paint_square(map, tile_type, {x, y}, radius, globals);
 	}
 }
 
-static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorState& state, const Scalar& width, const Scalar& height)
+static Id map_view(const Context ctx, Map& map, const Globals& globals, EditorState& state, const Scalar& width, const Scalar& height)
 {
 	EASY_FUNCTION();
 
@@ -173,24 +110,13 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 			Id tile_id = map.tile_id(tile_coords);
 			if (tile_id)
 			{
-				const Tile& tile = map.tiles[id_to_index(tile_id)];
-				if (tile.type)
+				const auto& ground_glyph = map.ground_glyphs[id_to_index(tile_id)];
+				if (ground_glyph.code > 0)
 				{
-					const TileType& tile_type = meta.tile_types[tile.type];
 					GlyphData glyph;
-					glyph.code = tile_type.glyph;
-					glyph.color2 = tile_type.color_a;
+					glyph.code = ground_glyph.code;
+					glyph.color2 = ground_glyph.color;
 					glyph.coords = { layout.left + x, layout.top + layout.height - 1 - y };
-					if (tile_type.flags & TileTypeFlags::water)
-					{
-						const auto mask = calc_neighbor_water_mask(map, meta.tile_types, tile_coords);
-						if (mask)
-						{
-							glyph.code = meta.ex_tile_glyphes[tile_type.ex_glyph_start + water_tile_mask.codes[mask]];
-							// glyph.color2 = 0x4070a0_rgb32;
-						}
-					}
-
 					render_buffer.push_glyph(elem_id, glyph);
 				}
 			}
@@ -205,7 +131,7 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 		{
 			const IVec2 map_cursor{map_x + cursor.x - layout.left, map_y + (layout.top + layout.height - 1 - cursor.y)};
 			const uint16_t tile_type_idx = state.selected_tile_type;
-			const TileType& tile_type = meta.tile_types[tile_type_idx];
+			const TerrainType& tile_type = globals.terrain_types[tile_type_idx];
 			const int r = state.brush_radius - 1;
 			const int d = r * 2 + 1;
 			GlyphData glyph;
@@ -222,11 +148,11 @@ static Id map_view(const Context ctx, Map& map, const WorldMeta& meta, EditorSta
 				{
 					state.painting = true;
 					state.paint_cursor = map_cursor;
-					paint_square(map, tile_type_idx, map_cursor, state.brush_radius);
+					paint_square(map, tile_type_idx, map_cursor, state.brush_radius, globals);
 				}
 				else if (state.paint_cursor != map_cursor)
 				{
-					paint_line(map, tile_type_idx, state.paint_cursor, map_cursor, state.brush_radius);
+					paint_line(map, tile_type_idx, state.paint_cursor, map_cursor, state.brush_radius, globals);
 					state.paint_cursor = map_cursor;
 				}				
 			}
@@ -315,22 +241,22 @@ static void palette_button(const Context ctx, int index, uint16_t glyph_code, co
 	}
 }
 
-static void tile_palette(const Context ctx, const std::vector<TileType>& tile_types, EditorState& state)
+static void tile_palette(const Context ctx, const Array<TerrainType>& terrain_types, EditorState& state)
 {
 	int size = 3;
 	int cols = 2;
 
-	for (int i = 0; i < tile_types.size(); i++)
+	for (int i = 0; i < terrain_types.size(); i++)
 	{
-		const TileType& type_data = tile_types[i];
+		const TerrainType& type_data = terrain_types[i];
 		palette_button(_ctx_id(i), i, type_data.glyph, type_data.color_a, i, state.selected_tile_type);
 	}
 }
 
-static void brush_size_palette(const Context ctx, const std::vector<TileType>& tile_types, EditorState& state)
+static void brush_size_palette(const Context ctx, const Array<TerrainType>& terrain_types, EditorState& state)
 {
 	int brush_sizes[] = {1, 2, 4, 8};
-	int padding = (((int)tile_types.size() + 1) / 2) * 2; // TODO: hack until we have the proper layout implemented
+	int padding = (((int)terrain_types.size() + 1) / 2) * 2; // TODO: hack until we have the proper layout implemented
 	for (int i = 0; i < LEN(brush_sizes); i++)
 	{
 		const int size = brush_sizes[i];
@@ -409,7 +335,7 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			map_view(_ctx, map, world_meta, editor_state, map_size, map_size);
+			map_view(_ctx, world.map, globals, editor_state, map_size, map_size);
 		}
 
 
@@ -426,8 +352,8 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			tile_palette(_ctx, world_meta.tile_types, editor_state);
-			brush_size_palette(_ctx, world_meta.tile_types, editor_state);
+			tile_palette(_ctx, globals.terrain_types, editor_state);
+			brush_size_palette(_ctx, globals.terrain_types, editor_state);
 		}
 	}
 }

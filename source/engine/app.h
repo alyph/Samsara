@@ -12,6 +12,11 @@ int run_app()
 	profiler::startListen();
 	scoped_engine_init();
 
+	// no need to pop, nothing outside is using it
+	// TODO: maybe a better way is to have a scoped perm allocator setup
+	// or implement the defer{}
+	push_perm_allocator(Allocator::app);
+
 	WindowCreationParams params;
 	params.width = 1024;
 	params.height = 768;
