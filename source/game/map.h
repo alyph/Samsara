@@ -34,12 +34,17 @@ struct Map
 
 	Array<TileGlyph> ground_glyphs;
 
-	inline Id tile_id(const IVec2& coords) const;
-	inline int chunk_coords_to_idx(const IVec2& coords) const;
-	inline IVec2 chunk_idx_to_coords(int idx) const;
-	inline void set_tile(const IVec2& coords, const Tile& tile, const Globals& globals);
-	void expand_to_fit_chunk(const IVec2& coords);
-	void update_glyphs(const IVec2& coords, const IVec2& dims, const Globals& globals);
+	inline Id tile_id(const Vec2i& coords) const;
+	inline int chunk_coords_to_idx(const Vec2i& coords) const;
+	inline Vec2i chunk_idx_to_coords(int idx) const;
+	inline void set_tile(const Vec2i& coords, const Tile& tile);
+	inline void set_structure(const Vec2i& coords, TypeIndex structure_type);
+
+	void expand_to_fit_chunk(const Vec2i& coords);
+
+	// NOTE: dirty_tiles should just be the tiles that changed, this function will 
+	// auto expand to surounding tiles that also need glyph updates
+	void update_glyphs(const Box2i dirty_tiles, const Globals& globals);
 };
 
 inline int tile_to_chunk(int tile_coord)
@@ -53,9 +58,9 @@ inline int chunk_first_tile(int chunk_coord)
 	return chunk_coord * map_chunk_size;
 }
 
-inline Id Map::tile_id(const IVec2& coords) const
+inline Id Map::tile_id(const Vec2i& coords) const
 {
-	IVec2 chunk_coords{ tile_to_chunk(coords.x), tile_to_chunk(coords.y) };
+	Vec2i chunk_coords{ tile_to_chunk(coords.x), tile_to_chunk(coords.y) };
 	if (chunk_coords.x < chunk_bounds.x || chunk_coords.x >= (chunk_bounds.x + chunk_bounds.width) ||
 		chunk_coords.y < chunk_bounds.y || chunk_coords.y >= (chunk_bounds.y + chunk_bounds.height))
 	{
@@ -68,12 +73,12 @@ inline Id Map::tile_id(const IVec2& coords) const
 		(coords.y - chunk_first_tile(chunk_coords.y)) * map_chunk_size;
 }
 
-inline int Map::chunk_coords_to_idx(const IVec2& coords) const
+inline int Map::chunk_coords_to_idx(const Vec2i& coords) const
 {
 	return (coords.x - chunk_bounds.x) + (coords.y - chunk_bounds.y) * chunk_bounds.width;
 }
 
-inline IVec2 Map::chunk_idx_to_coords(int idx) const
+inline Vec2i Map::chunk_idx_to_coords(int idx) const
 {
 	return 
 	{
@@ -82,9 +87,9 @@ inline IVec2 Map::chunk_idx_to_coords(int idx) const
 	};
 }
 
-inline void Map::set_tile(const IVec2& coords, const Tile& tile, const Globals& globals)
+inline void Map::set_tile(const Vec2i& coords, const Tile& tile)
 {
-	IVec2 chunk_coords{ tile_to_chunk(coords.x), tile_to_chunk(coords.y) };
+	Vec2i chunk_coords{ tile_to_chunk(coords.x), tile_to_chunk(coords.y) };
 	if (chunk_coords.x < chunk_bounds.x || chunk_coords.x >= (chunk_bounds.x + chunk_bounds.width) ||
 		chunk_coords.y < chunk_bounds.y || chunk_coords.y >= (chunk_bounds.y + chunk_bounds.height))
 	{
@@ -106,8 +111,20 @@ inline void Map::set_tile(const IVec2& coords, const Tile& tile, const Globals& 
 	Id tile_id = first_tile_id + (coords.x - chunk_first_tile(chunk_coords.x)) +
 		(coords.y - chunk_first_tile(chunk_coords.y)) * map_chunk_size;
 	tiles[id_to_index(tile_id)] = tile;
+}
 
-	// TODO: maybe we should separate this and call it explicitly?
-	update_glyphs(coords - IVec2{1, 1}, {3, 3}, globals);
+inline void Map::set_structure(const Vec2i& coords, TypeIndex structure_type)
+{
+	const auto id = tile_id(coords);
+	if (id)
+	{
+		tiles[id_to_index(id)].structure = structure_type;
+	}
+	else
+	{
+		Tile new_tile{};
+		new_tile.structure = structure_type;
+		set_tile(coords, new_tile);
+	}
 }
 

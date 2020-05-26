@@ -40,7 +40,7 @@ struct WaterTileMask
 static const constexpr WaterTileMask water_tile_mask{};
 
 
-void Map::expand_to_fit_chunk(const IVec2& coords)
+void Map::expand_to_fit_chunk(const Vec2i& coords)
 {
 	if (chunks.empty())
 	{
@@ -85,13 +85,13 @@ void Map::expand_to_fit_chunk(const IVec2& coords)
 
 // This generates the mask that encodes the non-water directions (see above explanations of mask)
 // return 0 for water tile that has no blocking non-water directions, in which case a normal tile glyph should be used
-static inline uint8_t calc_neighbor_water_mask(const Map& map, const Array<TerrainType>& terrain_types, const IVec2& tile_coords)
+static inline uint8_t calc_neighbor_water_mask(const Map& map, const Array<TerrainType>& terrain_types, const Vec2i& tile_coords)
 {
 	// remind of ordering:
 	//     7 0 1  +Y
 	//     6 - 2   ^
 	//     5 4 3   | -> +X
-	const IVec2 offsets[] = { {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1} };
+	const Vec2i offsets[] = { {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1} };
 	uint8_t mask = 0;
 	for (int i = 0; i < 8; i++)
 	{
@@ -105,28 +105,37 @@ static inline uint8_t calc_neighbor_water_mask(const Map& map, const Array<Terra
 	return mask;
 }
 
-void Map::update_glyphs(const IVec2& coords, const IVec2& dims, const Globals& globals)
+void Map::update_glyphs(const Box2i dirty_tiles, const Globals& globals)
 {
-	for (int y = 0; y < dims.y; y++)
+	for (int y = (dirty_tiles.min.y - 1); y <= (dirty_tiles.max.y + 1); y++)
 	{
-		for (int x = 0; x < dims.x; x++)
+		for (int x = (dirty_tiles.min.x - 1); x <= (dirty_tiles.max.x + 1); x++)
 		{
-			const auto tile_coords = coords + IVec2{x, y};
+			const Vec2i tile_coords{x, y};
 			Id tid = tile_id(tile_coords);
 			if (tid)
 			{
 				const Tile& tile = tiles[id_to_index(tid)];
 				TileGlyph& glyph = ground_glyphs[id_to_index(tid)];
-				const auto& terrain_type = globals.terrain_types[tile.terrain];
-				glyph.code = terrain_type.glyph;
-				glyph.color = terrain_type.color_a;
-				if (terrain_type.flags & TileTypeFlags::water)
+				if (tile.structure)
 				{
-					const auto mask = calc_neighbor_water_mask(*this, globals.terrain_types, tile_coords);
-					if (mask)
+					const auto& struct_type = globals.structure_types[tile.structure];
+					glyph.code = struct_type.glyph;
+					glyph.color = struct_type.color;
+				}
+				else
+				{
+					const auto& terrain_type = globals.terrain_types[tile.terrain];
+					glyph.code = terrain_type.glyph;
+					glyph.color = terrain_type.color_a;
+					if (terrain_type.flags & TileTypeFlags::water)
 					{
-						// TODO: maybe provide a function to truncate the code within the page
-						glyph.code = (terrain_type.glyph + water_tile_mask.codes[mask]);
+						const auto mask = calc_neighbor_water_mask(*this, globals.terrain_types, tile_coords);
+						if (mask)
+						{
+							// TODO: maybe provide a function to truncate the code within the page
+							glyph.code = (terrain_type.glyph + water_tile_mask.codes[mask]);
+						}
 					}
 				}
 			}

@@ -3,6 +3,7 @@
 #include "assertion.h"
 #include <cmath>
 #include <cstdint>
+#include <algorithm>
 
 struct Vec2
 {
@@ -29,12 +30,12 @@ struct Vec4
 	inline const float* data() const;
 };
 
-struct DVec2
+struct Vec2d
 {
 	double x{}, y{};
 };
 
-struct IVec2
+struct Vec2i
 {
 	int32_t x{}, y{};
 };
@@ -42,6 +43,11 @@ struct IVec2
 struct IRect
 {
 	int32_t x{}, y{}, width{}, height{};
+};
+
+struct Box2i
+{
+	Vec2i min, max;
 };
 
 // column major, post multiply
@@ -106,11 +112,13 @@ inline Vec4 to_vec4(const Vec3& v3, float w);
 inline Vec4 operator+(const Vec4& v0, const Vec4& v1);
 inline Vec4 operator*(const Vec4& v, float s);
 
-// IVec2
-inline IVec2 operator+(const IVec2& v0, const IVec2& v1);
-inline IVec2 operator-(const IVec2& v0, const IVec2& v1);
-inline bool operator==(const IVec2& v0, const IVec2& v1);
-inline bool operator!=(const IVec2& v0, const IVec2& v1);
+// Vec2i
+inline Vec2i operator+(const Vec2i& v0, const Vec2i& v1);
+inline Vec2i operator-(const Vec2i& v0, const Vec2i& v1);
+inline bool operator==(const Vec2i& v0, const Vec2i& v1);
+inline bool operator!=(const Vec2i& v0, const Vec2i& v1);
+inline Vec2i comp_min(const Vec2i& v0, const Vec2i& v1);
+inline Vec2i comp_max(const Vec2i& v0, const Vec2i& v1);
 
 // Mat33
 inline Quat to_quat(const Mat33& m);
@@ -268,26 +276,36 @@ inline Vec4 operator*(const Vec4& v, float s)
 	return { v.x * s, v.y * s, v.z * s, v.w * s };
 }
 
-// IVec2 Impl
+// Vec2i Impl
 
-inline IVec2 operator+(const IVec2& v0, const IVec2& v1)
+inline Vec2i operator+(const Vec2i& v0, const Vec2i& v1)
 {
 	return { v0.x + v1.x, v0.y + v1.y };
 }
 
-inline IVec2 operator-(const IVec2& v0, const IVec2& v1)
+inline Vec2i operator-(const Vec2i& v0, const Vec2i& v1)
 {
 	return { v0.x - v1.x, v0.y - v1.y };
 }
 
-inline bool operator==(const IVec2& v0, const IVec2& v1)
+inline bool operator==(const Vec2i& v0, const Vec2i& v1)
 {
 	return (v0.x == v1.x) && (v0.y == v1.y);
 }
 
-inline bool operator!=(const IVec2& v0, const IVec2& v1)
+inline bool operator!=(const Vec2i& v0, const Vec2i& v1)
 {
 	return !(v0 == v1);
+}
+
+inline Vec2i comp_min(const Vec2i& v0, const Vec2i& v1)
+{
+	return { std::min(v0.x, v1.x), std::min(v0.y, v1.y) };
+}
+
+inline Vec2i comp_max(const Vec2i& v0, const Vec2i& v1)
+{
+	return { std::max(v0.x, v1.x), std::max(v0.y, v1.y) };
 }
 
 // Mat33 Impl

@@ -101,6 +101,15 @@
   - [ ] map zoom
 
 ## game
-- [ ] basic economic model
+- [ ] economic model
+  - [ ] development
+  - [ ] production
+  - [ ] trade
+- [ ] culture
+- [ ] technology
+- [ ] political systems
+- [ ] diplomacy
+- [ ] warfare
+- [ ] characters
 - [ ] action mechanics
 

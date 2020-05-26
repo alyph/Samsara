@@ -29,6 +29,16 @@ Game::Game()
 		"../../data/fonts/path_24x24.png",
 	});
 
+	const auto next_struct_type_idx = [this]() { return (TypeIndex)globals.structure_types.size(); };
+	const auto next_dev_type_idx = [this]() { return (TypeIndex)globals.development_types.size(); };
+	const auto make_dev_type = [&](const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> TypeIndex
+	{
+		const auto dev_type_idx = next_dev_type_idx();
+		globals.development_types.push_back({name, area, next_struct_type_idx()});
+		globals.structure_types.push_back({name, glyph, color, StructureCategory::dev, dev_type_idx});
+		return dev_type_idx;
+	};
+
 	globals.terrain_types.alloc_perm( 
 	{
 		{"empty", 0, 0_rgb32, 0_rgb32},
@@ -37,12 +47,24 @@ Game::Game()
 		{"coast", 0x0300, 0x103060_rgb32, 0x80c0f0_rgb32, TileTypeFlags::water},
 	});
 
-	editor_state.selected_tile_type = 1;
+	globals.structure_types.alloc_perm(0, 1024);
+	globals.structure_types.push_back({"none", 0, 0_rgb32, StructureCategory::none, 0});
+
+	globals.development_types.alloc_perm(0, 512);
+	const auto governing_dev = make_dev_type("governing", DevelopmentArea::urban, 0x007f, 0xe000e0_rgb32);
+	make_dev_type("commercial", DevelopmentArea::urban, 0x007f, 0xf0f000_rgb32);
+	make_dev_type("industrial", DevelopmentArea::urban, 0x007f, 0x0030f0_rgb32);
+	make_dev_type("farming", DevelopmentArea::urban, 0x007f, 0x40ef20_rgb32);
+
+	const auto wall_struct = next_struct_type_idx();
+	globals.structure_types.push_back({"wall", 0x00db, 0xafafaf_rgb32, StructureCategory::wall, 0});
+
+	globals.city_rules.starting_dev_type = governing_dev;
+	globals.city_rules.starting_wall_type = wall_struct;
+
+	editor_state.selected_brush = 1;
 	editor_state.map_vp.x = editor_state.map_vp.y = (map_chunk_size / 2);
-	// TODO: maybe should be in Map's constructor
-	world.map.chunks.alloc(0, 1024, stage_allocator());
-	world.map.tiles.alloc(0, 512 * 512, stage_allocator());
-	world.map.ground_glyphs.alloc(0, 512 * 512, stage_allocator());
+	world.init(stage_allocator());
 }
 
 
@@ -52,7 +74,7 @@ void Game::update()
 
 
 
-static void paint_square(Map& map, uint16_t tile_type, const IVec2& center, int radius, const Globals& globals)
+static void paint_square(Map& map, uint16_t tile_type, const Vec2i& center, int radius, const Globals& globals)
 {
 	// TODO: move this function to map and let it do less glyph update
 	int r = (radius - 1);
@@ -61,12 +83,14 @@ static void paint_square(Map& map, uint16_t tile_type, const IVec2& center, int 
 	{
 		for (int dy = -r; dy <= r; dy++)
 		{
-			map.set_tile(center + IVec2{dx, dy}, tile, globals);
+			// TODO: should be setting the terrain only, here it's wiping out the structure data
+			map.set_tile(center + Vec2i{dx, dy}, tile);
 		}
-	}	
+	}
+	map.update_glyphs({center - Vec2i{r, r}, center + Vec2i{r, r}}, globals);
 }
 
-static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const IVec2& end, int radius, const Globals& globals)
+static void paint_line(Map& map, uint16_t tile_type, const Vec2i& start, const Vec2i& end, int radius, const Globals& globals)
 {
 	// https://en.wikipedia.org/wiki/Bresenham's_line_algorithm#All_cases
 	// http://members.chello.at/~easyfilter/Bresenham.pdf
@@ -89,7 +113,10 @@ static void paint_line(Map& map, uint16_t tile_type, const IVec2& start, const I
 	}
 }
 
-static Id map_view(const Context ctx, Map& map, const Globals& globals, EditorState& state, const Scalar& width, const Scalar& height)
+static const constexpr uint16_t city_brush_glyph = 0x02e1;
+static const constexpr Color32 city_brush_color = 0xffff00_rgb32;
+
+static Id map_view(const Context ctx, World& world, const Globals& globals, EditorState& state, const Scalar& width, const Scalar& height)
 {
 	EASY_FUNCTION();
 
@@ -102,11 +129,12 @@ static Id map_view(const Context ctx, Map& map, const Globals& globals, EditorSt
 	int map_x = state.map_vp.x - layout.width / 2;
 	int map_y = state.map_vp.y - layout.height / 2;
 
+	Map& map = world.map;
 	for (int y = 0; y < layout.height; y++)
 	{
 		for (int x = 0; x < layout.width; x++)
 		{		
-			IVec2 tile_coords{ map_x + x, map_y + y };
+			Vec2i tile_coords{ map_x + x, map_y + y };
 			Id tile_id = map.tile_id(tile_coords);
 			if (tile_id)
 			{
@@ -125,37 +153,60 @@ static Id map_view(const Context ctx, Map& map, const Globals& globals, EditorSt
 
 	if (_hover)
 	{
-		const IVec2& cursor = ctx.frame->curr_input.mouse_hit.iuv;
+		const Vec2i& cursor = ctx.frame->curr_input.mouse_hit.iuv;
 		if (cursor.x >= layout.left && cursor.x < (layout.left + layout.width) &&
 			cursor.y >= layout.top && cursor.y < (layout.top + layout.height))
 		{
-			const IVec2 map_cursor{map_x + cursor.x - layout.left, map_y + (layout.top + layout.height - 1 - cursor.y)};
-			const uint16_t tile_type_idx = state.selected_tile_type;
-			const TerrainType& tile_type = globals.terrain_types[tile_type_idx];
-			const int r = state.brush_radius - 1;
+			const Vec2i map_cursor{map_x + cursor.x - layout.left, map_y + (layout.top + layout.height - 1 - cursor.y)};
+
+			uint16_t code{};
+			Color32 color{};
+			int r{};
+
+			if (state.selected_brush < globals.terrain_types.size())
+			{
+				const uint16_t tile_type_idx = state.selected_brush;
+				const TerrainType& tile_type = globals.terrain_types[tile_type_idx];
+				code = tile_type.glyph;
+				color = tile_type.color_a;
+				r = state.brush_radius - 1;
+
+				if (_down)
+				{
+					if (!state.painting)
+					{
+						state.painting = true;
+						state.paint_cursor = map_cursor;
+						paint_square(map, tile_type_idx, map_cursor, state.brush_radius, globals);
+					}
+					else if (state.paint_cursor != map_cursor)
+					{
+						paint_line(map, tile_type_idx, state.paint_cursor, map_cursor, state.brush_radius, globals);
+						state.paint_cursor = map_cursor;
+					}				
+				}
+			}
+			else
+			{
+				// city
+				code = city_brush_glyph;
+				color = city_brush_color;
+
+				if (_pressed)
+				{
+					create_city(world, map_cursor, globals);
+				}
+			}
+
 			const int d = r * 2 + 1;
 			GlyphData glyph;
-			glyph.code = tile_type.glyph;
-			glyph.color2 = tile_type.color_a;
+			glyph.code = code;
+			glyph.color2 = color;
 			glyph.color1 = 0x303030_rgb32;
 			glyph.coords = { cursor.x - r, cursor.y - r };
 			glyph.size = { d, d };
 			render_buffer.push_glyph(elem_id, glyph);
 
-			if (_down)
-			{
-				if (!state.painting)
-				{
-					state.painting = true;
-					state.paint_cursor = map_cursor;
-					paint_square(map, tile_type_idx, map_cursor, state.brush_radius, globals);
-				}
-				else if (state.paint_cursor != map_cursor)
-				{
-					paint_line(map, tile_type_idx, state.paint_cursor, map_cursor, state.brush_radius, globals);
-					state.paint_cursor = map_cursor;
-				}				
-			}
 
 			if (!state.dragging_map && _right_down)
 			{
@@ -181,12 +232,12 @@ static Id map_view(const Context ctx, Map& map, const Globals& globals, EditorSt
 	return elem_id;
 }
 
-static void palette_button(const Context ctx, int index, uint16_t glyph_code, const Color32& color, int val, int& selected_val)
+static int palette_button(const Context ctx, int index, int begin_row, uint16_t glyph_code, const Color32& color, int val, int& selected_val)
 {
 	int size = 3;
 	int cols = 2;
 
-	int row = (index / cols);
+	int row = begin_row + (index / cols);
 	int col = (index % cols);
 
 	const Id button_id = make_element(ctx, null_id);
@@ -206,7 +257,7 @@ static void palette_button(const Context ctx, int index, uint16_t glyph_code, co
 	GlyphData glyph;
 	int x{layout.left}, y{layout.top};
 
-	auto draw = [&](uint16_t code, const IVec2& coords)
+	auto draw = [&](uint16_t code, const Vec2i& coords)
 	{
 		glyph.code = code;
 		glyph.coords = coords;
@@ -239,29 +290,29 @@ static void palette_button(const Context ctx, int index, uint16_t glyph_code, co
 	{
 		selected_val = val;
 	}
+
+	return row;
 }
 
-static void tile_palette(const Context ctx, const Array<TerrainType>& terrain_types, EditorState& state)
+static void tile_palette(const Context ctx, const Array<TerrainType>& terrain_types, EditorState& state, int& row)
 {
-	int size = 3;
-	int cols = 2;
-
+	int begin_row = row;
 	for (int i = 0; i < terrain_types.size(); i++)
 	{
 		const TerrainType& type_data = terrain_types[i];
-		palette_button(_ctx_id(i), i, type_data.glyph, type_data.color_a, i, state.selected_tile_type);
+		row = palette_button(_ctx_id(i), i, begin_row, type_data.glyph, type_data.color_a, i, state.selected_brush);
 	}
 }
 
-static void brush_size_palette(const Context ctx, const Array<TerrainType>& terrain_types, EditorState& state)
+static void brush_size_palette(const Context ctx, EditorState& state, int& row)
 {
+	int begin_row = row;
 	int brush_sizes[] = {1, 2, 4, 8};
-	int padding = (((int)terrain_types.size() + 1) / 2) * 2; // TODO: hack until we have the proper layout implemented
 	for (int i = 0; i < LEN(brush_sizes); i++)
 	{
 		const int size = brush_sizes[i];
 		uint16_t code = ('0' + size);
-		palette_button(_ctx_id(i), padding + i, code, 0xffffff_rgb32, size, state.brush_radius);
+		row = palette_button(_ctx_id(i), i, begin_row, code, 0xffffff_rgb32, size, state.brush_radius);
 	}
 }
 
@@ -301,7 +352,7 @@ void Game::present(const Context& ctx)
 			if (is_mouse_down(ctx, MouseButtons::right))
 			{
 				const auto& input = ctx.frame->curr_input;
-				DVec2 ndc = calc_ndc({input.mouse_x, input.mouse_y}, window->width(), window->height());
+				Vec2d ndc = calc_ndc({input.mouse_x, input.mouse_y}, window->width(), window->height());
 				double world_x = ndc.x * vp_width / 2 - editor_state.dragging_map_offset.x;
 				double world_y = ndc.y * vp_height / 2 - editor_state.dragging_map_offset.y;
 				int half_size = map_size / 2;
@@ -312,7 +363,7 @@ void Game::present(const Context& ctx)
 				// the values there are no longer valid and will have 1 frame delay, so ideally we should calculate the hit 
 				// map coordinates right there, store and use it whenever needed consistently
 				editor_state.map_pose_offset = {(float)(world_x - tablet_x), (float)(world_y - tablet_y)};
-				editor_state.map_vp = (editor_state.dragging_map_coord - IVec2{tablet_x, tablet_y});
+				editor_state.map_vp = (editor_state.dragging_map_coord - Vec2i{tablet_x, tablet_y});
 			}
 			else
 			{
@@ -335,7 +386,7 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			map_view(_ctx, world.map, globals, editor_state, map_size, map_size);
+			map_view(_ctx, world, globals, editor_state, map_size, map_size);
 		}
 
 
@@ -352,8 +403,13 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			tile_palette(_ctx, globals.terrain_types, editor_state);
-			brush_size_palette(_ctx, globals.terrain_types, editor_state);
+			int row = 0;
+			tile_palette(_ctx, globals.terrain_types, editor_state, row); 
+			row++;
+			brush_size_palette(_ctx, editor_state, row);
+			row++;
+			const int city_brush = (int)globals.terrain_types.size();
+			row = palette_button(_ctx, 0, row, city_brush_glyph, city_brush_color, city_brush, editor_state.selected_brush) + 1;
 		}
 	}
 }

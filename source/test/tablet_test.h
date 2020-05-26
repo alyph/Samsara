@@ -25,7 +25,7 @@ public:
 		int width;
 		int height;
 
-		std::vector<IVec2> extra_coords;
+		std::vector<Vec2i> extra_coords;
 		Array<GlyphData> glyphs;
 	};
 

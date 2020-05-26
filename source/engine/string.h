@@ -234,7 +234,8 @@ inline void assign_stored_string(StringData& str_data, const char* start, size_t
 	}
 	else
 	{
-		assign_normal_string(str_data, start, size, perm_allocator());
+		// TODO: maybe we should force user to select an explicit allocator instead
+			assign_normal_string(str_data, start, size, perm_allocator());
 		str_data.header()->ref_count = 1;
 	}
 }

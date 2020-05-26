@@ -175,7 +175,7 @@ struct RaycastResult
 	Vec3 point; // in NDC space (-1, 1), smaller z means closer
 	Vec2 uv; // contextual 2d data (always 0 ~ 1)
 	Vec2 ruv; // contextual 2d real number data (may be any value that makes sense)
-	IVec2 iuv; // contextual 2d integer data
+	Vec2i iuv; // contextual 2d integer data
 };
 
 struct Context

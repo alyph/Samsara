@@ -24,8 +24,8 @@ namespace elem
 
 struct GlyphData
 {
-	IVec2 coords;
-	IVec2 size{1,1};
+	Vec2i coords;
+	Vec2i size{1,1};
 	Color32 color1;
 	Color32 color2;
 	uint16_t code{};

@@ -155,7 +155,7 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 	const auto vert_loc = shader_attribute_loc(shader, attribute_vert_pos);
 	if (vert_loc >= 0)
 	{
-		IVec2 verts[] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
+		Vec2i verts[] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
 		glGenBuffers(1, &vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
@@ -408,7 +408,7 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 // 			if (!item.extra_coords.empty())			
 // 			{
 // 				glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.coord_buffer));
-// 				glBufferSubData(GL_ARRAY_BUFFER, num_fixed_glyphs * sizeof(IVec2), item.extra_coords.size() * sizeof(IVec2), item.extra_coords.data());
+// 				glBufferSubData(GL_ARRAY_BUFFER, num_fixed_glyphs * sizeof(Vec2i), item.extra_coords.size() * sizeof(Vec2i), item.extra_coords.data());
 // 			}
 
 // 			// copy in the glyph data
@@ -1158,7 +1158,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	// if (!item.extra_coords.empty())			
 	// {
 	// 	glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.coord_buffer));
-	// 	glBufferSubData(GL_ARRAY_BUFFER, num_fixed_glyphs * sizeof(IVec2), item.extra_coords.size() * sizeof(IVec2), item.extra_coords.data());
+	// 	glBufferSubData(GL_ARRAY_BUFFER, num_fixed_glyphs * sizeof(Vec2i), item.extra_coords.size() * sizeof(Vec2i), item.extra_coords.data());
 	// }
 
 	// copy in the glyph data
