@@ -105,6 +105,26 @@ static inline uint8_t calc_neighbor_water_mask(const Map& map, const Array<Terra
 	return mask;
 }
 
+static inline uint8_t calc_neighbor_matching_structure_mask(const Map& map, uint32_t tile_struct, const Vec2i& tile_coords)
+{
+	// remind of ordering:
+	//       0    +Y
+	//     3 - 1   ^
+	//       2     | -> +X
+	const Vec2i offsets[] = { {0, 1}, {1, 0}, {0, -1}, {-1, 0} };
+	uint8_t mask = 0;
+	for (int i = 0; i < 4; i++)
+	{
+		const Id id = map.tile_id(tile_coords + offsets[i]);
+		const auto neighbor_struct = (id ? map.tiles[id_to_index(id)].structure : 0);
+		if (tile_struct == neighbor_struct)
+		{
+			mask |= (1 << i);
+		}
+	}
+	return mask;
+}
+
 void Map::update_glyphs(const Box2i dirty_tiles, const Globals& globals)
 {
 	for (int y = (dirty_tiles.min.y - 1); y <= (dirty_tiles.max.y + 1); y++)
@@ -122,6 +142,11 @@ void Map::update_glyphs(const Box2i dirty_tiles, const Globals& globals)
 					const auto& struct_type = globals.structure_types[tile.structure];
 					glyph.code = struct_type.glyph;
 					glyph.color = struct_type.color;
+					// TODO: probably more than just wall
+					if (struct_type.category == StructureCategory::wall)
+					{
+						glyph.code += calc_neighbor_matching_structure_mask(*this, tile.structure, tile_coords);
+					}
 				}
 				else
 				{

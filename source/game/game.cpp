@@ -24,7 +24,8 @@ Game::Game()
 	atlas_texture = load_texture_array(
 	{
 		"../../data/fonts/cp437_24x24.png",
-		"../../data/fonts/anikki_square_24x24.png",
+		// "../../data/fonts/anikki_square_24x24.png",
+		"../../data/fonts/nice_curses_24x24.png",
 		"../../data/fonts/urr_a_24x24.png",
 		"../../data/fonts/path_24x24.png",
 	});
@@ -57,7 +58,7 @@ Game::Game()
 	make_dev_type("farming", DevelopmentArea::urban, 0x007f, 0x40ef20_rgb32);
 
 	const auto wall_struct = next_struct_type_idx();
-	globals.structure_types.push_back({"wall", 0x00db, 0xafafaf_rgb32, StructureCategory::wall, 0});
+	globals.structure_types.push_back({"wall", 0x0310, 0xafafaf_rgb32, StructureCategory::wall, 0});
 
 	globals.city_rules.starting_dev_type = governing_dev;
 	globals.city_rules.starting_wall_type = wall_struct;
@@ -74,23 +75,21 @@ void Game::update()
 
 
 
-static void paint_square(Map& map, uint16_t tile_type, const Vec2i& center, int radius, const Globals& globals)
+static void paint_square(Map& map, TypeIndex terrain_type, const Vec2i& center, int radius, const Globals& globals)
 {
 	// TODO: move this function to map and let it do less glyph update
 	int r = (radius - 1);
-	const Tile tile{tile_type};
 	for (int dx = -r; dx <= r; dx++)
 	{
 		for (int dy = -r; dy <= r; dy++)
 		{
-			// TODO: should be setting the terrain only, here it's wiping out the structure data
-			map.set_tile(center + Vec2i{dx, dy}, tile);
+			map.set_terrain(center + Vec2i{dx, dy}, terrain_type);
 		}
 	}
 	map.update_glyphs({center - Vec2i{r, r}, center + Vec2i{r, r}}, globals);
 }
 
-static void paint_line(Map& map, uint16_t tile_type, const Vec2i& start, const Vec2i& end, int radius, const Globals& globals)
+static void paint_line(Map& map, TypeIndex terrain_type, const Vec2i& start, const Vec2i& end, int radius, const Globals& globals)
 {
 	// https://en.wikipedia.org/wiki/Bresenham's_line_algorithm#All_cases
 	// http://members.chello.at/~easyfilter/Bresenham.pdf
@@ -102,14 +101,14 @@ static void paint_line(Map& map, uint16_t tile_type, const Vec2i& start, const V
 	auto err = (dx + dy);
 	auto x = start.x;
 	auto y = start.y;
-	paint_square(map, tile_type, {x, y}, radius, globals);
+	paint_square(map, terrain_type, {x, y}, radius, globals);
 	while (!((x == end.x && y == end.y)))
 	{
 		const auto e2 = err * 2;
 		if (e2 >= dy) { err += dy; x += sx; }
 		if (e2 <= dx) { err += dx; y += sy; }
 		// TODO: if this gets too expensive, can just draw the deltas
-		paint_square(map, tile_type, {x, y}, radius, globals);
+		paint_square(map, terrain_type, {x, y}, radius, globals);
 	}
 }
 

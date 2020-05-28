@@ -38,6 +38,7 @@ struct Map
 	inline int chunk_coords_to_idx(const Vec2i& coords) const;
 	inline Vec2i chunk_idx_to_coords(int idx) const;
 	inline void set_tile(const Vec2i& coords, const Tile& tile);
+	inline void set_terrain(const Vec2i& coords, TypeIndex terrain_type);
 	inline void set_structure(const Vec2i& coords, TypeIndex structure_type);
 
 	void expand_to_fit_chunk(const Vec2i& coords);
@@ -111,6 +112,21 @@ inline void Map::set_tile(const Vec2i& coords, const Tile& tile)
 	Id tile_id = first_tile_id + (coords.x - chunk_first_tile(chunk_coords.x)) +
 		(coords.y - chunk_first_tile(chunk_coords.y)) * map_chunk_size;
 	tiles[id_to_index(tile_id)] = tile;
+}
+
+inline void Map::set_terrain(const Vec2i& coords, TypeIndex terrain_type)
+{
+	const auto id = tile_id(coords);
+	if (id)
+	{
+		tiles[id_to_index(id)].terrain = terrain_type;
+	}
+	else
+	{
+		Tile new_tile{};
+		new_tile.terrain = terrain_type;
+		set_tile(coords, new_tile);
+	}
 }
 
 inline void Map::set_structure(const Vec2i& coords, TypeIndex structure_type)

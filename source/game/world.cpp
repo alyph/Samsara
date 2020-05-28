@@ -46,6 +46,9 @@ Id create_city(World& world, const Vec2i& coords, const Globals& globals)
 	// TODO: everytime we create new city a new array is allocated
 	// ideally we could reuse it as the cities collection is essentially a pool
 	// maybe Array should provide a function optionally allocate (only if the handle has not been allocated)
+	// TODO: some terrains may be changed when city is placed for example forests will be cleared
+	// some terrain may remain e.g. the hilly area
+	// some terrain may prevent city from being placed e.g. mountainous, water etc.
 	city.devs.alloc(0, 128, world.allocator);
 	add_development(city, world.map, globals.city_rules.starting_dev_type, coords, globals);
 	setup_walls(city, world.map, globals.city_rules.starting_wall_type, globals);
