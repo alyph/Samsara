@@ -120,6 +120,9 @@ inline bool operator!=(const Vec2i& v0, const Vec2i& v1);
 inline Vec2i comp_min(const Vec2i& v0, const Vec2i& v1);
 inline Vec2i comp_max(const Vec2i& v0, const Vec2i& v1);
 
+// Box2i
+inline bool encompasses(const Box2i& box, const Vec2i& v);
+
 // Mat33
 inline Quat to_quat(const Mat33& m);
 
@@ -306,6 +309,13 @@ inline Vec2i comp_min(const Vec2i& v0, const Vec2i& v1)
 inline Vec2i comp_max(const Vec2i& v0, const Vec2i& v1)
 {
 	return { std::max(v0.x, v1.x), std::max(v0.y, v1.y) };
+}
+
+// Box2i Impl
+
+inline bool encompasses(const Box2i& box, const Vec2i& v)
+{
+	return (v.x >= box.min.x && v.x <= box.max.x && v.y >= box.min.y && v.y <= box.max.y);
 }
 
 // Mat33 Impl

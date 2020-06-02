@@ -112,8 +112,15 @@ static void paint_line(Map& map, TypeIndex terrain_type, const Vec2i& start, con
 	}
 }
 
+static const constexpr uint16_t sel_brush_glyph = 0x02f1;
+static const constexpr Color32 sel_brush_color = 0xffffff_rgb32;
 static const constexpr uint16_t city_brush_glyph = 0x02e1;
 static const constexpr Color32 city_brush_color = 0xffff00_rgb32;
+
+static inline Vec2i to_tablet_coords(const Vec2i& map_coords, const TabletLayout& layout, const Vec2i& map_min_coords)
+{
+	return { layout.left + map_coords.x - map_min_coords.x, layout.top + layout.height - 1 - (map_coords.y - map_min_coords.y) };
+}
 
 static Id map_view(const Context ctx, World& world, const Globals& globals, EditorState& state, const Scalar& width, const Scalar& height)
 {
@@ -127,6 +134,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, Edit
 	TabletRenderBuffer& render_buffer = access_tablet_render_buffer_and_layout(ctx, layout);
 	int map_x = state.map_vp.x - layout.width / 2;
 	int map_y = state.map_vp.y - layout.height / 2;
+	const Vec2i map_min{map_x, map_y};
 
 	Map& map = world.map;
 	for (int y = 0; y < layout.height; y++)
@@ -150,6 +158,17 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, Edit
 		}
 	}
 
+	if (state.selected_city_id)
+	{
+		const auto& city = world.cities.get(state.selected_city_id);
+		GlyphData glyph;
+		glyph.code = 0;
+		glyph.color1 = 0xffffff50_rgba32;
+		glyph.coords = to_tablet_coords({city.wall_bounds.min.x, city.wall_bounds.max.y}, layout, map_min);
+		glyph.size = {city.wall_bounds.max.x - city.wall_bounds.min.x + 1, city.wall_bounds.max.y - city.wall_bounds.min.y + 1};
+		render_buffer.push_glyph(elem_id, glyph);
+	}
+
 	if (_hover)
 	{
 		const Vec2i& cursor = ctx.frame->curr_input.mouse_hit.iuv;
@@ -158,54 +177,70 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, Edit
 		{
 			const Vec2i map_cursor{map_x + cursor.x - layout.left, map_y + (layout.top + layout.height - 1 - cursor.y)};
 
-			uint16_t code{};
-			Color32 color{};
-			int r{};
-
-			if (state.selected_brush < globals.terrain_types.size())
+			if (state.selected_brush == (int)Brush::selection)
 			{
-				const uint16_t tile_type_idx = state.selected_brush;
-				const TerrainType& tile_type = globals.terrain_types[tile_type_idx];
-				code = tile_type.glyph;
-				color = tile_type.color_a;
-				r = state.brush_radius - 1;
-
-				if (_down)
+				if (_pressed)
 				{
-					if (!state.painting)
+					for (const auto& city : world.cities)
 					{
-						state.painting = true;
-						state.paint_cursor = map_cursor;
-						paint_square(map, tile_type_idx, map_cursor, state.brush_radius, globals);
+						if (encompasses(city.wall_bounds, map_cursor))
+						{
+							state.selected_city_id = city.id;
+							break;
+						}
 					}
-					else if (state.paint_cursor != map_cursor)
-					{
-						paint_line(map, tile_type_idx, state.paint_cursor, map_cursor, state.brush_radius, globals);
-						state.paint_cursor = map_cursor;
-					}				
 				}
 			}
 			else
 			{
-				// city
-				code = city_brush_glyph;
-				color = city_brush_color;
+				uint16_t code{};
+				Color32 color{};
+				int r{};
 
-				if (_pressed)
+				int terrain_brush = (state.selected_brush - (int)Brush::max);
+				if (terrain_brush >= 0 && terrain_brush < globals.terrain_types.size())
 				{
-					create_city(world, map_cursor, globals);
+					const TerrainType& tile_type = globals.terrain_types[terrain_brush];
+					code = tile_type.glyph;
+					color = tile_type.color_a;
+					r = state.brush_radius - 1;
+
+					if (_down)
+					{
+						if (!state.painting)
+						{
+							state.painting = true;
+							state.paint_cursor = map_cursor;
+							paint_square(map, terrain_brush, map_cursor, state.brush_radius, globals);
+						}
+						else if (state.paint_cursor != map_cursor)
+						{
+							paint_line(map, terrain_brush, state.paint_cursor, map_cursor, state.brush_radius, globals);
+							state.paint_cursor = map_cursor;
+						}				
+					}
 				}
+				else if (state.selected_brush == (int)Brush::city)
+				{
+					// city
+					code = city_brush_glyph;
+					color = city_brush_color;
+
+					if (_pressed)
+					{
+						create_city(world, map_cursor, globals);
+					}
+				}
+
+				const int d = r * 2 + 1;
+				GlyphData glyph;
+				glyph.code = code;
+				glyph.color2 = color;
+				glyph.color1 = 0x303030_rgb32;
+				glyph.coords = { cursor.x - r, cursor.y - r };
+				glyph.size = { d, d };
+				render_buffer.push_glyph(elem_id, glyph);
 			}
-
-			const int d = r * 2 + 1;
-			GlyphData glyph;
-			glyph.code = code;
-			glyph.color2 = color;
-			glyph.color1 = 0x303030_rgb32;
-			glyph.coords = { cursor.x - r, cursor.y - r };
-			glyph.size = { d, d };
-			render_buffer.push_glyph(elem_id, glyph);
-
 
 			if (!state.dragging_map && _right_down)
 			{
@@ -299,7 +334,7 @@ static void tile_palette(const Context ctx, const Array<TerrainType>& terrain_ty
 	for (int i = 0; i < terrain_types.size(); i++)
 	{
 		const TerrainType& type_data = terrain_types[i];
-		row = palette_button(_ctx_id(i), i, begin_row, type_data.glyph, type_data.color_a, i, state.selected_brush);
+		row = palette_button(_ctx_id(i), i, begin_row, type_data.glyph, type_data.color_a, (int)Brush::max + i, state.selected_brush);
 	}
 }
 
@@ -407,8 +442,8 @@ void Game::present(const Context& ctx)
 			row++;
 			brush_size_palette(_ctx, editor_state, row);
 			row++;
-			const int city_brush = (int)globals.terrain_types.size();
-			row = palette_button(_ctx, 0, row, city_brush_glyph, city_brush_color, city_brush, editor_state.selected_brush) + 1;
+			palette_button(_ctx, 0, row, sel_brush_glyph, sel_brush_color, (int)Brush::selection, editor_state.selected_brush);
+			row = palette_button(_ctx, 1, row, city_brush_glyph, city_brush_color, (int)Brush::city, editor_state.selected_brush) + 1;
 		}
 	}
 }

@@ -4,6 +4,13 @@
 #include "engine/texture.h"
 #include "world.h"
 
+enum class Brush: int
+{
+	selection,
+	city,
+	max,
+};
+
 struct EditorState
 {
 	// TODO: maybe this should be the internal state of the map view
@@ -11,6 +18,7 @@ struct EditorState
 	Vec2i paint_cursor;
 	int selected_brush{};
 	int brush_radius = 1;
+	Id selected_city_id{};
 
 	Vec2i map_vp;
 	Vec2 map_pose_offset;

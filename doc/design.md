@@ -33,6 +33,37 @@
 - Military build up, expansion and upgrade should be decision and event based, not constant actions
 - Military operations are the results and extensions of quests, expeditions and political actions 
 
+## Major Topics
+
+### Economy
+- production, distribution, consumption of trade goods
+- urban and rural development and growth
+- wealth accumulation and distribution, taxation, state and private incomes
+
+### Culture, Religion, Technologies
+- population, their classes and ethnics, how are those tied to each development
+  * NOTE: cultures are unique and colorful. not only those bring unique buildings and units, but also life styles, dietry which affect what goods they consume, they can also be more skilled or technologically more advanced in certain fields, they will have splecial traits, modifiers and unique abilities that make them like characters by itself, those traits and abilities are also dynamic and can change and shift over time and transform into completely new culture
+- higher needs of population that lead to education, art, religion and entertainment
+- rules and restrictions applied by cultural traditions and religious doctrines and practices
+- technologies, innovations and scientific discoveries, how do they emmerge and spread
+- skills, specialties that are carried down over generations through traditions
+
+
+### Administration, Internal External Politics
+- state ruler and advisory councils (major source of state actions)
+- local administrative efficiency
+- internal factions, vassals and characters management
+- revolutions, rebellions, revolt and overthrow of current ruler or government
+- crisis, how they emmerge and progress
+- diplomacy, tools to influence relationships between states (and potentialy vassals) and make requests
+- colonization and exploration
+
+
+### Warfare
+- steps that lead to open war
+- macro planning at campaign level
+- autoplayed battle simulation at tactical level
+
 
 ## Mechanics
 
@@ -69,7 +100,7 @@
   - providing tools for other fields (e.g. agriculture, mining)
 - cultural level
   - population involved in academic/scientific research, philosophic/religious/social study, art creation etc.
-  - facilities supporting these actiities, schools, monesteries, temples, theatres
+  - facilities supporting these activities, schools, monesteries, temples, theatres
   - generating culture and research points which (together with the technology points from pratical work) eventually lead to discoveries
 - military level
   - population that serves in regular military force, or can be potentially drafted (e.g. levy)

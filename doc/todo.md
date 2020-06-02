@@ -88,9 +88,10 @@
     - [ ] terrain glyphs (index to glyph table)
     - [ ] map object glyphs
   - [ ] city placement
-    - [ ] city data (and devs)
-    - [ ] button to create city (comes with intial set of devs)
-    - [ ] city wall (first pass, just rect wall bounding box encompassing all urban devs)
+    - [x] city data (and devs)
+    - [x] button to create city (comes with intial set of devs)
+    - [x] city wall (first pass, just rect wall bounding box encompassing all urban devs)
+    - [x] select city
     - [ ] city expansion
     - [ ] road connection
     - [ ] rural devs (simple placement outside of the city)
