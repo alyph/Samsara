@@ -350,6 +350,23 @@ static void brush_size_palette(const Context ctx, EditorState& state, int& row)
 	}
 }
 
+static void city_dev_palette(const Context ctx, Id sel_city, const Globals& globals, World& world, int& row)
+{
+	int begin_row = row;
+	int sel_dev_type = -1;
+	for (int i = 0; i < globals.development_types.size(); i++)
+	{
+		const DevelopmentType& dev_type = globals.development_types[i];
+		const StructureType& struct_type = globals.structure_types[dev_type.structure_type];
+		row = palette_button(_ctx_id(i), i, begin_row, struct_type.glyph, struct_type.color, i, sel_dev_type);
+	}
+
+	if (sel_dev_type >= 0)
+	{
+		develop_city(world, sel_city, sel_dev_type);
+	}
+}
+
 void Game::present(const Context& ctx)
 {
 	using namespace elem;
@@ -444,6 +461,12 @@ void Game::present(const Context& ctx)
 			row++;
 			palette_button(_ctx, 0, row, sel_brush_glyph, sel_brush_color, (int)Brush::selection, editor_state.selected_brush);
 			row = palette_button(_ctx, 1, row, city_brush_glyph, city_brush_color, (int)Brush::city, editor_state.selected_brush) + 1;
+			if (editor_state.selected_city_id)
+			{
+				row++;
+				city_dev_palette(_ctx, editor_state.selected_city_id, globals, world, row);
+				row++;
+			}
 		}
 	}
 }

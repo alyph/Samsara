@@ -36,8 +36,10 @@
 ## Major Topics
 
 ### Economy
-- production, distribution, consumption of trade goods
 - urban and rural development and growth
+- [goods](topics/goods.md), production, distribution, consumption of trade goods
+- trade network
+- services
 - wealth accumulation and distribution, taxation, state and private incomes
 
 ### Culture, Religion, Technologies
@@ -290,51 +292,6 @@
 - ruling classes (e.g. council, senate etc.) can also propose directional missions, which will show up in the mission list, these are not persistent and must be picked within the time limit
 - the bigger missions of the game are the legacies which are meta challenges similar to achievements (more for meta progression and game mode specifics)
 - there is also smaller missions like bring properity to a city, which act like a side plot line which bring some speical actions and trigger events
-
-### Resources
-- food
-  - grain *
-  - seafood *
-  - fruit
-  - dairy *-
-  - produce *-
-  - meat
-  - livestock *-
-  - sugar
-  - salt
-  - spice
-  - wine
-  - tea
-  - coffee
-- civilian goods
-  - flax *
-  - wool *-
-  - silk
-  - cotton *-
-  - leather *-
-  - fur *-
-  - pottery *
-  - textile *
-  - cloth *-
-  - clothing
-  - paper
-  - chinaware
-  - dyes
-- industrial materials
-  - wood *
-  - clay *
-  - stone *-
-  - marble
-  - iron
-  - copper
-- luxury
-  - gold
-  - gem
-- millitary
-  - weapons
-  - hourse (also used in civilian and industrial needs)
-  - ship (also used in trading)
-
 
 
 

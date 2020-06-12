@@ -56,3 +56,8 @@ Id create_city(World& world, const Vec2i& coords, const Globals& globals)
 	return city.id;
 }
 
+Id develop_city(World& world, Id city_id, TypeIndex dev_type)
+{
+	return 0;
+}
+
