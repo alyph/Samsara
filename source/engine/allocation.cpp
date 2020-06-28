@@ -112,6 +112,7 @@ void AllocatorGlobals::reallocate(AllocHandle& handle, size_t size)
 	auto& allocator_data = allocators[allocator];
 	asserts(header_idx < allocator_data.num_headers);
 	auto& header = allocator_data.headers[header_idx];
+	// TODO: we need be careful about this check, because the header.size is set to slightly larger than the requested size previously due to allocation is always max aligned
 	asserts(header.size < size); // no point resizing if the block is already large enough
 	Buffer& buffer = allocator_data.pages[header.page];
 

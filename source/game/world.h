@@ -28,7 +28,7 @@ struct World
 };
 
 extern Id create_city(World& world, const Vec2i& coords, const Globals& globals);
-extern Id develop_city(World& world, Id city_id, TypeIndex dev_type);
+extern void develop_city(World& world, Id city_id, TypeIndex dev_type, const Globals& globals);
 
 
 inline void World::init(Allocator alloc)

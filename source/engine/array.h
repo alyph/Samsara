@@ -225,6 +225,11 @@ public:
 };
 
 template<typename T>
+inline Array<T> make_temp_array(size_t size, size_t capacity);
+
+// TODO: consider renaming this
+// essentially this is a trivially copyable array that does not deep copy each element when copied
+template<typename T>
 class ArrayTemp: public ArrayBase<T>
 {
 public:
@@ -461,7 +466,7 @@ inline void ArrayBase<T>::ensure_capacity(size_t size)
 		// TODO: we may be dangerously increasing the size too much later on
 		// for large data storage it might be too much
 		size_t new_capacity = (size * 2);
-		engine().allocators.reallocate(handle, new_capacity);
+		engine().allocators.reallocate(handle, total_array_buffer_size<T>(new_capacity));
 		_capacity = new_capacity;
 	}
 }
@@ -509,4 +514,13 @@ inline Array<T>& Array<T>::operator=(Array<T>&& other) noexcept
 	other._capacity = 0;
 	return *this;
 }
+
+template<typename T>
+inline Array<T> make_temp_array(size_t size, size_t capacity) 
+{ 
+	Array<T> array; 
+	array.alloc_temp(size, capacity); 
+	return array; 
+}
+
 

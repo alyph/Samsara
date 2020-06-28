@@ -37,6 +37,8 @@ struct Map
 	inline Id tile_id(const Vec2i& coords) const;
 	inline int chunk_coords_to_idx(const Vec2i& coords) const;
 	inline Vec2i chunk_idx_to_coords(int idx) const;
+	inline const Tile* get_tile(const Vec2i& coords) const { return const_cast<Map*>(this)->get_tile(coords); } 
+	inline Tile* get_tile(const Vec2i& coords);
 	inline void set_tile(const Vec2i& coords, const Tile& tile);
 	inline void set_terrain(const Vec2i& coords, TypeIndex terrain_type);
 	inline void set_structure(const Vec2i& coords, TypeIndex structure_type);
@@ -86,6 +88,16 @@ inline Vec2i Map::chunk_idx_to_coords(int idx) const
 		chunk_bounds.x + (idx % chunk_bounds.width),
 		chunk_bounds.y + (idx / chunk_bounds.width),
 	};
+}
+
+inline Tile* Map::get_tile(const Vec2i& coords)
+{
+	const auto id = tile_id(coords);
+	if (id)
+	{
+		return &tiles[id_to_index(id)];
+	}
+	return nullptr;
 }
 
 inline void Map::set_tile(const Vec2i& coords, const Tile& tile)

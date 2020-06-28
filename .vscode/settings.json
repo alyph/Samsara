@@ -66,6 +66,7 @@
         "map": "cpp",
         "xtree": "cpp",
         "array": "cpp",
-        "xxatomic": "cpp"
+        "xxatomic": "cpp",
+        "random": "cpp"
     }
 }

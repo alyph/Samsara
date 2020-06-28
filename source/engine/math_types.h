@@ -121,6 +121,7 @@ inline Vec2i comp_min(const Vec2i& v0, const Vec2i& v1);
 inline Vec2i comp_max(const Vec2i& v0, const Vec2i& v1);
 
 // Box2i
+inline Box2i to_box(const Vec2i& v) { return {v, v}; }
 inline bool encompasses(const Box2i& box, const Vec2i& v);
 
 // Mat33

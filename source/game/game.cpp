@@ -55,7 +55,7 @@ Game::Game()
 	const auto governing_dev = make_dev_type("governing", DevelopmentArea::urban, 0x007f, 0xe000e0_rgb32);
 	make_dev_type("commercial", DevelopmentArea::urban, 0x007f, 0xf0f000_rgb32);
 	make_dev_type("industrial", DevelopmentArea::urban, 0x007f, 0x0030f0_rgb32);
-	make_dev_type("farming", DevelopmentArea::urban, 0x007f, 0x40ef20_rgb32);
+	make_dev_type("farming", DevelopmentArea::rural, 0x007f, 0x40ef20_rgb32);
 
 	const auto wall_struct = next_struct_type_idx();
 	globals.structure_types.push_back({"wall", 0x0310, 0xafafaf_rgb32, StructureCategory::wall, 0});
@@ -363,7 +363,7 @@ static void city_dev_palette(const Context ctx, Id sel_city, const Globals& glob
 
 	if (sel_dev_type >= 0)
 	{
-		develop_city(world, sel_city, sel_dev_type);
+		develop_city(world, sel_city, sel_dev_type, globals);
 	}
 }
 
@@ -382,7 +382,6 @@ void Game::present(const Context& ctx)
 	const float vp_width = (float)tablet_width;
 	const float vp_height = vp_width / aspect;
 
-	// TODO: use othographic projection
 	Viewpoint vp;
 	vp.projection = make_orthographic(vp_width / 2, aspect, 0.f, 100.f);
 

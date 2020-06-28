@@ -36,18 +36,19 @@
 ## Major Topics
 
 ### Economy
-- urban and rural development and growth
-- [goods](topics/goods.md), production, distribution, consumption of trade goods
+- [development](topics/development.md) - urban and rural development and growth
+- [population](topics/population.md) - population, classes, estates, how are those tied to each development
+- [goods](topics/goods.md) - production, distribution, consumption of trade goods
 - trade network
 - services
 - wealth accumulation and distribution, taxation, state and private incomes
 
 ### Culture, Religion, Technologies
-- population, their classes and ethnics, how are those tied to each development
+- culture, ethnics and tradition of each population group, how those evolve, shift and transform
   * NOTE: cultures are unique and colorful. not only those bring unique buildings and units, but also life styles, dietry which affect what goods they consume, they can also be more skilled or technologically more advanced in certain fields, they will have splecial traits, modifiers and unique abilities that make them like characters by itself, those traits and abilities are also dynamic and can change and shift over time and transform into completely new culture
 - higher needs of population that lead to education, art, religion and entertainment
 - rules and restrictions applied by cultural traditions and religious doctrines and practices
-- technologies, innovations and scientific discoveries, how do they emmerge and spread
+- technologies, innovations and scientific discoveries, how do they emerge and spread
 - skills, specialties that are carried down over generations through traditions
 
 

@@ -94,10 +94,10 @@ Tiered benefit???
 
 #### clothing
 
-- generic clothing (local)
+- basic generic clothing (local)
   - locally produced basic clothing
   - not traded
-  - TODO: maybe just not have it represented then, not much significance, rarely there's shortage of clothing or any benefit having oversupply of clothing, the higher tier clothing though does have bigger economic impact
+  - TODO: maybe just not have it represented then, not much significance, rarely there's shortage of clothing or any benefit having oversupply of clothing, the higher tier clothing though does have bigger economic impact. Although when a population is poor the basic clothing may not be sufficient to cover the needs that can bring a difficult life and unhappy, unheathy unproductive people. maybe some of these goods can always considered as sufficiently supplied just may not be consumed
 - textile
   - produced from wool, cotton and dye
   - +comfort +culture
