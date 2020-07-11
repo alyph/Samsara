@@ -100,6 +100,7 @@ extern bool was_elem_clicked(const Context& context);
 extern bool was_elem_pressed(const Context& context);
 inline bool is_key_down(const Context& context, Keys key);
 inline bool is_mouse_down(const Context& context, MouseButtons button);
+inline int mouse_wheel_delta(const Context& context);
 
 #define _ctx create_scoped_context(ctx, __COUNTER__)
 #define _ctx_id(user_id) create_scoped_context(ctx, __COUNTER__, user_id)
@@ -110,6 +111,7 @@ inline bool is_mouse_down(const Context& context, MouseButtons button);
 #define _right_down (is_elem_down(ctx, MouseInteraction::right_down))
 #define _clicked (was_elem_clicked(ctx))
 #define _pressed (was_elem_pressed(ctx))
+#define _mouse_wheel_delta (mouse_wheel_delta(ctx))
 
 
 struct ScopeEntry
@@ -194,6 +196,7 @@ struct Context
 struct InputState
 {
 	double mouse_x{}, mouse_y{};
+	int64_t mouse_wheel_pos{};
 	Id mouse_interact_elems[(size_t)MouseInteraction::max]{}; //guid
 	uint64_t key_button_down[4]{}; // merged key or mouse button down state (mouse occupy highest byte)
 	RaycastResult mouse_hit;
@@ -403,6 +406,11 @@ inline bool is_mouse_down(const Context& context, MouseButtons button)
 	const int bit = 56 + (int)button;
 	uint64_t mask = (((uint64_t)1ull) << bit);
 	return (context.frame->curr_input.key_button_down[idx] & mask);
+}
+
+inline int mouse_wheel_delta(const Context& context)
+{
+	return (int)(context.frame->curr_input.mouse_wheel_pos - context.frame->prev_input.mouse_wheel_pos);
 }
 
 namespace elem

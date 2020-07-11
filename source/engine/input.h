@@ -6,6 +6,7 @@ enum class InputEventType
 	key,
 	mouse_button,
 	mouse_move,
+	mouse_wheel,
 };
 
 enum class MouseButtons : uint8_t
@@ -180,6 +181,10 @@ struct InputEvent
 		struct
 		{
 			double x, y;
+		};
+		struct
+		{
+			int delta;
 		};
 	};
 };

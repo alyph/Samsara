@@ -47,6 +47,18 @@ Tiered benefit???
   - one need may involve multiple goods
 
 
+#### gameplay significance
+
+trade goods need to feel impactful and significant (at least for some of those)
+- should not just be simple spread sheet numbers
+- should unlock special buildings, troops or even culture and technology advancements
+  - based on how easy to access those trade goods? with the help of trading
+  - generally you can consider trade goods can be accessed anywhere, however the difference is at the amount it can be accessed
+- each goods should be distinguishable enough instead of just another type
+  - first they have real usabilities, they are demanded for different types of reasons
+  - by having some of those goods, the population can behave differently and they may live in a different way and gradually shift on culture and advance to next level
+
+
 ### Type of goods
 
 #### food

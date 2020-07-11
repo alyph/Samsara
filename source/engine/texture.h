@@ -42,5 +42,6 @@ private:
 };
 
 extern Id create_texture(const TextureDesc& desc);
+extern Id load_texture(const String& filename);
 extern Id load_texture_array(const std::vector<String>& filenames);
 

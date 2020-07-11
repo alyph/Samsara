@@ -24,7 +24,7 @@ struct TileGlyph
 	Color32 color;
 };
 
-static constexpr const int map_chunk_size = 32;
+static constexpr const int map_chunk_size = 64;
 
 struct Map
 {

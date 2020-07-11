@@ -589,6 +589,10 @@ void Presenter::process_control(const std::vector<InputEvent>& events)
 			latest_input.mouse_x = event.x;
 			latest_input.mouse_y = event.y;
 		}
+		else if (event.type == InputEventType::mouse_wheel)
+		{
+			latest_input.mouse_wheel_pos += event.delta;
+		}
 		else
 		{
 			int idx{}, bit{};

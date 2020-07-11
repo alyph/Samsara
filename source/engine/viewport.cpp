@@ -3,6 +3,7 @@
 #include "presenter.h"
 #include "easy/profiler.h"
 #include "math_utils.h"
+#include "render_utils.h"
 #include <GL/glew.h>
 #include <cmath>
 
@@ -37,9 +38,12 @@ static void render_viewport(const Frame& frame, Id elem_id)
 		tf_stack.push_back(mat_vp);
 
 		// TODO: configurable and maybe per sub tree configurable
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL); // let the later drawn objects cover the previous ones if depth are the same
-		glEnable(GL_CULL_FACE);
+		RenderState render_state;
+		render_state.depth_test = true;
+		render_state.depth_func = DepthFunc::less_equal; // let the later drawn objects cover the previous ones if depth are the same
+		render_state.alpha_blend = true;
+		render_state.cull_face = true;
+		push_render_state(render_state);
 
 		while (!elem_stack.empty())
 		{
@@ -81,6 +85,8 @@ static void render_viewport(const Frame& frame, Id elem_id)
 				while (!elem_stack.empty());
 			}
 		}
+
+		pop_render_state();
 	}
 }
 

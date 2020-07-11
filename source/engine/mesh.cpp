@@ -10,8 +10,10 @@ namespace attrs
 }
 
 static constexpr const char* uniform_mvp = "MVP";
+static constexpr const char* uniform_texture = "Texture";
 static constexpr const char* attribute_pos = "VertexPos";
 static constexpr const char* attribute_color = "VertexColor";
+static constexpr const char* attribute_uv = "VertexUV";
 
 static MeshStore global_mesh_store;
 
@@ -39,6 +41,14 @@ Id MeshStore::add_mesh(Mesh&& mesh, Id shader)
 		auto& cache = shader_caches.emplace_back();
 		cache.shader_id = shader_id;
 		cache.param_mvp = shader_uniform_loc(shader, uniform_mvp);
+
+		const auto texture_loc = shader_uniform_loc(shader, uniform_texture);
+		if (texture_loc >= 0)
+		{
+			glUseProgram(static_cast<GLuint>(shader_id));
+			glUniform1i(texture_loc, 0);
+			glUseProgram(0);
+		}
 	}
 
 	const Id id = mesh_objects.size();
@@ -83,6 +93,17 @@ Id MeshStore::add_mesh(Mesh&& mesh, Id shader)
 	else
 	{
 		printf("Cannot find shader attribute: %s\n", attribute_color);
+	}
+
+	const auto uv_loc = shader_attribute_loc(shader, attribute_uv);
+	if (uv_loc >= 0)
+	{
+		glGenBuffers(1, &vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, mesh.uvs.size() * sizeof(mesh.uvs[0]), mesh.uvs.data(), GL_STATIC_DRAW);
+		glVertexAttribPointer(uv_loc, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(uv_loc);
+		mesh_obj.uv_buffer = vbo;
 	}
 
 	// create and bind indices
@@ -156,9 +177,16 @@ Id add_mesh(Mesh&& mesh, Id shader)
 static Render3dType render_mesh(const Frame& frame, Id elem_id, const Mat44& transform)
 {
 	const Id mesh_id = get_elem_attr_or_assert(frame, elem_id, attrs::mesh_id);
+	const auto texture = get_elem_attr_or_default(frame, elem_id, attrs::texture);
 
 	const auto& mesh_cache = global_mesh_store.mesh_cache(mesh_id);
 	const auto& shader_cache = global_mesh_store.shader_cache(mesh_id);
+
+	if (texture)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
+	}
 
 	// use shader
 	glUseProgram(static_cast<GLuint>(shader_cache.shader_id));

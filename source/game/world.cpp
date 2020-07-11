@@ -206,7 +206,7 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, const Developme
 		{
 			int num_occupied = idx >= occupied.size() ? 0 : occupied[idx];
 			// TODO: check to make sure it has enough usable terrains and other structures
-			if (num_occupied <= 3)
+			if (num_occupied <= 2)
 			{
 				const auto big_tile_rel_pos = to_ring_tile_pos({0, 0}, ring, idx);
 				int weight = 1;

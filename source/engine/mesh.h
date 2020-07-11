@@ -21,6 +21,7 @@ public:
 	std::vector<uint32_t> indices;
 	std::vector<Vec3> vertices;
 	std::vector<Color> colors;
+	std::vector<Vec2> uvs;
 };
 
 struct MeshCache
@@ -53,6 +54,7 @@ private:
 		size_t shader_cache_idx{};
 		Id vertex_buffer{};
 		Id color_buffer{};
+		Id uv_buffer{};
 	};
 
 	std::vector<InternalMeshObject> mesh_objects;

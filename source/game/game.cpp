@@ -4,7 +4,10 @@
 #include "engine/tablet.h"
 #include "engine/shader.h"
 #include "engine/image_utils.h"
+#include "engine/mesh.h"
 #include "easy/profiler.h"
+
+static constexpr const Vec2i initial_map_vp{ (map_chunk_size / 2), (map_chunk_size / 2) };
 
 Game::Game()
 {
@@ -29,6 +32,32 @@ Game::Game()
 		"../../data/fonts/urr_a_24x24.png",
 		"../../data/fonts/path_24x24.png",
 	});
+
+	desc.vs_path = "../../data/shaders/mesh_vs.gls";
+	desc.fs_path = "../../data/shaders/mesh_fs.gls";
+	const auto ref_map_shader = create_shader(desc);
+
+	// TODO: just one pixel per tile, will adjust it later if needed
+	const float half_w = 3648 / 2; // note: integer
+	const float half_h = 3004 / 2;
+	const Color mesh_tint{ 1.f, 1.f, 1.f, 0.3f };
+	Mesh mesh;
+	mesh.indices = { 0, 1, 2, 0, 2, 3 };
+	mesh.vertices = 
+	{
+		{ -half_w, -half_h, 0 }, { half_w, -half_h, 0 }, 
+		{ half_w, half_h, 0 }, { -half_w, half_h, 0 },
+	};
+	mesh.colors = 
+	{
+		mesh_tint, mesh_tint, mesh_tint, mesh_tint, 
+	};
+	mesh.uvs =
+	{
+		{ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f }, { 0.f, 1.f },
+	};
+	ref_map_mesh = add_mesh(std::move(mesh), ref_map_shader);
+	ref_map_texture = load_texture("../../data/images/europe1054ref.png");
 
 	const auto next_struct_type_idx = [this]() { return (TypeIndex)globals.structure_types.size(); };
 	const auto next_dev_type_idx = [this]() { return (TypeIndex)globals.development_types.size(); };
@@ -58,13 +87,13 @@ Game::Game()
 	make_dev_type("farming", DevelopmentArea::rural, 0x007f, 0x40ef20_rgb32);
 
 	const auto wall_struct = next_struct_type_idx();
-	globals.structure_types.push_back({"wall", 0x0310, 0xafafaf_rgb32, StructureCategory::wall, 0});
+	globals.structure_types.push_back({"wall", 0x0320, 0xafafaf_rgb32, StructureCategory::wall, 0});
 
 	globals.city_rules.starting_dev_type = governing_dev;
 	globals.city_rules.starting_wall_type = wall_struct;
 
 	editor_state.selected_brush = 1;
-	editor_state.map_vp.x = editor_state.map_vp.y = (map_chunk_size / 2);
+	editor_state.map_vp = initial_map_vp;
 	world.init(stage_allocator());
 }
 
@@ -389,22 +418,30 @@ void Game::present(const Context& ctx)
 	_attr(attrs::width, window->width());
 	_attr(attrs::height, window->height());
 	_attr(attrs::viewpoint, vp);
-	_attr(attrs::background_color, Color{});
+	_attr(attrs::background_color, (Color{0.f, 0.f, 0.f, 1.f}));
 
 	_children
 	{
 		// map view
+		float min_zoom = 0.25f;
 		float max_zoom = 2.0;
 		int map_size = (int)(tablet_width * max_zoom) + 4;
+		editor_state.map_scale += _mouse_wheel_delta * 0.001f;
+		const auto map_scale = editor_state.map_scale = std::clamp(editor_state.map_scale, 1/max_zoom, 1/min_zoom);
 		
+		// TODO: code below and serveral other places will not work if the map cells are not square
+		// it should employ a more generalized algorithem:
+		// 1. calculate the new map tablet position based on the new mouse position and real number cell coordinates (ruv?) it's dragging on 
+		// 2. offset this new map position with the new map_vp, so the map position never goes over one cell
+		// 3. other overlay images (like the ref map) should follow the map position calculated in step 1
 		if (editor_state.dragging_map)
 		{
 			if (is_mouse_down(ctx, MouseButtons::right))
 			{
 				const auto& input = ctx.frame->curr_input;
 				Vec2d ndc = calc_ndc({input.mouse_x, input.mouse_y}, window->width(), window->height());
-				double world_x = ndc.x * vp_width / 2 - editor_state.dragging_map_offset.x;
-				double world_y = ndc.y * vp_height / 2 - editor_state.dragging_map_offset.y;
+				double world_x = ndc.x * vp_width / (2 * map_scale) - editor_state.dragging_map_offset.x;
+				double world_y = ndc.y * vp_height / (2 * map_scale) - editor_state.dragging_map_offset.y;
 				int half_size = map_size / 2;
 				int tablet_x = std::clamp((int)std::floor(world_x), -half_size, half_size-1);
 				int tablet_y = std::clamp((int)std::floor(world_y), -half_size, half_size-1);
@@ -427,7 +464,8 @@ void Game::present(const Context& ctx)
 		map_pose.pos.x = editor_state.map_pose_offset.x;
 		map_pose.pos.y = editor_state.map_pose_offset.y;
 		map_pose.pos.z = 1.f;
-		_attr(attrs::transform, to_mat44(map_pose));
+		const auto map_scale_mat = make_mat44_scale({map_scale, map_scale, 1.f});
+		_attr(attrs::transform, map_scale_mat * to_mat44(map_pose));
 		_attr(attrs::width, map_size);
 		_attr(attrs::height, map_size);
 		_attr(attrs::texture, atlas_texture);
@@ -438,6 +476,15 @@ void Game::present(const Context& ctx)
 		{
 			map_view(_ctx, world, globals, editor_state, map_size, map_size);
 		}
+
+
+		// reference image
+		mesh(_ctx);
+		Pose mesh_pose;
+		mesh_pose.pos = to_vec3(editor_state.map_pose_offset - to_vec2(editor_state.map_vp - initial_map_vp), 0.5);
+		_attr(attrs::mesh_id, ref_map_mesh);
+		_attr(attrs::transform, map_scale_mat * to_mat44(mesh_pose));
+		_attr(attrs::texture, ref_map_texture);
 
 
 		// overlay

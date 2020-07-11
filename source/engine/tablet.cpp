@@ -10,6 +10,7 @@
 #include "easy/profiler.h"
 #include <cstddef>
 #include <algorithm>
+#include "render_utils.h"
 #include <GL/glew.h>
 #include <cmath>
 
@@ -1023,10 +1024,14 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		glViewport(0, 0, tablet_cache.rt_width, tablet_cache.rt_height);
 		glClearColor(0.f, 0.f, 0.f, 0.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		// glEnable(GL_DEPTH_TEST);
-		// glDepthFunc(GL_LESS);
-		glEnable(GL_BLEND);
-		glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+		RenderState render_state;
+		render_state.depth_test = false;
+		render_state.alpha_blend = true;
+		render_state.alpha_func.src_rgb = render_state.alpha_func.src_a = AlphaFactor::one;
+		render_state.alpha_func.dest_rgb = render_state.alpha_func.dest_a = AlphaFactor::one_minus_src_alpha;
+		push_render_state(render_state);
+		
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(atlas_target, static_cast<GLuint>(tablet_cache.texture)); // texture for glyph atlas
 		glUseProgram(static_cast<GLuint>(tablet_cache.shader_id)); // glyph shader;
@@ -1087,7 +1092,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		// 6 because of two triangles, see above indices in add_tablet()
 		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(num_glyphs));
 		// glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
+		
 	// construct glyph data and upload
 #if 0
 	const auto num_fixed_glyphs = (tablet_cache.width * tablet_cache.height);
@@ -1170,12 +1175,18 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 		glBindTexture(atlas_target, 0);
+		pop_render_state();
 
 
 		// draw quad on screen
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
+		render_state = current_render_state();
+		render_state.alpha_blend = true;
+		render_state.alpha_func.src_rgb = render_state.alpha_func.src_a = AlphaFactor::one;
+		render_state.alpha_func.dest_rgb = render_state.alpha_func.dest_a = AlphaFactor::one_minus_src_alpha;
+		push_render_state(render_state);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tablet_cache.rt_texture));
@@ -1194,6 +1205,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
+		pop_render_state();
 	}
 
 	return Render3dType::sub_tree;

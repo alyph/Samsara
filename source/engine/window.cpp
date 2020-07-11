@@ -370,6 +370,14 @@ static void queue_input_event(std::vector<InputEvent>& events, UINT message, WPA
 			events.push_back(event);
 			break;
 		}
+		case WM_MOUSEWHEEL:
+		{
+			InputEvent event;
+			event.type = InputEventType::mouse_wheel;
+			event.delta = (int)std::round(GET_WHEEL_DELTA_WPARAM(wparam) * 100.f / WHEEL_DELTA);
+			events.push_back(event);
+			break;
+		}
 	}
 }
 

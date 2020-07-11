@@ -96,6 +96,7 @@ inline Vec2 operator+(const Vec2& v0, const Vec2& v1);
 inline Vec2 operator-(const Vec2& v0, const Vec2& v1);
 inline Vec2 operator*(const Vec2& v, float s);
 inline float cross(const Vec2& v0, const Vec2& v1);
+inline Vec3 to_vec3(const Vec2& v2, float z);
 
 // Vec3
 inline Vec3 operator-(const Vec3& v);
@@ -119,6 +120,7 @@ inline bool operator==(const Vec2i& v0, const Vec2i& v1);
 inline bool operator!=(const Vec2i& v0, const Vec2i& v1);
 inline Vec2i comp_min(const Vec2i& v0, const Vec2i& v1);
 inline Vec2i comp_max(const Vec2i& v0, const Vec2i& v1);
+inline Vec2 to_vec2(const Vec2i& v);
 
 // Box2i
 inline Box2i to_box(const Vec2i& v) { return {v, v}; }
@@ -132,6 +134,7 @@ inline Vec4 operator*(const Mat44& m, const Vec4& v);
 inline Vec4 operator*(const Mat44& m, const Vec3& v);
 inline Mat44 operator*(const Mat44& m0, const Mat44& m1);
 inline Mat44 inverse(const Mat44& m);
+inline Mat44 make_mat44_scale(const Vec3& scale);
 
 // Quat
 inline Quat make_quat_angle_axis(float angle, const Vec3& axis);
@@ -172,6 +175,11 @@ inline Vec2 operator*(const Vec2& v, float s)
 inline float cross(const Vec2& v0, const Vec2& v1)
 {
 	return v0.x * v1.y - v0.y * v1.x;
+}
+
+inline Vec3 to_vec3(const Vec2& v2, float z)
+{
+	return Vec3{ v2.x, v2.y, z };
 }
 
 // Vec3 Impl
@@ -310,6 +318,11 @@ inline Vec2i comp_min(const Vec2i& v0, const Vec2i& v1)
 inline Vec2i comp_max(const Vec2i& v0, const Vec2i& v1)
 {
 	return { std::max(v0.x, v1.x), std::max(v0.y, v1.y) };
+}
+
+inline Vec2 to_vec2(const Vec2i& v)
+{
+	return Vec2{ static_cast<float>(v.x), static_cast<float>(v.y) };
 }
 
 // Box2i Impl
@@ -511,6 +524,16 @@ inline Mat44 inverse(const Mat44& m)
 	const bool invertible = inverse_matrix<4>(m.data(), inv.data());
 	asserts(invertible);
 	return inv;
+}
+
+inline Mat44 make_mat44_scale(const Vec3& scale)
+{
+	Mat44 m;
+	m[0][0] = scale.x;
+	m[1][1] = scale.y;
+	m[2][2] = scale.z;
+	m[3][3] = 1.f;
+	return m;
 }
 
 

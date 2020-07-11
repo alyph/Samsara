@@ -62,11 +62,12 @@ Id create_texture(const TextureDesc& desc)
 	asserts(desc.width > 0 && desc.height > 0);
 
 	GLenum format;
+	int bpp;
 	switch (desc.format)
 	{
-		case TextureFormat::Mono: format = GL_RED; break;
-		case TextureFormat::RGB: format = GL_RGB; break;
-		case TextureFormat::RGBA: format = GL_RGBA; break;
+		case TextureFormat::Mono: format = GL_RED; bpp = 1; break;
+		case TextureFormat::RGB: format = GL_RGB; bpp = 3; break;
+		case TextureFormat::RGBA: format = GL_RGBA; bpp = 4; break;
 		default: asserts(false, "unsupported texture format");
 	}
 
@@ -78,21 +79,25 @@ Id create_texture(const TextureDesc& desc)
 
 	GLuint id;
 	glGenTextures(1, &id);
+	GLint align;
+	glGetIntegerv(GL_UNPACK_ALIGNMENT, &align);
 
 	const bool is_tex_array = (desc.layers > 0);
 	GLenum target;
 	if (is_tex_array)
 	{
+		asserts(((desc.width * bpp + align - 1) / align) * align * desc.height * desc.layers == desc.data.size());
 		target = GL_TEXTURE_2D_ARRAY;
 		glBindTexture(target, id);
 		glTexImage3D(target, 0, format, desc.width, desc.height, desc.layers, 0, format, GL_UNSIGNED_BYTE, desc.data.data());
 	}
 	else
 	{
+		asserts(((desc.width * bpp + align - 1) / align) * align * desc.height == desc.data.size());
 		target = GL_TEXTURE_2D;
 		glBindTexture(target, id);
 		glTexImage2D(target, 0, format, desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.data.data());
-	}	
+	}
 	
 	glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -102,6 +107,18 @@ Id create_texture(const TextureDesc& desc)
 	glBindTexture(target, 0);
 
 	return id;
+}
+
+Id load_texture(const String& filename)
+{
+	TextureDesc desc;
+	desc.layers = 0;
+	auto img = load_image(filename.c_str(), true);
+	desc.width = img.width;
+	desc.height = img.height;
+	desc.format = img.format;
+	desc.data = std::move(img.data);
+	return create_texture(desc);
 }
 
 Id load_texture_array(const std::vector<String>& filenames)

@@ -25,6 +25,7 @@ struct EditorState
 	bool dragging_map{};
 	Vec2i dragging_map_coord{};
 	Vec2 dragging_map_offset{};
+	float map_scale = 1.f;
 };
 
 
@@ -34,13 +35,15 @@ public:
 	Game();
 	void update();
 	bool ended();
-	void present(const Context& ctx);
+void present(const Context& ctx);
 
 private:
 	// TODO: managed by asset manager
 	Id tablet_shader;
 	Id tablet_screen_shader;
 	Id atlas_texture;
+	Id ref_map_mesh;
+	Id ref_map_texture;
 
 	Globals globals;
 	World world;

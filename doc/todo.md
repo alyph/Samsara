@@ -55,6 +55,7 @@
   - [ ] pooled bucket array, has a main pool and each array will get allocated buckets from that pool, and they will have access to a control block from the pool
 - [ ] make Id an actual type so it can't be used directly as index
 - [ ] replace all std::string with String
+- [ ] replace all std::vector with Array
 - [ ] finish impl simple array
 - [ ] attribute should have a default constructor with T{}
 - [x] string store should probably be immutible too, so copy that into normal string or string attribute would work fine
@@ -68,7 +69,7 @@
 - [ ] allow allocate 0 bytes data, which will return an empty handle but record the allocator and later can use reallocate to get real memory
 
 ### input
-- [ ] mouse wheel event
+- [x] mouse wheel event
 
 
 
@@ -83,34 +84,38 @@
     - [x] coast
     - [ ] ocean
     - [ ] river
-  - [ ] map runtime visual data (these data are recreated when map loaded or new map created)
-    - [ ] global map glyph table
-    - [ ] terrain glyphs (index to glyph table)
-    - [ ] map object glyphs
+  - [x] map runtime visual data (these data are recreated when map loaded or new map created)
+    - [x] map glyph cache
+    - [x] update glyph when changing the tile terrain and structure
   - [ ] city placement
     - [x] city data (and devs)
     - [x] button to create city (comes with intial set of devs)
     - [x] city wall (first pass, just rect wall bounding box encompassing all urban devs)
     - [x] select city
-    - [ ] city expansion
-    - [ ] road connection
-    - [ ] rural devs (simple placement outside of the city)
+    - [x] city expansion
+    - [x] rural devs (simple placement outside of the city)
+    - [x] houses (some of these will be replaced by template or auto gen)
+    - [ ] road connection (connects cities)
+  - [ ] features and buildings
     - [ ] resource sites
-    - [ ] houses (some of these will be replaced by template or auto gen)
-    - [ ] road (connects cities)
-  - [x] map panning
-  - [ ] map zoom
+    - [ ] building placement
+  - [ ] map view
+    - [x] map panning
+    - [x] map zoom
+    - [x] reference map
+    - [ ] multi-stage zoom
 
 ## game
 - [ ] economic model
   - [ ] development
   - [ ] production
   - [ ] trade
-- [ ] culture
+- [ ] action mechanics
+- [ ] building system
+- [ ] warfare
 - [ ] technology
+- [ ] culture
+- [ ] characters
 - [ ] political systems
 - [ ] diplomacy
-- [ ] warfare
-- [ ] characters
-- [ ] action mechanics
 

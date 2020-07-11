@@ -40,18 +40,6 @@ Image load_image(const char* filename, bool vertical_flip)
 	return result;
 }
 
-TextureDesc load_texture(const char* filename)
-{
-	auto result = load_image(filename, true);
-
-	TextureDesc desc;
-	desc.width = result.width;
-	desc.height = result.height;
-	desc.format = result.format;
-	desc.data = std::move(result.data);
-	return desc;
-}
-
 bool save_image(const char* filename, const Image& image, bool vertical_flip)
 {
 	stbi_flip_vertically_on_write(vertical_flip);
