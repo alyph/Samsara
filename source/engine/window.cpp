@@ -9,6 +9,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <chrono>
+#include <cmath>
 
 LRESULT CALLBACK window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
