@@ -1,6 +1,8 @@
 #pragma once
 
 #include "assertion.h"
+#include "reflection.h"
+#include "serialization.h"
 #include <cmath>
 #include <cstdint>
 #include <algorithm>
@@ -124,6 +126,7 @@ inline Vec2 to_vec2(const Vec2i& v);
 
 // Box2i
 inline Box2i to_box(const Vec2i& v) { return {v, v}; }
+inline Box2i make_box_wh(int32_t x, int32_t y, int32_t w, int32_t h) { return { {x, y}, {x + w - 1, y + h - 1} }; }
 inline bool encompasses(const Box2i& box, const Vec2i& v);
 
 // Mat33
@@ -636,3 +639,29 @@ inline Mat44 to_mat44(const Pose& pose)
 	m[3] = to_vec4(pose.pos, 1.f);
 	return m;
 }
+
+namespace serialization
+{
+	template<class TOp, class T>
+	inline std::enable_if_t<is_any_v<std::remove_const_t<T>, Vec2, Vec2i, Vec2d>>
+	serialize(TOp& op, T& v)
+	{
+		op.delim(Delimiter::value_open);
+		op.number(v.x);
+		op.number(v.y);
+		op.delim(Delimiter::value_close);
+	}
+
+	template<class TOp, class T>
+	inline std::enable_if_t<std::is_same_v<std::remove_const_t<T>, Box2i>>
+	serialize(TOp& op, T& v)
+	{
+		op.delim(Delimiter::value_open);
+		op.number(v.min.x);
+		op.number(v.min.y);
+		op.number(v.max.x);
+		op.number(v.max.y);
+		op.delim(Delimiter::value_close);
+	}
+}
+

@@ -1,4 +1,10 @@
 
+### Design considerations
+
+#### another idea
+
+another idea is not having development just industry per goods and services so you have one industry aimed at one goods or service
+
 
 ### Development
 

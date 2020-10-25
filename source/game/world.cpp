@@ -1,45 +1,18 @@
 #include "world.h"
 #include "engine/random.h"
+#include "engine/serialization.h"
+#include "engine/fileio.h"
 
-
-static void add_development(City& city, Map& map, TypeIndex dev_type, const Vec2i& coords, const Globals& globals)
+static void add_development(City& city, Map& map, Id dev_type, const Vec2i& coords, const Globals& globals)
 {
-	city.devs.push_back({dev_type, coords});	
-	map.set_structure(coords, globals.development_types[dev_type].structure_type);	
+	city.devs.push_back({to_type_id(dev_type), coords});	
+	map.set_structure(coords, globals.development_types.get(dev_type).structure_type);	
 }
 
-static void setup_walls(City& city, Map& map, TypeIndex wall_type, const Globals& globals)
+static void set_wall_tiles(Map& map, const Box2i& wall_bounds, Id wall_type)
 {
-	// destroy old walls if there is any
-	for (int y = city.wall_bounds.min.y; y <= city.wall_bounds.max.y; y++)
-	{
-		for (int x = city.wall_bounds.min.x; x <= city.wall_bounds.max.x; x++)
-		{
-			Tile* tile = map.get_tile({x, y});
-			if (tile && tile->structure && globals.structure_types[tile->structure].category == StructureCategory::wall)
-			{
-				tile->structure = 0;
-			}
-		}
-	}
-
-	// create new walls
-	auto min = city.coords;
-	auto max = min;
-	for (const auto& dev : city.devs)
-	{
-		const auto& dev_type = globals.development_types[dev.type];
-		if (dev_type.area == DevelopmentArea::urban)
-		{
-			min = comp_min(min, dev.coords);
-			max = comp_max(max, dev.coords);
-		}
-	}
-
-	min = (min - Vec2i{1, 1});
-	max = (max + Vec2i{1, 1});
-
-	// TODO: we don't want to destroy existing structures, so check and may need to relocate some of the devs
+	const auto& min = wall_bounds.min;
+	const auto& max = wall_bounds.max;
 	for (int x = min.x; x <= max.x; x++)
 	{
 		map.set_structure({x, min.y}, wall_type);
@@ -51,14 +24,60 @@ static void setup_walls(City& city, Map& map, TypeIndex wall_type, const Globals
 		map.set_structure({min.x, y}, wall_type);
 		map.set_structure({max.x, y}, wall_type);
 	}
+}
+
+static void setup_walls(City& city, Map& map, Id wall_type, const Globals& globals)
+{
+	// destroy old walls if there is any
+	for (int y = city.wall_bounds.min.y; y <= city.wall_bounds.max.y; y++)
+	{
+		for (int x = city.wall_bounds.min.x; x <= city.wall_bounds.max.x; x++)
+		{
+			Tile* tile = map.get_tile({x, y});
+			if (tile && tile->structure && globals.structure_types.get(tile->structure).category == StructureCategory::wall)
+			{
+				tile->structure = 0;
+			}
+		}
+	}
+
+	// create new walls
+	auto min = city.coords;
+	auto max = min;
+	for (const auto& dev : city.devs)
+	{
+		const auto& dev_type = globals.development_types.get(dev.type);
+		if (dev_type.area == DevelopmentArea::urban)
+		{
+			min = comp_min(min, dev.coords);
+			max = comp_max(max, dev.coords);
+		}
+	}
+
+	min = (min - Vec2i{1, 1});
+	max = (max + Vec2i{1, 1});
+	city.wall_bounds = {min, max};
+
+	// TODO: we don't want to destroy existing structures, so check and may need to relocate some of the devs
+	// for (int x = min.x; x <= max.x; x++)
+	// {
+	// 	map.set_structure({x, min.y}, wall_type);
+	// 	map.set_structure({x, max.y}, wall_type);
+	// }
+
+	// for (int y = (min.y + 1); y <= (max.y - 1); y++)
+	// {
+	// 	map.set_structure({min.x, y}, wall_type);
+	// 	map.set_structure({max.x, y}, wall_type);
+	// }
+	set_wall_tiles(map, city.wall_bounds, wall_type);
 
 	// TODO: we should fill empty spaces in the wall with a "city ground" structure type
-
-	city.wall_bounds = {min, max};
 }
 
 Id create_city(World& world, const Vec2i& coords, const Globals& globals)
 {
+	push_perm_allocator(world.allocator);
 	City& city = world.cities.emplace();
 	city.coords = coords;
 	// TODO: everytime we create new city a new array is allocated
@@ -68,10 +87,11 @@ Id create_city(World& world, const Vec2i& coords, const Globals& globals)
 	// some terrain may remain e.g. the hilly area
 	// some terrain may prevent city from being placed e.g. mountainous, water etc.
 	city.devs.alloc(0, 128, world.allocator);
-	add_development(city, world.map, globals.city_rules.starting_dev_type, coords, globals);
+	add_development(city, world.map, globals.defines.starting_dev_type, coords, globals);
 	city.wall_bounds = to_box(coords);
-	setup_walls(city, world.map, globals.city_rules.starting_wall_type, globals);
+	setup_walls(city, world.map, globals.defines.starting_wall_type, globals);
 	world.map.update_glyphs(city.wall_bounds, globals);
+	pop_perm_allocator();
 	return city.id;
 }
 
@@ -128,7 +148,7 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, const Developme
 		size_t max_occupied_ring = 0;
 		for (const auto& dev : city.devs)
 		{
-			if (globals.development_types[dev.type].area == DevelopmentArea::urban)
+			if (globals.development_types.get(dev.type).area == DevelopmentArea::urban)
 			{
 				const auto ring_idx = to_ring_index(dev.coords - city.coords);
 				max_occupied_ring = std::max(ring_idx, max_occupied_ring);
@@ -181,7 +201,7 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, const Developme
 		size_t max_occupied_ring = 0;
 		for (const auto& dev : city.devs)
 		{
-			if (globals.development_types[dev.type].area == DevelopmentArea::rural)
+			if (globals.development_types.get(dev.type).area == DevelopmentArea::rural)
 			{
 				const auto ring_idx = to_ring_index(scale_up_vec(dev.coords - city.coords));
 				max_occupied_ring = std::max(ring_idx, max_occupied_ring);
@@ -236,7 +256,7 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, const Developme
 			{
 				const auto tile_pos = center_tile + Vec2i{x, y};
 				const auto tile = map.get_tile(tile_pos);
-				const auto category = tile ? globals.structure_types[tile->structure].category : StructureCategory::none;
+				const auto category = tile ? globals.structure_types.get(tile->structure).category : StructureCategory::none;
 				if (category != StructureCategory::dev && category != StructureCategory::wall) // TODO: road
 				{
 					new_tiles.push_back(tile_pos);
@@ -247,17 +267,17 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, const Developme
 	}
 }
 
-void develop_city(World& world, Id city_id, TypeIndex dev_type, const Globals& globals)
+void develop_city(World& world, Id city_id, Id dev_type, const Globals& globals)
 {
 	auto& city = world.cities.get(city_id);
 	auto& map = world.map;
-	const auto& dev = globals.development_types[dev_type];
+	const auto& dev = globals.development_types.get(dev_type);
 	const auto dev_coords = find_tile_for_dev(city, map, dev, globals);
-	city.devs.push_back({dev_type, dev_coords});
+	city.devs.push_back({to_type_id(dev_type), dev_coords});
 	map.set_structure(dev_coords, dev.structure_type);
 	if (dev.area == DevelopmentArea::urban)
 	{
-		setup_walls(city, map, globals.city_rules.starting_wall_type, globals);
+		setup_walls(city, map, globals.defines.starting_wall_type, globals);
 		world.map.update_glyphs(city.wall_bounds, globals);
 	}
 	else
@@ -265,4 +285,157 @@ void develop_city(World& world, Id city_id, TypeIndex dev_type, const Globals& g
 		world.map.update_glyphs(to_box(dev_coords), globals);
 	}
 }
+
+namespace serialization
+{
+	template<class T>
+	static void serialize(T& op, RefType<T, City> city)
+	{
+		op.prop("pos", city.coords);
+		op.prop("wall", city.wall_bounds);
+		op.prop("devs", city.devs);
+	}
+
+	template<class T>
+	static void serialize(T& op, RefType<T, Development> dev)
+	{
+		op.value<NamedIdValue>(dev.type, op.context.globals->development_types);
+		op.value(dev.coords);
+	}
+
+	template<class T>
+	static void serialize(T& op, RefType<T, Map> map)
+	{
+		op.section("terrains");
+		op.blob<MapTilesBlob>(map);
+	}
+
+	struct MapTilesBlob
+	{
+		template<class TOp>
+		static inline void write(TOp& op, const Map& map)
+		{
+			for (int y = 0; y < map.chunk_bounds.height; y++)
+			{
+				for (int x = 0; x < map.chunk_bounds.width; x++)
+				{
+					Vec2i chunk_coords{x + map.chunk_bounds.x, y + map.chunk_bounds.y};
+					size_t chunk_idx = map.chunk_coords_to_idx(chunk_coords);
+					Id first_tile_id = map.chunks[chunk_idx].first_tile_id;
+					if (first_tile_id)
+					{
+						op.new_object();
+						op.value(chunk_coords);
+						op.end_heading();
+
+						size_t first_tile_idx = id_to_index(first_tile_id);
+						for (int ty = 0; ty < map_chunk_size; ty++)
+						{
+							for (int tx = 0; tx < map_chunk_size; tx++)
+							{
+								const auto terrain_id = map.tiles[first_tile_idx + tx + ty * map_chunk_size].terrain;
+								const auto& terrain_type = op.context.globals->terrain_types.get(terrain_id);
+								op.blob_char(terrain_type.symbol);
+							}
+							op.newline();
+						}
+						op.newline();
+					}
+				}
+			}
+		}
+		
+		template<class TOp>
+		static inline void read(TOp& op, Map& map)
+		{
+			TypeId terrain_map[256]{};
+			for (const auto& terrain_type : op.context.globals->terrain_types)
+			{
+				terrain_map[terrain_type.symbol] = to_type_id(terrain_type.id);
+			}
+			while (op.next_object())
+			{
+				Vec2i chunk_coords;
+				op.value(chunk_coords);
+				op.end_heading();
+				// TODO: we shouldn't expand if entire blob is just 0s (terrain type id == 0)
+				Id first_tile_id = map.ensure_tiles_for_chunk(chunk_coords);
+				size_t first_tile_idx = id_to_index(first_tile_id);
+
+				// read each line until end of the object
+				int y = 0;
+				while (!op.at_delim(Delimiter::object_tag) &&
+					!op.at_delim(Delimiter::section_open))
+				{
+					int x = 0;
+					char symbol;
+					while (x < map_chunk_size && op.blob_char(symbol))
+					{
+						map.tiles[first_tile_idx + x + y * map_chunk_size].terrain = terrain_map[symbol];
+						x++;
+					}
+					y++;
+
+					if (!op.blob_next_line())
+					{
+						break;
+					}
+				}
+			}
+			for (size_t ci = 0; ci < map.chunks.size(); ci++)
+			{
+				if (map.chunks[ci].first_tile_id)
+				{
+					const auto coords = map.chunk_idx_to_coords(ci);
+					const auto bounds = make_box_wh(chunk_first_tile(coords.x), chunk_first_tile(coords.y), map_chunk_size, map_chunk_size);
+					map.update_glyphs(bounds, *op.context.globals);
+				}
+			}
+		}
+	};
+
+	template<SerializeOpType E>
+	static void serialize_world(RefTypeE<E, World> world, const String& path, const Globals& globals)
+	{
+		WorldSerializationContext context{&globals};
+		auto op = make_file_op<E>(format_str("%s/%s", path, "world.dat"), context);
+		op.section("cities");
+		op.collection(world.cities, "city");
+
+		op = make_file_op<E>(format_str("%s/%s", path, "map.dat"), context);
+		serialize(op, world.map);
+	}
+}
+
+struct WorldSerializationContext
+{
+	const Globals* globals{};
+};
+
+void save_world(const World& world, const String& path, const Globals& globals)
+{
+	serialization::serialize_world<SerializeOpType::write>(world, path, globals);
+}
+
+World load_world(const String& path, const Globals& globals, Allocator alloc)
+{
+	push_perm_allocator(alloc);
+	World world;
+	world.init(alloc);
+	serialization::serialize_world<SerializeOpType::read>(world, path, globals);
+	for (const auto& city : world.cities)
+	{
+		for (const auto& dev : city.devs)
+		{
+			const auto& dev_type = globals.development_types.get(dev.type);
+			world.map.set_structure(dev.coords, dev_type.structure_type);
+			world.map.update_glyphs(to_box(dev.coords), globals);
+		}
+		set_wall_tiles(world.map, city.wall_bounds, globals.defines.starting_wall_type); // TODO: store wall type of the city
+		world.map.update_glyphs(city.wall_bounds, globals);
+	}
+	pop_perm_allocator();
+	return world;
+}
+
 

@@ -2,11 +2,14 @@
 
 #include "allocation.h"
 #include "engine.h"
+#include "id.h"
 #include <cstddef>
 #include <cstring>
 #include <cstdio>
 #include <utility>
 #include <algorithm>
+#include <string_view>
+#include <functional>
 
 #define STRING_REF_COUNT 0
 #define STRING_VIEW STRING_REF_COUNT
@@ -104,6 +107,7 @@ struct StringData
 	inline bool is_persistent_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() < Allocator::temp; }
 	inline bool is_temp_allocated() const { return is_normal() && normal_data.alloc_handle.allocator_type() >= Allocator::temp; }
 	inline StringHeader* header() const;
+	inline bool equal(const StringData& other) const;
 };
 
 // value always temp
@@ -141,15 +145,22 @@ public:
 	inline void store(char (&str)[N]) = delete;
 	inline void store(const String& str);
 
+	inline bool operator==(const String& other) const { return str_data.equal(other.str_data); }
+	inline bool operator!=(const String& other) const { return !str_data.equal(other.str_data); }
 	inline const char* c_str() const { return str_data.c_str(); }
+	inline bool empty() const { return size() == 0; }
 	inline size_t size() const { return str_data.size(); }
 	inline const char* data() const { return str_data.data(); }
+	inline Id hash() const;
+	inline void clear() { str_data.clear(); }
 
 #if STRING_REF_COUNT
 private:
 	inline void dispose();
 #endif
 };
+
+inline String make_string_view(const char* start, size_t size);
 
 #if STRING_VIEW
 class StringView final
@@ -357,6 +368,24 @@ inline StringHeader* StringData::header() const
 	return is_normal() ? reinterpret_cast<StringHeader*>(validate_and_get_string_buffer(*this)) : nullptr;
 }
 
+inline bool StringData::equal(const StringData& other) const
+{
+	const auto s = size();
+	if (s != other.size())
+	{
+		return false;
+	}
+
+	auto this_data = data();
+	auto other_data = other.data();
+	if (this_data == other_data)
+	{
+		return true;
+	}
+
+	return (std::memcmp(this_data, other_data, s) == 0);
+}
+
 
 // String
 
@@ -434,6 +463,19 @@ inline void String::store(const String& str)
 {
 	*this = str;
 	store();
+}
+
+inline Id String::hash() const
+{
+	std::string_view sv{data(), size()};
+	return std::hash<std::string_view>{}(sv);
+}
+
+inline String make_string_view(const char* start, size_t size)
+{
+	String str;
+	assign_string_literal(str.str_data, start, size);
+	return str;
 }
 
 #if STRING_REF_COUNT

@@ -85,7 +85,7 @@ void Map::expand_to_fit_chunk(const Vec2i& coords)
 
 // This generates the mask that encodes the non-water directions (see above explanations of mask)
 // return 0 for water tile that has no blocking non-water directions, in which case a normal tile glyph should be used
-static inline uint8_t calc_neighbor_water_mask(const Map& map, const Array<TerrainType>& terrain_types, const Vec2i& tile_coords)
+static inline uint8_t calc_neighbor_water_mask(const Map& map, const Collection<TerrainType>& terrain_types, const Vec2i& tile_coords)
 {
 	// remind of ordering:
 	//     7 0 1  +Y
@@ -97,7 +97,7 @@ static inline uint8_t calc_neighbor_water_mask(const Map& map, const Array<Terra
 	{
 		const Id id = map.tile_id(tile_coords + offsets[i]);
 		const uint16_t type = (id ? map.tiles[id_to_index(id)].terrain : 0);
-		if (!(terrain_types[type].flags & TileTypeFlags::water))
+		if (!(terrain_types.get(type).flags & TileTypeFlags::water))
 		{
 			mask |= (1 << i);
 		}
@@ -139,7 +139,7 @@ void Map::update_glyphs(const Box2i dirty_tiles, const Globals& globals)
 				TileGlyph& glyph = ground_glyphs[id_to_index(tid)];
 				if (tile.structure)
 				{
-					const auto& struct_type = globals.structure_types[tile.structure];
+					const auto& struct_type = globals.structure_types.get(tile.structure);
 					glyph.code = struct_type.glyph;
 					glyph.color = struct_type.color;
 					// TODO: probably more than just wall
@@ -150,7 +150,7 @@ void Map::update_glyphs(const Box2i dirty_tiles, const Globals& globals)
 				}
 				else
 				{
-					const auto& terrain_type = globals.terrain_types[tile.terrain];
+					const auto& terrain_type = globals.terrain_types.get(tile.terrain);
 					glyph.code = terrain_type.glyph;
 					glyph.color = terrain_type.color_a;
 					if (terrain_type.flags & TileTypeFlags::water)

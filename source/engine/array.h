@@ -2,6 +2,7 @@
 
 #include "assertion.h"
 #include "allocation.h"
+#include "reflection.h"
 #include "engine.h"
 
 // Array
@@ -166,6 +167,7 @@ class ArrayBase
 public:
 	static_assert(std::is_trivial_v<T> || std::is_trivially_destructible_v<T>);
 	static_assert(alignof(T) <= alignof(std::max_align_t));
+	using ElemType = T;
 
 	AllocHandle handle;
 	size_t _size{};
@@ -185,12 +187,13 @@ public:
 	inline const T& back() const { return back_impl(); }
 	inline void clear() { _size = 0; }
 	inline void resize(size_t new_size);
+	inline void expand(size_t min_size);
 	inline void push_back(const T& value); // TODO: move version
 	inline void pop_back();
 	inline void insert(size_t pos, const T& value);
 	inline void insert_defaults(size_t pos, size_t count);
 	inline ArrayView<T> view() { return { handle, 0, size() }; }
-	static constexpr bool is_trivial() { return (std::is_trivial_v<T> || (std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>)); }
+	static constexpr bool is_trivial() { return (std::is_trivial_v<T> || (std::is_trivially_constructible_v<T> && std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>)); }
 
 protected:
 	inline void alloc_impl(size_t size, size_t capacity, Allocator allocator);
@@ -209,11 +212,12 @@ class Array: public ArrayBase<T>
 {
 public:
 	inline Array() = default;
+	inline Array(size_t size, size_t capacity) noexcept { alloc_impl(size, size, perm_allocator()); }
 	inline Array(size_t size, Allocator allocator) noexcept { alloc_impl(size, size, allocator); }
 	inline Array(size_t size, size_t capacity, Allocator allocator) noexcept { alloc_impl(size, capacity, allocator); }
-	inline Array(const Array<T>& other) noexcept { *this = other; }
+	// inline Array(const Array<T>& other) noexcept { *this = other; } // TODO: don't implement until we really need this
 	inline Array(Array<T>&& other) noexcept { *this = std::move(other); }
-	inline Array& operator=(const Array<T>& other) noexcept;
+	// inline Array& operator=(const Array<T>& other) noexcept; // TODO: don't implement until we really need this
 	inline Array& operator=(Array<T>&& other) noexcept; // TODO: not implemented yet, implement it if we actually need to deep copy the array
 
 	inline void alloc(size_t size, size_t capacity, Allocator allocator) { alloc_impl(size, capacity, allocator); }
@@ -286,7 +290,7 @@ constexpr size_t total_array_buffer_size(size_t num_items)
 template<typename T>
 inline void ArrayBase<T>::alloc_impl(size_t size, size_t capacity, Allocator allocator)
 {
-	asserts(size <= capacity && capacity > 0);
+	asserts(size <= capacity);
 	const size_t num_bytes = total_array_buffer_size<T>(capacity);
 	auto& allocators = engine().allocators;
 	handle = allocators.allocate(allocator, num_bytes);
@@ -384,6 +388,15 @@ inline void ArrayBase<T>::resize(size_t new_size)
 	if (old_size < new_size)
 	{
 		init_data(old_size, (new_size - old_size));
+	}
+}
+
+template<typename T>
+inline void ArrayBase<T>::expand(size_t min_size)
+{
+	if (_size < min_size)
+	{
+		resize(min_size);
 	}
 }
 
@@ -522,5 +535,4 @@ inline Array<T> make_temp_array(size_t size, size_t capacity)
 	array.alloc_temp(size, capacity); 
 	return array; 
 }
-
 

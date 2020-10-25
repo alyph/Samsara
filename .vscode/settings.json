@@ -67,6 +67,15 @@
         "xtree": "cpp",
         "array": "cpp",
         "xxatomic": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "cctype": "cpp",
+        "filesystem": "cpp",
+        "iomanip": "cpp",
+        "locale": "cpp",
+        "string_view": "cpp",
+        "xlocbuf": "cpp",
+        "xlocmes": "cpp",
+        "xlocmon": "cpp",
+        "xloctime": "cpp"
     }
 }

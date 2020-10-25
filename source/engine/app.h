@@ -29,7 +29,10 @@ int run_app()
 
 	engine().window = window.get();
 
+	// const auto app_start = std::chrono::system_clock::now();
 	AppT app;
+	// const auto app_end = std::chrono::system_clock::now();
+	// printf("startup time: %f\n", std::chrono::duration_cast<std::chrono::duration<double>>(app_end - app_start).count());
 	Presenter presenter;
 	presenter.set_present_object(&app);
 
@@ -61,5 +64,6 @@ int run_app()
 			frame_count = 0;
 		}
 	}
+	app.shutdown();
 	return 0;
 }

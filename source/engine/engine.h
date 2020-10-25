@@ -77,7 +77,7 @@ inline void push_perm_allocator(Allocator alloc)
 	alloc_globals.perm_allocator_stack_size++;
 }
 
-inline void pop_perm_allocator(Allocator alloc)
+inline void pop_perm_allocator()
 {
 	auto& alloc_globals = engine().allocators;
 	asserts(alloc_globals.perm_allocator_stack_size > 0);

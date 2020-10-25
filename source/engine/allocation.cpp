@@ -62,42 +62,50 @@ static size_t allocate_bytes(AllocatorData& alloc, size_t size)
 AllocHandle AllocatorGlobals::allocate(Allocator allocator, size_t size)
 {
 	// TODO: handle Allocator::none, maybe we should get idx = (allocator - 1)
+	asserts(allocator > Allocator::none && allocator < Allocator::max);
 	const auto allocator_idx = static_cast<size_t>(allocator);
 	asserts(allocator_idx < num_allocators);
 	auto& allocator_data = allocators[allocator_idx];
-
-	const size_t ptr = allocate_bytes(allocator_data, size);
-	const Buffer& buffer = allocator_data.pages[allocator_data.curr_page];
-	const size_t alloc_size = (buffer.size() - ptr);
-
-	// TODO: should we memzero the allocated memory?
-
 	size_t header_idx{};
-	if (allocator_data.num_headers < allocator_data.headers.size())
-	{
-		header_idx = allocator_data.num_headers++;
-	}
-	else if (allocator_data.free_header != 0)
-	{
-		asserts(false); // not impl
-	}
-	else
-	{
-		allocator_data.headers.resize(allocator_data.headers.size() + header_page_size);
-		header_idx = allocator_data.num_headers++;
-	}
+	void* alloc_ptr{};
 
-	asserts(header_idx <= 0x0FFFFFFF);
-	auto& header = allocator_data.headers[header_idx];
-	const AllocId new_alloc_id = allocator_data.curr_alloc_id;
-	header.alloc_id = new_alloc_id;
-	header.ptr = ptr;
-	header.size = alloc_size;
-	header.page = static_cast<decltype(header.page)>(allocator_data.curr_page);
+	if (size > 0)
+	{
+		const size_t ptr = allocate_bytes(allocator_data, size);
+		const Buffer& buffer = allocator_data.pages[allocator_data.curr_page];
+		const size_t alloc_size = (buffer.size() - ptr);
+
+		// TODO: should we memzero the allocated memory?
+
+		if (allocator_data.num_headers < allocator_data.headers.size())
+		{
+			header_idx = allocator_data.num_headers++;
+		}
+		else if (allocator_data.free_header != 0)
+		{
+			asserts(false); // not impl
+		}
+		else
+		{
+			allocator_data.headers.resize(allocator_data.headers.size() + header_page_size);
+			header_idx = allocator_data.num_headers++;
+		}
+
+		asserts(header_idx <= 0x0FFFFFFF);
+		auto& header = allocator_data.headers[header_idx];
+		// const AllocId new_alloc_id = allocator_data.curr_alloc_id;
+		header.alloc_id = allocator_data.curr_alloc_id;
+		header.ptr = ptr;
+		header.size = alloc_size;
+		header.page = static_cast<decltype(header.page)>(allocator_data.curr_page);
+
+		alloc_ptr = buffer.get(ptr);
+	}
+	// handle.alloc_id = new_alloc_id;
 
 	AllocHandle handle;
-	handle.ptr = buffer.get(ptr);
-	handle.alloc_id = new_alloc_id;
+	handle.ptr = alloc_ptr;
+	handle.alloc_id = allocator_data.curr_alloc_id;
 	handle.header = ((static_cast<uint32_t>(allocator_idx) << 28) | static_cast<uint32_t>(header_idx));
 	return handle;
 }
@@ -105,9 +113,13 @@ AllocHandle AllocatorGlobals::allocate(Allocator allocator, size_t size)
 void AllocatorGlobals::reallocate(AllocHandle& handle, size_t size)
 {
 	asserts(handle.valid(*this));
-
 	const size_t allocator = ((handle.header >> 28) & 0x0000000F);
 	const uint32_t header_idx = (handle.header & 0x0FFFFFFF);
+	if (!handle.ptr)
+	{
+		handle = allocate((Allocator)allocator, size);
+		return;
+	}
 	asserts(allocator < num_allocators);
 	auto& allocator_data = allocators[allocator];
 	asserts(header_idx < allocator_data.num_headers);

@@ -5,9 +5,11 @@
 #include "engine/shader.h"
 #include "engine/image_utils.h"
 #include "engine/mesh.h"
+#include "engine/filesystem.h"
 #include "easy/profiler.h"
 
 static constexpr const Vec2i initial_map_vp{ (map_chunk_size / 2), (map_chunk_size / 2) };
+static const String main_scenario_dir = "../../data/game/scenarios/main";
 
 Game::Game()
 {
@@ -59,42 +61,47 @@ Game::Game()
 	ref_map_mesh = add_mesh(std::move(mesh), ref_map_shader);
 	ref_map_texture = load_texture("../../data/images/europe1054ref.png");
 
-	const auto next_struct_type_idx = [this]() { return (TypeIndex)globals.structure_types.size(); };
-	const auto next_dev_type_idx = [this]() { return (TypeIndex)globals.development_types.size(); };
-	const auto make_dev_type = [&](const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> TypeIndex
+	const auto make_dev_type = [&](const String& dev_key, const String& struct_key, const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> DevelopmentType&
 	{
-		const auto dev_type_idx = next_dev_type_idx();
-		globals.development_types.push_back({name, area, next_struct_type_idx()});
-		globals.structure_types.push_back({name, glyph, color, StructureCategory::dev, dev_type_idx});
-		return dev_type_idx;
+		auto& dev = globals.development_types.set(dev_key, {0, name, area, 0});
+		auto& structure = globals.structure_types.set(struct_key, {0, name, glyph, color, StructureCategory::dev, dev.id});
+		dev.structure_type = structure.id;
+		return dev;
 	};
 
-	globals.terrain_types.alloc_perm( 
-	{
-		{"empty", 0, 0_rgb32, 0_rgb32},
-		{"forest", 0x0105, 0x30ff50_rgb32, 0x30ff50_rgb32},
-		{"hill", 0x0218, 0x606070_rgb32, 0x606070_rgb32},
-		{"coast", 0x0300, 0x103060_rgb32, 0x80c0f0_rgb32, TileTypeFlags::water},
-	});
+	const auto alloc = perm_allocator();
 
-	globals.structure_types.alloc_perm(0, 1024);
-	globals.structure_types.push_back({"none", 0, 0_rgb32, StructureCategory::none, 0});
+	globals.terrain_types.alloc(64, alloc);
+	globals.terrain_types.set(0, "clear", {0, "clear", '_', 0, 0_rgb32, 0_rgb32});
+	globals.terrain_types.set("forest", {0, "forest", 'T', 0x0105, 0x30ff50_rgb32, 0x30ff50_rgb32});
+	globals.terrain_types.set("hill", {0, "hill", '^', 0x0218, 0x606070_rgb32, 0x606070_rgb32});
+	globals.terrain_types.set("coast", {0, "coast", '=', 0x0300, 0x103060_rgb32, 0x80c0f0_rgb32, TileTypeFlags::water});
 
-	globals.development_types.alloc_perm(0, 512);
-	const auto governing_dev = make_dev_type("governing", DevelopmentArea::urban, 0x007f, 0xe000e0_rgb32);
-	make_dev_type("commercial", DevelopmentArea::urban, 0x007f, 0xf0f000_rgb32);
-	make_dev_type("industrial", DevelopmentArea::urban, 0x007f, 0x0030f0_rgb32);
-	make_dev_type("farming", DevelopmentArea::rural, 0x007f, 0x40ef20_rgb32);
+	globals.structure_types.alloc(1024, alloc);
+	globals.structure_types.set(0, "none", {0, "none", 0, 0_rgb32, StructureCategory::none, 0});
 
-	const auto wall_struct = next_struct_type_idx();
-	globals.structure_types.push_back({"wall", 0x0320, 0xafafaf_rgb32, StructureCategory::wall, 0});
+	globals.development_types.alloc(512, alloc);
+	const auto& governing_dev = make_dev_type("gov", "d_gov", "governing", DevelopmentArea::urban, 0x007f, 0xe000e0_rgb32);
+	make_dev_type("comm", "d_comm", "commercial", DevelopmentArea::urban, 0x007f, 0xf0f000_rgb32);
+	make_dev_type("ind", "d_ind", "industrial", DevelopmentArea::urban, 0x007f, 0x0030f0_rgb32);
+	make_dev_type("farm", "d_farm", "farming", DevelopmentArea::rural, 0x007f, 0x40ef20_rgb32);
 
-	globals.city_rules.starting_dev_type = governing_dev;
-	globals.city_rules.starting_wall_type = wall_struct;
+	const auto& wall_struct = globals.structure_types.set("wall", {0, "wall", 0x0320, 0xafafaf_rgb32, StructureCategory::wall, 0});
+
+	globals.defines.starting_dev_type = governing_dev.id;
+	globals.defines.starting_wall_type = wall_struct.id;
 
 	editor_state.selected_brush = 1;
 	editor_state.map_vp = initial_map_vp;
-	world.init(stage_allocator());
+	
+	if (filesystem::exists(main_scenario_dir))
+	{
+		world = load_world(main_scenario_dir, globals, stage_allocator());
+	}
+	else
+	{
+		world.init(stage_allocator());
+	}
 }
 
 
@@ -104,7 +111,7 @@ void Game::update()
 
 
 
-static void paint_square(Map& map, TypeIndex terrain_type, const Vec2i& center, int radius, const Globals& globals)
+static void paint_square(Map& map, Id terrain_type, const Vec2i& center, int radius, const Globals& globals)
 {
 	// TODO: move this function to map and let it do less glyph update
 	int r = (radius - 1);
@@ -118,7 +125,7 @@ static void paint_square(Map& map, TypeIndex terrain_type, const Vec2i& center, 
 	map.update_glyphs({center - Vec2i{r, r}, center + Vec2i{r, r}}, globals);
 }
 
-static void paint_line(Map& map, TypeIndex terrain_type, const Vec2i& start, const Vec2i& end, int radius, const Globals& globals)
+static void paint_line(Map& map, Id terrain_type, const Vec2i& start, const Vec2i& end, int radius, const Globals& globals)
 {
 	// https://en.wikipedia.org/wiki/Bresenham's_line_algorithm#All_cases
 	// http://members.chello.at/~easyfilter/Bresenham.pdf
@@ -227,9 +234,9 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, Edit
 				int r{};
 
 				int terrain_brush = (state.selected_brush - (int)Brush::max);
-				if (terrain_brush >= 0 && terrain_brush < globals.terrain_types.size())
+				if (terrain_brush >= 0 /* && terrain_brush < globals.terrain_types.size()*/)
 				{
-					const TerrainType& tile_type = globals.terrain_types[terrain_brush];
+					const TerrainType& tile_type = globals.terrain_types.get(terrain_brush);
 					code = tile_type.glyph;
 					color = tile_type.color_a;
 					r = state.brush_radius - 1;
@@ -357,13 +364,14 @@ static int palette_button(const Context ctx, int index, int begin_row, uint16_t 
 	return row;
 }
 
-static void tile_palette(const Context ctx, const Array<TerrainType>& terrain_types, EditorState& state, int& row)
+static void tile_palette(const Context ctx, const Collection<TerrainType>& terrain_types, EditorState& state, int& row)
 {
 	int begin_row = row;
-	for (int i = 0; i < terrain_types.size(); i++)
+	int idx = 0;
+	for (const auto& type : terrain_types)
 	{
-		const TerrainType& type_data = terrain_types[i];
-		row = palette_button(_ctx_id(i), i, begin_row, type_data.glyph, type_data.color_a, (int)Brush::max + i, state.selected_brush);
+		row = palette_button(_ctx_id(idx), idx, begin_row, type.glyph, type.color_a, (int)Brush::max + (int)type.id, state.selected_brush);
+		idx++;
 	}
 }
 
@@ -382,15 +390,16 @@ static void brush_size_palette(const Context ctx, EditorState& state, int& row)
 static void city_dev_palette(const Context ctx, Id sel_city, const Globals& globals, World& world, int& row)
 {
 	int begin_row = row;
-	int sel_dev_type = -1;
-	for (int i = 0; i < globals.development_types.size(); i++)
+	int sel_dev_type = 0;
+	int idx = 0;
+	for (const auto& dev_type : globals.development_types)
 	{
-		const DevelopmentType& dev_type = globals.development_types[i];
-		const StructureType& struct_type = globals.structure_types[dev_type.structure_type];
-		row = palette_button(_ctx_id(i), i, begin_row, struct_type.glyph, struct_type.color, i, sel_dev_type);
+		const StructureType& struct_type = globals.structure_types.get(dev_type.structure_type);
+		row = palette_button(_ctx_id(idx), idx, begin_row, struct_type.glyph, struct_type.color, (int)dev_type.id, sel_dev_type);
+		idx++;
 	}
 
-	if (sel_dev_type >= 0)
+	if (sel_dev_type > 0)
 	{
 		develop_city(world, sel_city, sel_dev_type, globals);
 	}
@@ -521,3 +530,10 @@ bool Game::ended()
 {
 	return engine().window->should_close();
 }
+
+void Game::shutdown()
+{
+	filesystem::create_directories(main_scenario_dir);
+	save_world(world, main_scenario_dir, globals);
+}
+

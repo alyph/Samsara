@@ -16,6 +16,17 @@
             "externalConsole": true
         },
         {
+            "name": "run mesh viewer",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "mesh_viewer.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/bin/win64",
+            "environment": [],
+            "externalConsole": true
+        },
+        {
             "name": "run tablet ui",
             "type": "cppvsdbg",
             "request": "launch",

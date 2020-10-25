@@ -70,6 +70,19 @@
 
 ## Mechanics
 
+### Realm Customization
+- customizations are long term or permanent buffs/perks you gain while playing
+- realm level, apply to your realm (your states and maybe also sub states), these are legacies, traditions and long lasting ideas that gradually formed uniquely to your realm (ruling classes are the primary drive of these)
+- culture level, apply to your primary culture/ethnics, these are how your culture transforms and morphs based on internal and external interactions, innovations and discoveries. (both ruling and civilian classes can drive these)
+- religion level, apply to all parts that your religion spreads (although this may be a specific system regarding religion)
+
+### Characters
+- named characters can appear in your realm, not just ones working for the state but also as civilians. That can include royal members, statesmen, generals, knights, merchants, artists, philosophors, theologians, priests, rogues etc.
+- they can appear in events, or by actions (e.g. promote a general)
+- a limited number of those characters can be incorporated into stations of the realm (not necessarily working for the state still), and these characters can have bigger impact on the realm's development (e.g. generating additional realm powers)
+  - MAYBE: when incorporated, maybe require to select a station instead of automatically assign a station (stations is like advisors, generals, royal guards, merchants, great artists etc.)
+- unincorporated characters are still useful, they can be assigned to certain tasks (e.g. leading troops, managing trade missions, creating great works etc.)
+
 ### Economic Model
 - key advancement
   - more dev = more production & more demand
@@ -169,6 +182,7 @@
 - Option A: limited ongoing actions, pick new action when there is empty action slot. events don't count towards action limit
 - Option B: pick new action(s) every fixed number of turns, do not have hard action limit but may apply soft limit, certain actions may be instantanous and do not take action slots
 - Option C: no centralized action selection list, each category will prompt action selection by itself, e.g. when builds complete, pop up to select new building
+- Option D: no hard limit, and pick actions every few turns, each ongoing actions may consume different amount of resources (resources are points like treasury, governance, economy, military, diplomacy etc.), you cannot start new action if certain resource is missing
 
 ### Actions
 
