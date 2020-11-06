@@ -10,6 +10,8 @@
 - Richard I of England (the Lionheart): https://en.wikipedia.org/wiki/Richard_I_of_England
 - David IV of Georgia: https://en.wikipedia.org/wiki/David_IV_of_Georgia
 - Frederick II, Holy Roman Emperor: https://en.wikipedia.org/wiki/Frederick_II,_Holy_Roman_Emperor
+- Abd al-Raḥman III: https://en.wikipedia.org/wiki/Abd_al-Rahman_III
+- Alexander Nevsky: https://en.wikipedia.org/wiki/Alexander_Nevsky
 
 
 #### generals, knights, queens and advisors

@@ -187,7 +187,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, Edit
 					GlyphData glyph;
 					glyph.code = ground_glyph.code;
 					glyph.color2 = ground_glyph.color;
-					glyph.coords = { layout.left + x, layout.top + layout.height - 1 - y };
+					glyph.coords = { layout.left + x, layout.top + y };
 					render_buffer.push_glyph(elem_id, glyph);
 				}
 			}
@@ -211,7 +211,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, Edit
 		if (cursor.x >= layout.left && cursor.x < (layout.left + layout.width) &&
 			cursor.y >= layout.top && cursor.y < (layout.top + layout.height))
 		{
-			const Vec2i map_cursor{map_x + cursor.x - layout.left, map_y + (layout.top + layout.height - 1 - cursor.y)};
+			const Vec2i map_cursor{map_x + cursor.x - layout.left, map_y + cursor.y - layout.top};
 
 			if (state.selected_brush == (int)Brush::selection)
 			{
@@ -283,7 +283,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, Edit
 				state.dragging_map = true;
 				state.dragging_map_coord = map_cursor;
 				const auto& ruv = ctx.frame->curr_input.mouse_hit.ruv;
-				state.dragging_map_offset = {ruv.x - cursor.x, 1.f - (ruv.y - cursor.y)};
+				state.dragging_map_offset = {ruv.x - cursor.x, ruv.y - cursor.y};
 			}
 		}
 	}
@@ -450,7 +450,7 @@ void Game::present(const Context& ctx)
 				const auto& input = ctx.frame->curr_input;
 				Vec2d ndc = calc_ndc({input.mouse_x, input.mouse_y}, window->width(), window->height());
 				double world_x = ndc.x * vp_width / (2 * map_scale) - editor_state.dragging_map_offset.x;
-				double world_y = ndc.y * vp_height / (2 * map_scale) - editor_state.dragging_map_offset.y;
+				double world_y = ndc.y * vp_height / (2 * map_scale) + editor_state.dragging_map_offset.y;
 				int half_size = map_size / 2;
 				int tablet_x = std::clamp((int)std::floor(world_x), -half_size, half_size-1);
 				int tablet_y = std::clamp((int)std::floor(world_y), -half_size, half_size-1);
@@ -459,7 +459,7 @@ void Game::present(const Context& ctx)
 				// the values there are no longer valid and will have 1 frame delay, so ideally we should calculate the hit 
 				// map coordinates right there, store and use it whenever needed consistently
 				editor_state.map_pose_offset = {(float)(world_x - tablet_x), (float)(world_y - tablet_y)};
-				editor_state.map_vp = (editor_state.dragging_map_coord - Vec2i{tablet_x, tablet_y});
+				editor_state.map_vp = (editor_state.dragging_map_coord + Vec2i{-tablet_x, tablet_y});
 			}
 			else
 			{
@@ -490,7 +490,9 @@ void Game::present(const Context& ctx)
 		// reference image
 		mesh(_ctx);
 		Pose mesh_pose;
-		mesh_pose.pos = to_vec3(editor_state.map_pose_offset - to_vec2(editor_state.map_vp - initial_map_vp), 0.5);
+		auto vp_offset = to_vec2(editor_state.map_vp - initial_map_vp);
+		vp_offset.y = -vp_offset.y;
+		mesh_pose.pos = to_vec3(editor_state.map_pose_offset - vp_offset, 0.5);
 		_attr(attrs::mesh_id, ref_map_mesh);
 		_attr(attrs::transform, map_scale_mat * to_mat44(mesh_pose));
 		_attr(attrs::texture, ref_map_texture);

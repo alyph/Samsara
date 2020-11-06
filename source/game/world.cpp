@@ -324,22 +324,35 @@ namespace serialization
 					Id first_tile_id = map.chunks[chunk_idx].first_tile_id;
 					if (first_tile_id)
 					{
-						op.new_object();
-						op.value(chunk_coords);
-						op.end_heading();
-
 						size_t first_tile_idx = id_to_index(first_tile_id);
-						for (int ty = 0; ty < map_chunk_size; ty++)
+						bool empty_chunk = true;
+						for (size_t idx = 0; idx < (map_chunk_size * map_chunk_size); idx++)
 						{
-							for (int tx = 0; tx < map_chunk_size; tx++)
+							if (map.tiles[idx + first_tile_idx].terrain != 0)
 							{
-								const auto terrain_id = map.tiles[first_tile_idx + tx + ty * map_chunk_size].terrain;
-								const auto& terrain_type = op.context.globals->terrain_types.get(terrain_id);
-								op.blob_char(terrain_type.symbol);
+								empty_chunk = false;
+								break;
+							}
+						}
+						
+						if (!empty_chunk)
+						{
+							op.new_object();
+							op.value(chunk_coords);
+							op.end_heading();
+
+							for (int ty = 0; ty < map_chunk_size; ty++)
+							{
+								for (int tx = 0; tx < map_chunk_size; tx++)
+								{
+									const auto terrain_id = map.tiles[first_tile_idx + tx + ty * map_chunk_size].terrain;
+									const auto& terrain_type = op.context.globals->terrain_types.get(terrain_id);
+									op.blob_char(terrain_type.symbol);
+								}
+								op.newline();
 							}
 							op.newline();
 						}
-						op.newline();
 					}
 				}
 			}
@@ -365,7 +378,8 @@ namespace serialization
 				// read each line until end of the object
 				int y = 0;
 				while (!op.at_delim(Delimiter::object_tag) &&
-					!op.at_delim(Delimiter::section_open))
+					!op.at_delim(Delimiter::section_open) &&
+					y < map_chunk_size)
 				{
 					int x = 0;
 					char symbol;

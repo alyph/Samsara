@@ -8,6 +8,26 @@
   - some actions have some regular interactions (e.g. adjust marching order in a military campaign)
 
 
+#### action pool
+
+| Action | Pool | Tags | Effects |
+|--------|------|------|------------|
+| building | pool | administration, economy | building rolled, contructed |
+| improve Relationship | single | diplomacy | relationship roll, events |
+| relationship deteriorate | single | diplomacy | relationship, roll, events |
+| invasion | single | millitary | ongoing war, territory captured until treaty or cease fire |
+| recruitment | pool | military | troops rolled, recruited |
+| enact policy | pool | administration, economy |  policy rolled, enacted |
+| culture evolving | pool | culture | new culture aspects rolled, emerged |
+| technology achievement | pool | technology | new invention, innovation, discovery rolled, emerged |
+| trade mission | single | economy | new trade partener, trade routes established |
+| treaty | pool | diplomacy | new treaty negotiated, signed |
+| diplomatic missions | pool | diplomacy | some aggrements are made |
+| appoint governors etc. | pool | administration | |
+
+
+#### action details
+
 - **building projects**
   - building time will be determined by the scale of the project and other modifiers (e.g. size of the city)
   - can be physical buildings (usually monumental): palace, cathedral, castles, great library, foundry etc.

@@ -3,15 +3,15 @@
 
 // mask encodes 1 for the directions that are not water
 // total 8 bits for 8 directions, ordered as follows:
-//     7 0 1    +Y
-//     6 - 2     ^
-//     5 4 3     | -> +X
+//     7 0 1    | -> +X
+//     6 - 2    V 
+//     5 4 3    +Y 
 //
 // code encodes 1 for neighbors that need water connections
 // total 4 bits for 4 neighbors, ordered as follows:
-//       0      +Y
-//     3 - 1     ^
-//       2       | -> +X
+//       0      | -> +X
+//     3 - 1    V 
+//       2      +Y 
 struct WaterTileMask
 {
 	uint8_t codes[256];
@@ -88,10 +88,10 @@ void Map::expand_to_fit_chunk(const Vec2i& coords)
 static inline uint8_t calc_neighbor_water_mask(const Map& map, const Collection<TerrainType>& terrain_types, const Vec2i& tile_coords)
 {
 	// remind of ordering:
-	//     7 0 1  +Y
-	//     6 - 2   ^
-	//     5 4 3   | -> +X
-	const Vec2i offsets[] = { {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1} };
+	//     7 0 1   | -> +X
+	//     6 - 2   V
+	//     5 4 3   +Y
+	const Vec2i offsets[] = { {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1} };
 	uint8_t mask = 0;
 	for (int i = 0; i < 8; i++)
 	{
@@ -108,10 +108,10 @@ static inline uint8_t calc_neighbor_water_mask(const Map& map, const Collection<
 static inline uint8_t calc_neighbor_matching_structure_mask(const Map& map, uint32_t tile_struct, const Vec2i& tile_coords)
 {
 	// remind of ordering:
-	//       0    +Y
-	//     3 - 1   ^
-	//       2     | -> +X
-	const Vec2i offsets[] = { {0, 1}, {1, 0}, {0, -1}, {-1, 0} };
+	//       0     | -> +X
+	//     3 - 1   V
+	//       2     +Y
+	const Vec2i offsets[] = { {0, -1}, {1, 0}, {0, 1}, {-1, 0} };
 	uint8_t mask = 0;
 	for (int i = 0; i < 4; i++)
 	{

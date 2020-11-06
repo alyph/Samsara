@@ -10,6 +10,7 @@ public:
 	void update();
 	bool ended();
 	void present(const Context& ctx);
+	void shutdown() {}
 
 private:
 	Id tablet_shader;

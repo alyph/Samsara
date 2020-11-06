@@ -50,6 +50,7 @@ public:
 	void update();
 	bool ended();
 	void present(const Context& ctx);
+	void shutdown() {}
 	
 public:
 	TabletTestModel model;
