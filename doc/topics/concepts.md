@@ -21,7 +21,11 @@
 - affect the local city
 
 
+#### state
 
+- domain: a country, state, district etc.
+- government: the ruling authority of a domain
+- ruler: the head of the government
 
 
 

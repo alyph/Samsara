@@ -12,18 +12,151 @@
 
 | Action | Pool | Tags | Effects |
 |--------|------|------|------------|
-| building | pool | administration, economy | building rolled, contructed |
-| improve Relationship | single | diplomacy | relationship roll, events |
-| relationship deteriorate | single | diplomacy | relationship, roll, events |
-| invasion | single | millitary | ongoing war, territory captured until treaty or cease fire |
-| recruitment | pool | military | troops rolled, recruited |
 | enact policy | pool | administration, economy |  policy rolled, enacted |
 | culture evolving | pool | culture | new culture aspects rolled, emerged |
 | technology achievement | pool | technology | new invention, innovation, discovery rolled, emerged |
 | trade mission | single | economy | new trade partener, trade routes established |
-| treaty | pool | diplomacy | new treaty negotiated, signed |
-| diplomatic missions | pool | diplomacy | some aggrements are made |
 | appoint governors etc. | pool | administration | |
+
+
+#### building
+
+- pool: available building pool based on tech, culture, religion etc.
+  - there can be some unique buildings show up too based on events or as reward of other actions
+- cost: 
+  - realm points depending on the type (e.g. commerce building use economy points, military building use military points etc.)
+  - money (state funding vs. private funding??)
+    - we should rethink concept of state treasury, wealth etc. maybe it can be represented more abstractly rather than a solid cost you must pay for almost all actions
+- options 
+  - select a city and location (cosmetic?), there may be prerequisites for city
+    - should we include the building in the pool if no city is available? (probably yes)
+  - select the estate it belongs to (crown, baron, church, city etc.)?
+    - is this too micro?
+  - supervisor: selection based on building type, e.g. clergy used for religious building, merchant used for commerce building etc.
+- effects: building is built (may take a few turns?)
+  - additional effects may be rolled depending on realm and character skills. e.g. an extra mod added to the building, or temp buff for local, or reduced building time etc.
+
+
+#### recruitment
+
+- pool: available troop types depending on tech, culture, religion, locality
+  - unique troops may be available as well, maybe for a limited time too
+- cost:
+  - military points
+- options:
+  - location, certain troop has prerequisites as where they can be recruited
+    - each location also has limit how many troops they can support
+    - most of the troop in lords' seats are recruited as lords direct retinues, whereas in other territories most will belong to local lords
+  - recruiter: a general? depending on where they are too
+    - wonder maybe it's too macro, maybe a global extersion of buff will work better
+    - or depending on where you hire them, certain general characters buff will auto apply
+- effects: troops are added to the local troop pool
+  - you can only use them when mustered for the war campaign, how much you can muster depends on the war eagerness (see [military campaign](#military-campaign))
+
+#### military campaign
+
+- represent a military offensive
+- cost:
+  - military points
+  - diplomacy points for certain mustering bonus?
+- options
+  - enemy, depending on the alliance status, may campaign against multiple enemies
+  - mustering, depending on the war eagerness against the enemy, lords within the realm can be mustered to varying degrees (varied amount of troop joining, may vary on time table too). Allies may also join depending on their eagerness as well.
+    - can also hire mercenaries
+  - warplan, setup the warplan for this turn
+    - army distribution, assign generals as commanders
+    - marching path (main settlements to capture, minor settlements may be captured along the way)
+- effects:
+  - warplan is played out for this turn, battle may be fought, settlements may be sieged or captured
+  - roll for campaign events, e.g.
+    - some troops may stay, some may leave
+    - ravaged country side etc.
+- can call for the end of the campaign, if not, it continues next turn, until both sides are standing down
+  - each turn, warplans can be adjusted, additional mustering can occur
+- defender side will draw their own warplan as well, and defender can become counter-attacker if the situation goes in their favour
+- medieval campaign normally won't last more than one or two years, the constant compaigning will most likely wear the lords and soldiers down, as well as their economy
+- the newly captured land will usually have garrisons stationed, until the land is sucessfully absorbed (a lot of times by the new lords) or gets retaken
+  - aren't all settlements garrisoned? maybe should abstract this out
+
+
+#### diplomacy
+
+- various events and actions altering geo political landscape
+- cost:
+  - diplomacy points
+- ones to be covered
+  - confederacy
+  - subjugation
+  - declare hegemony
+
+##### relationship improved
+- options
+  - target domain
+  - character may be selected as a driving force (manual or auto select?)
+- effects
+  - relationship score increase
+  - roll for additional effects. e.g. exchange visitors, and follow up events like marriage arrangement
+
+##### relationship deteriorated
+- options
+  - target domain
+  - character may be selected as a driving force (manual or auto select?)
+- effects
+  - relationship score decrease
+  - and roll for additional effects. e.g. cancel treaties etc.
+
+
+##### trade agreement 
+- options
+  - target domain (state)
+  - character leading the negotiation
+- requirements
+  - target domain >= min relationship
+- effects
+  - trade between states are protected muturally, additional benefits can be rolled e.g. more trade income
+
+##### mutural enemy agreement
+- options
+  - target domain
+  - enemy domain
+  - character leading the scheme
+- requirements
+  - target domain >= min relationship
+  - target domain against enemy domain has certain attitude (unfriendly, untrusted, threatened etc.)
+- effects
+  - domains in treaty will provide aid to each other when either goes into war against the common enemy
+  - higher roll may add benefit like direct military aid in campaign
+
+##### defensive pact
+- options
+  - target domain (may be multiple?)
+  - character leading the negotiation
+- requirements
+  - target domain >= min relationship
+  - bonus if target domain feel threatened
+- effects
+  - domains are bound together fo fend off aggressors
+
+##### coalition
+- options
+  - target domains
+  - sometimes a common enemy domain
+  - character leading the negotiation
+- requirements
+  - target domain >= min relationship
+  - bonus if target domain hostile against the common enemy
+- effects
+  - domains are bound together facing all military threats
+  - sometimes they also provide economic aid to each other
+
+##### marriage arrangement
+- options
+  - target domain (state?)
+  - characters to be married
+- requirements
+  - target domain >= min relationship
+- effects
+  - two states will be in a temporary alliance as long as the marriage tie stands
 
 
 #### action details
