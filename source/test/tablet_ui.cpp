@@ -6,8 +6,9 @@
 #include "engine/shader.h"
 #include "engine/math_utils.h"
 #include "engine/image_utils.h"
-#include <ft2build.h>
-#include FT_FREETYPE_H
+#include "engine/font.h"
+// #include <ft2build.h>
+// #include FT_FREETYPE_H
 //#include FT_GLYPH_H
 
 int main()
@@ -15,10 +16,10 @@ int main()
 	return run_app<TabletUIApp>();
 }
 
-static int round_fixed26_6_to_pixel(FT_Long fixed_pixels)
-{
-	return static_cast<int>(std::lround(static_cast<double>(fixed_pixels) / 64.0));
-}
+// static int round_fixed26_6_to_pixel(FT_Long fixed_pixels)
+// {
+// 	return static_cast<int>(std::lround(static_cast<double>(fixed_pixels) / 64.0));
+// }
 
 TabletUIApp::TabletUIApp()
 {
@@ -34,8 +35,10 @@ TabletUIApp::TabletUIApp()
 
 	// TODO: the atlas texture should probably use nearest filter 
 	// since we are drawing into pixel perfect render buffer
-	atlas_texture = load_texture_array({"../../data/fonts/cp437_20x20.png"});
+	// atlas_texture = load_texture_array({"../../data/fonts/cp437_20x20.png"});
 
+
+#if 0
 	FT_Library  ft_lib;
 	FT_Error error = FT_Init_FreeType(&ft_lib);
 	if (!error)
@@ -184,8 +187,20 @@ TabletUIApp::TabletUIApp()
 	{
 		printf("freetype failed to init!\n");
 	}
-	
+#endif
 
+	const auto font = create_font("../../data/fonts/DejaVuSansMono.ttf", 0, 36);
+
+	const int w{16}, h{16}, pages{1};
+	const int num = (w * h * pages);
+	ArrayTemp<uint32_t> codes{(size_t)num};
+
+	for (int i = 0; i < num; i++)
+	{
+		codes[i] = i;
+	}
+
+	atlas_texture = create_font_texture(w, h, pages, codes, font);
 }
 
 void TabletUIApp::update()

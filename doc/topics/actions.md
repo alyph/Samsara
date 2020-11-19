@@ -88,6 +88,7 @@
   - confederacy
   - subjugation
   - declare hegemony
+  - other special events (e.g. seeking help from pope)
 
 ##### relationship improved
 - options
