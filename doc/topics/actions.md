@@ -6,6 +6,14 @@
   - deed, stratagem, endeavor, undertaking, move, manoeuvre, act, actiion activity, operation, initiative, plot, scheme, ploy, tactic, gambit, ruse
 - actions take time to complete and takes up slots
   - some actions have some regular interactions (e.g. adjust marching order in a military campaign)
+- actions usually cost some of the realm points
+  - ministry (or governance) - administration work, bureaucracy, reign in peaceful time, usually for improving social and economic status of a realm
+  - influence - political power and influence, used for diplomacy, coersion, negotiation, projecting power without military means
+  - stratagem - for military related actions, ruse and plots, war planning, war strategy etc.
+  - some actions use combinations of these points. e.g.
+    - ministry + influence - e.g. manage trade, cultural assimilation
+    - influence + stratagem - covert actions, scheme and deception against other countries
+    - stratagem + ministry - logistics related actions, building fortifications, manage military leaderships
 
 
 #### action pool

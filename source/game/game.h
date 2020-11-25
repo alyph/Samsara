@@ -45,10 +45,12 @@ private:
 	Id atlas_texture;
 	Id ref_map_mesh;
 	Id ref_map_texture;
+	Id ui_texture;
 
 	Globals globals;
 	World world;
 	EditorState editor_state;
+	bool in_editor;
 };
 
 

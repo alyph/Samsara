@@ -6,6 +6,7 @@
 #include "engine/image_utils.h"
 #include "engine/mesh.h"
 #include "engine/filesystem.h"
+#include "engine/font.h"
 #include "easy/profiler.h"
 
 static constexpr const Vec2i initial_map_vp{ (map_chunk_size / 2), (map_chunk_size / 2) };
@@ -61,6 +62,16 @@ Game::Game()
 	ref_map_mesh = add_mesh(std::move(mesh), ref_map_shader);
 	ref_map_texture = load_texture("../../data/images/europe1054ref.png");
 
+	const auto font = create_font("../../data/fonts/DejaVuSansMono.ttf", 0, 36);
+	const int w{16}, h{16}, pages{1};
+	const int num = (w * h * pages);
+	ArrayTemp<uint32_t> codes{(size_t)num};
+	for (int i = 0; i < num; i++)
+	{
+		codes[i] = i;
+	}
+	ui_texture = create_font_texture(w, h, pages, codes, font);
+
 	const auto make_dev_type = [&](const String& dev_key, const String& struct_key, const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> DevelopmentType&
 	{
 		auto& dev = globals.development_types.set(dev_key, {0, name, area, 0});
@@ -102,6 +113,8 @@ Game::Game()
 	{
 		world.init(stage_allocator());
 	}
+
+	in_editor = false;
 }
 
 
@@ -486,43 +499,89 @@ void Game::present(const Context& ctx)
 			map_view(_ctx, world, globals, editor_state, map_size, map_size);
 		}
 
-
-		// reference image
-		mesh(_ctx);
-		Pose mesh_pose;
-		auto vp_offset = to_vec2(editor_state.map_vp - initial_map_vp);
-		vp_offset.y = -vp_offset.y;
-		mesh_pose.pos = to_vec3(editor_state.map_pose_offset - vp_offset, 0.5);
-		_attr(attrs::mesh_id, ref_map_mesh);
-		_attr(attrs::transform, map_scale_mat * to_mat44(mesh_pose));
-		_attr(attrs::texture, ref_map_texture);
-
-
-		// overlay
-		tablet(_ctx);
-		Pose overlay_tablet_pose;
-		overlay_tablet_pose.pos.y = (vp_height - tablet_size.y) / 2;
-		_attr(attrs::transform, to_mat44(overlay_tablet_pose));
-		_attr(attrs::width, tablet_width);
-		_attr(attrs::height, tablet_height);
-		_attr(attrs::texture, atlas_texture);
-		_attr(attrs::shader, tablet_shader);
-		_attr(attrs::quad_shader, tablet_screen_shader);
-
-		_children
+		if (in_editor)
 		{
-			int row = 0;
-			tile_palette(_ctx, globals.terrain_types, editor_state, row); 
-			row++;
-			brush_size_palette(_ctx, editor_state, row);
-			row++;
-			palette_button(_ctx, 0, row, sel_brush_glyph, sel_brush_color, (int)Brush::selection, editor_state.selected_brush);
-			row = palette_button(_ctx, 1, row, city_brush_glyph, city_brush_color, (int)Brush::city, editor_state.selected_brush) + 1;
-			if (editor_state.selected_city_id)
+			// reference image
+			mesh(_ctx);
+			Pose mesh_pose;
+			auto vp_offset = to_vec2(editor_state.map_vp - initial_map_vp);
+			vp_offset.y = -vp_offset.y;
+			mesh_pose.pos = to_vec3(editor_state.map_pose_offset - vp_offset, 0.5);
+			_attr(attrs::mesh_id, ref_map_mesh);
+			_attr(attrs::transform, map_scale_mat * to_mat44(mesh_pose));
+			_attr(attrs::texture, ref_map_texture);
+
+			// overlay
+			tablet(_ctx);
+			Pose overlay_tablet_pose;
+			overlay_tablet_pose.pos.y = (vp_height - tablet_size.y) / 2;
+			_attr(attrs::transform, to_mat44(overlay_tablet_pose));
+			_attr(attrs::width, tablet_width);
+			_attr(attrs::height, tablet_height);
+			_attr(attrs::texture, atlas_texture);
+			_attr(attrs::shader, tablet_shader);
+			_attr(attrs::quad_shader, tablet_screen_shader);
+
+			_children
 			{
+				int row = 0;
+				tile_palette(_ctx, globals.terrain_types, editor_state, row); 
 				row++;
-				city_dev_palette(_ctx, editor_state.selected_city_id, globals, world, row);
+				brush_size_palette(_ctx, editor_state, row);
 				row++;
+				palette_button(_ctx, 0, row, sel_brush_glyph, sel_brush_color, (int)Brush::selection, editor_state.selected_brush);
+				row = palette_button(_ctx, 1, row, city_brush_glyph, city_brush_color, (int)Brush::city, editor_state.selected_brush) + 1;
+				if (editor_state.selected_city_id)
+				{
+					row++;
+					city_dev_palette(_ctx, editor_state.selected_city_id, globals, world, row);
+					row++;
+				}
+			}
+		}
+		else
+		{
+			const int ui_tablet_width = 100;
+			const int ui_tablet_height = 80;
+			const Vec2 ui_tablet_size = calc_tablet_size(tablet_width, tablet_height, ui_texture);
+
+			tablet(_ctx);
+			Pose ui_tablet_pose;
+			ui_tablet_pose.pos.y = (vp_height - ui_tablet_size.y) / 2;
+			_attr(attrs::transform, to_mat44(ui_tablet_pose));
+			_attr(attrs::width, ui_tablet_width);
+			_attr(attrs::height, ui_tablet_height);
+			_attr(attrs::texture, ui_texture);
+			_attr(attrs::shader, tablet_shader);
+			_attr(attrs::quad_shader, tablet_screen_shader);
+
+			_children
+			{
+				Color fore_color{0.8f, 0.1f, 0.5f, 1.f};
+
+				node(_ctx);
+				_attr(attrs::height, 2);
+
+				node(_ctx);
+				String str = "Construct farmstead";
+				_attr(attrs::text, str);
+				_attr(attrs::foreground_color, fore_color);
+
+				node(_ctx);
+				_attr(attrs::height, 1);
+
+				node(_ctx);
+				str = "Marriage arrangement";
+				_attr(attrs::text, str);
+				_attr(attrs::foreground_color, fore_color);
+
+				node(_ctx);
+				_attr(attrs::height, 1);
+
+				node(_ctx);
+				str = "Military campaign";
+				_attr(attrs::text, str);
+				_attr(attrs::foreground_color, fore_color);
 			}
 		}
 	}
