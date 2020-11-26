@@ -288,6 +288,8 @@ void develop_city(World& world, Id city_id, Id dev_type, const Globals& globals)
 
 namespace serialization
 {
+	struct MapTilesBlob;
+
 	template<class T>
 	static void serialize(T& op, RefType<T, City> city)
 	{
@@ -411,7 +413,12 @@ namespace serialization
 	template<SerializeOpType E>
 	static void serialize_world(RefTypeE<E, World> world, const String& path, const Globals& globals)
 	{
-		WorldSerializationContext context{&globals};
+		struct WorldSerializationContext
+		{
+			const Globals* globals{};
+		}
+		context{&globals};
+
 		auto op = make_file_op<E>(format_str("%s/%s", path, "world.dat"), context);
 		op.section("cities");
 		op.collection(world.cities, "city");
@@ -421,10 +428,7 @@ namespace serialization
 	}
 }
 
-struct WorldSerializationContext
-{
-	const Globals* globals{};
-};
+
 
 void save_world(const World& world, const String& path, const Globals& globals)
 {

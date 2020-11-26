@@ -310,7 +310,7 @@ namespace serialization
 				op.end_heading();
 				
 				// body
-				serialization::serialize(op, elem); // IMPL
+				serialize(op, elem); // IMPL
 				op.newline();
 			}
 		}
@@ -332,7 +332,7 @@ namespace serialization
 				op.end_heading();
 
 				// body
-				serialization::serialize(op, elem); // IMPL
+				serialize(op, elem); // IMPL
 
 				if (has_key && has_id)
 				{

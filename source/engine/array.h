@@ -196,9 +196,9 @@ public:
 	static constexpr bool is_trivial() { return (std::is_trivial_v<T> || (std::is_trivially_constructible_v<T> && std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>)); }
 
 protected:
-	inline void alloc_impl(size_t size, size_t capacity, Allocator allocator);
-	inline void alloc_impl(Allocator allocator, std::initializer_list<T> il);
-	inline void init_data(size_t first, size_t count);
+	inline void alloc_impl(size_t size, size_t capacity, Allocator allocator) noexcept;
+	inline void alloc_impl(Allocator allocator, std::initializer_list<T> il) noexcept;
+	inline void init_data(size_t first, size_t count) noexcept;
 	inline T& at(size_t idx) const;
 	inline T* data_ptr() const { return reinterpret_cast<T*>(handle.get()); }
 	inline T& back_impl() const;
@@ -212,20 +212,20 @@ class Array: public ArrayBase<T>
 {
 public:
 	inline Array() = default;
-	inline Array(size_t size, size_t capacity) noexcept { alloc_impl(size, capacity, perm_allocator()); } // TODO: should not use default allocator, pass in a boolean to decide whether to use perm or temp allocator
-	inline Array(size_t size, Allocator allocator) noexcept { alloc_impl(size, size, allocator); }
-	inline Array(size_t size, size_t capacity, Allocator allocator) noexcept { alloc_impl(size, capacity, allocator); }
+	inline Array(size_t size, size_t capacity) noexcept { this->alloc_impl(size, capacity, perm_allocator()); } // TODO: should not use default allocator, pass in a boolean to decide whether to use perm or temp allocator
+	inline Array(size_t size, Allocator allocator) noexcept { this->alloc_impl(size, size, allocator); }
+	inline Array(size_t size, size_t capacity, Allocator allocator) noexcept { this->alloc_impl(size, capacity, allocator); }
 	// inline Array(const Array<T>& other) noexcept { *this = other; } // TODO: don't implement until we really need this
 	inline Array(Array<T>&& other) noexcept { *this = std::move(other); }
 	// inline Array& operator=(const Array<T>& other) noexcept; // TODO: don't implement until we really need this
 	inline Array& operator=(Array<T>&& other) noexcept; // TODO: not implemented yet, implement it if we actually need to deep copy the array
 
-	inline void alloc(size_t size, size_t capacity, Allocator allocator) { alloc_impl(size, capacity, allocator); }
-	inline void alloc(Allocator allocator, std::initializer_list<T> il) { alloc_impl(allocator, il); }
-	inline void alloc_perm(size_t size, size_t capacity) { alloc_impl(size, capacity, perm_allocator()); }
-	inline void alloc_perm(std::initializer_list<T> il) { alloc_impl(perm_allocator(), il); }
-	inline void alloc_temp(size_t size, size_t capacity) { alloc_impl(size, capacity, temp_allocator()); }
-	inline void alloc_temp(std::initializer_list<T> il) { alloc_impl(temp_allocator(), il); }
+	inline void alloc(size_t size, size_t capacity, Allocator allocator) { this->alloc_impl(size, capacity, allocator); }
+	inline void alloc(Allocator allocator, std::initializer_list<T> il) { this->alloc_impl(allocator, il); }
+	inline void alloc_perm(size_t size, size_t capacity) { this->alloc_impl(size, capacity, perm_allocator()); }
+	inline void alloc_perm(std::initializer_list<T> il) { this->alloc_impl(perm_allocator(), il); }
+	inline void alloc_temp(size_t size, size_t capacity) { this->alloc_impl(size, capacity, temp_allocator()); }
+	inline void alloc_temp(std::initializer_list<T> il) { this->alloc_impl(temp_allocator(), il); }
 };
 
 template<typename T>
@@ -242,8 +242,8 @@ public:
 	inline ArrayTemp(size_t size, size_t capacity) noexcept { alloc(size, capacity); }
 	// TODO: maybe rename these to alloc_temp just to make it clear and explicit
 	inline void alloc(size_t size) { alloc(size, size); }
-	inline void alloc(size_t size, size_t capacity) { alloc_impl(size, capacity, temp_allocator()); }
-	inline void alloc(std::initializer_list<T> il) { alloc_impl(temp_allocator(), il); }
+	inline void alloc(size_t size, size_t capacity) { this->alloc_impl(size, capacity, temp_allocator()); }
+	inline void alloc(std::initializer_list<T> il) { this->alloc_impl(temp_allocator(), il); }
 	inline operator const Array<T>&() const { return *reinterpret_cast<const Array<T>*>(this); }
 	inline operator Array<T>&() { return *reinterpret_cast<Array<T>*>(this); }
 };
@@ -290,7 +290,7 @@ constexpr size_t total_array_buffer_size(size_t num_items)
 }
 
 template<typename T>
-inline void ArrayBase<T>::alloc_impl(size_t size, size_t capacity, Allocator allocator)
+inline void ArrayBase<T>::alloc_impl(size_t size, size_t capacity, Allocator allocator) noexcept
 {
 	asserts(size <= capacity);
 	const size_t num_bytes = total_array_buffer_size<T>(capacity);
@@ -302,7 +302,7 @@ inline void ArrayBase<T>::alloc_impl(size_t size, size_t capacity, Allocator all
 }
 
 template<typename T>
-inline void ArrayBase<T>::alloc_impl(Allocator allocator, std::initializer_list<T> il)
+inline void ArrayBase<T>::alloc_impl(Allocator allocator, std::initializer_list<T> il) noexcept
 {
 	const size_t num = il.size();
 	alloc_impl(il.size(), num, allocator);
@@ -487,7 +487,7 @@ inline void ArrayBase<T>::ensure_capacity(size_t size)
 }
 
 template<typename T>
-inline void ArrayBase<T>::init_data(size_t first, size_t count)
+inline void ArrayBase<T>::init_data(size_t first, size_t count) noexcept
 {
 	T* d = data_ptr();
 	// TODO: user provided constructor is ignored
@@ -521,9 +521,9 @@ inline void ArrayBase<T>::init_data(size_t first, size_t count)
 template<typename T>
 inline Array<T>& Array<T>::operator=(Array<T>&& other) noexcept
 {
-	handle = other.handle;
-	_size = other._size;
-	_capacity = other._capacity;
+	this->handle = other.handle;
+	this->_size = other._size;
+	this->_capacity = other._capacity;
 	other.handle = {};
 	other._size = 0;
 	other._capacity = 0;

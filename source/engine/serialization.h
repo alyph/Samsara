@@ -57,7 +57,7 @@ public:
 	template<typename TColl>
 	inline void collection(const TColl& collection, const String& entry_key) // TODO: variatic arguments?
 	{
-		serialization::CollectionSerializer<TColl>::write(*this, collection, entry_key);
+		::serialization::template CollectionSerializer<TColl>::write(*this, collection, entry_key);
 	}
 
 	inline void new_object()
@@ -78,7 +78,7 @@ public:
 	inline void prop(const String& key, const TProp& value)
 	{
 		begin_prop(key);
-		serialization::TypeSerializer<TProp>::write(*this, value);
+		::serialization::template TypeSerializer<TProp>::write(*this, value);
 		end_prop();
 	}
 
@@ -95,7 +95,7 @@ public:
 	{
 		asserts(depth > 0 || heading);
 		// serialization::TypeSerializer<TVal>::write(*this, value);
-		defined_or_default_t<TS, serialization::TypeSerializer<TVal>>::write(*this, value, std::forward<TArgs>(args)...);
+		defined_or_default_t<TS, ::serialization::template TypeSerializer<TVal>>::write(*this, value, std::forward<TArgs>(args)...);
 	}
 
 	// template<typename TVal>
@@ -221,7 +221,7 @@ public:
 	inline void collection(TColl& collection, const String& entry_key) // TODO: variatic arguments?
 	{
 		static_assert(!std::is_const_v<TColl>);
-		serialization::CollectionSerializer<TColl>::read(*this, collection, entry_key);
+		::serialization::template CollectionSerializer<TColl>::read(*this, collection, entry_key);
 	}
 
 	inline bool next_object()
@@ -253,7 +253,7 @@ public:
 		static_assert(!std::is_const_v<TProp>);
 		if (begin_prop(key))
 		{
-			serialization::TypeSerializer<TProp>::read(*this, value);
+			::serialization::template TypeSerializer<TProp>::read(*this, value);
 			end_prop();
 		}
 	}
@@ -275,7 +275,7 @@ public:
 		static_assert(!std::is_const_v<TVal>);
 		asserts(depth > 0 || heading);
 		// serialization::TypeSerializer<TVal>::read(*this, value);
-		defined_or_default_t<TS, serialization::TypeSerializer<TVal>>::read(*this, value, std::forward<TArgs>(args)...);
+		defined_or_default_t<TS, ::serialization::template TypeSerializer<TVal>>::read(*this, value, std::forward<TArgs>(args)...);
 	}
 
 	// template<typename TVal>
@@ -539,8 +539,8 @@ namespace serialization
 	template<class T>
 	struct TypeSerializer
 	{
-		template<class TOp>	static inline void write(TOp& op, const T& v) { ::serialization::serialize(op, v); }
-		template<class TOp>	static inline void read(TOp& op, T& v) { ::serialization::serialize(op, v); }
+		template<class TOp>	static inline void write(TOp& op, const T& v) { serialize(op, v); }
+		template<class TOp>	static inline void read(TOp& op, T& v) { serialize(op, v); }
 	};
 
 	template<class T>
