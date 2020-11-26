@@ -174,6 +174,8 @@ void TabletTestApp::present(const Context& ctx)
 			_attr(attrs::glyphs, tablet_model.glyphs.view());
 			_attr(attrs::width, static_cast<double>(tablet_model.width));
 			_attr(attrs::height, static_cast<double>(tablet_model.height));			
+			_attr(attrs::tablet_columns, tablet_model.width);
+			_attr(attrs::tablet_rows, tablet_model.height);
 			_attr(attrs::texture, store.atlas_texture);
 			_attr(attrs::shader, store.tablet_shader);
 			_attr(attrs::quad_shader, store.tablet_screen_shader);

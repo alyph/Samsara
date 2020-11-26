@@ -212,7 +212,7 @@ class Array: public ArrayBase<T>
 {
 public:
 	inline Array() = default;
-	inline Array(size_t size, size_t capacity) noexcept { alloc_impl(size, size, perm_allocator()); } // TODO: should not use default allocator, pass in a boolean to decide whether to use perm or temp allocator
+	inline Array(size_t size, size_t capacity) noexcept { alloc_impl(size, capacity, perm_allocator()); } // TODO: should not use default allocator, pass in a boolean to decide whether to use perm or temp allocator
 	inline Array(size_t size, Allocator allocator) noexcept { alloc_impl(size, size, allocator); }
 	inline Array(size_t size, size_t capacity, Allocator allocator) noexcept { alloc_impl(size, capacity, allocator); }
 	// inline Array(const Array<T>& other) noexcept { *this = other; } // TODO: don't implement until we really need this
