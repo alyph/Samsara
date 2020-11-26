@@ -96,6 +96,7 @@
   - confederacy
   - subjugation
   - declare hegemony
+  - gaining support
   - other special events (e.g. seeking help from pope)
 
 ##### relationship improved

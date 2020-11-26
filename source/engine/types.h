@@ -27,6 +27,7 @@ struct Scalar
 	inline int to_int() const;
 	inline long long to_long() const;
 	inline double to_double() const;
+	inline float to_float() const { return static_cast<float>(to_double()); }
 };
 
 static const constexpr Scalar undefined_scalar{};

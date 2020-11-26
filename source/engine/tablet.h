@@ -13,6 +13,8 @@ struct GlyphData;
 namespace attrs
 {
 	// extern Attribute<Id> tablet_id; // TODO: remove
+	extern Attribute<int> tablet_columns;
+	extern Attribute<int> tablet_rows;
 	extern Attribute<Id> quad_shader;
 	extern Attribute<ArrayView<GlyphData>> glyphs;
 }
@@ -55,7 +57,8 @@ struct TabletLayout
 	int left{}, top{}, width{}, height{};
 };
 
-extern Vec2 calc_tablet_size(int width, int height, Id texture);
+extern float calc_tablet_width(int cols, int rows, float height, Id texture);
+extern float calc_tablet_height(int cols, int rows, float width, Id texture);
 extern TabletRenderBuffer& access_tablet_render_buffer_and_layout(const Context& context, TabletLayout& out_layout);
 
 // TabletRenderBuffer

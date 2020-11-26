@@ -16,6 +16,8 @@
 
 namespace attrs
 {
+	Attribute<int> tablet_columns{0};
+	Attribute<int> tablet_rows{0};
 	Attribute<Id> quad_shader{null_id};
 	Attribute<ArrayView<GlyphData>> glyphs{ArrayView<GlyphData>{}};
 }
@@ -44,8 +46,10 @@ struct TabletCache
 	Id texture{};
 	Id fbo{};
 	Id rt_texture{};
-	int width{};
-	int height{};
+	float width{};
+	float height{};
+	int cols{};
+	int rows{};
 	int max_num_glyphs{};
 	int rt_width{};
 	int rt_height{};
@@ -91,16 +95,29 @@ namespace attrs
 	Attribute<TabletLayout> tablet_layout{TabletLayout{}};
 }
 
-Vec2 calc_tablet_size(int width, int height, Id texture)
+// TODO: this should really be a function provided by the texture itself
+static void get_atlas_size(Id atlas_texture_id, int& out_width, int& out_height)
 {
-	// TODO: probably need a better texture inteface to read these values
-	GLint tex_w{}, tex_h{};
-	glBindTexture(atlas_target, static_cast<GLuint>(texture));
-	glGetTexLevelParameteriv(atlas_target, 0, GL_TEXTURE_WIDTH, &tex_w);
-	glGetTexLevelParameteriv(atlas_target, 0, GL_TEXTURE_HEIGHT, &tex_h);
+	glBindTexture(atlas_target, static_cast<GLuint>(atlas_texture_id));
+	glGetTexLevelParameteriv(atlas_target, 0, GL_TEXTURE_WIDTH, &out_width);
+	glGetTexLevelParameteriv(atlas_target, 0, GL_TEXTURE_HEIGHT, &out_height);
 	glBindTexture(atlas_target, 0);
+}
 
-	return Vec2{ (float)width, (float)height * tex_h / tex_w };
+float calc_tablet_width(int cols, int rows, float height, Id texture)
+{
+	int tw{}, th{};
+	get_atlas_size(texture, tw, th);
+	asserts(rows > 0 && th > 0);
+	return (height * cols * tw / (rows * th));
+}
+
+float calc_tablet_height(int cols, int rows, float width, Id texture)
+{
+	int tw{}, th{};
+	get_atlas_size(texture, tw, th);
+	asserts(cols > 0 && tw > 0);
+	return (width * rows * th / (cols * tw));
 }
 
 extern TabletRenderBuffer& access_tablet_render_buffer_and_layout(const Context& context, TabletLayout& out_layout)
@@ -118,10 +135,11 @@ extern TabletRenderBuffer& access_tablet_render_buffer_and_layout(const Context&
 // }
 
 // Id TabletStore::add_tablet(int width, int height, Id texture, Id shader, Id screen_shader)
-static void create_tablet_cache(TabletCache& cache, int width, int height, Id texture, Id shader, Id quad_shader)
+static void create_tablet_cache(TabletCache& cache, float width, float height, int cols, int rows, Id texture, Id shader, Id quad_shader)
 {
 	asserts(shader && quad_shader, "tablet shader must be valid.");
-	asserts(width > 0 && height > 0, "tablet cannot be empty sized");
+	asserts(width > 0.f && height > 0.f, "tablet is too small");
+	asserts(cols > 0 && rows > 0, "tablet cannot be empty sized");
 	asserts(texture, "tablet requires valid texture to render");
 
 	// find or create a shader cache
@@ -147,8 +165,10 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 	cache.texture = texture;
 	cache.width = width;
 	cache.height = height;
+	cache.cols = cols;
+	cache.rows = rows;
 
-	const size_t num_fixed_glyphs = (width * height);
+	const size_t num_fixed_glyphs = (cols * rows);
 	cache.max_num_glyphs = static_cast<int>(num_fixed_glyphs * 2); // allow twice as many glyphs to support layers
 
 	// TODO: can maybe share verts between tablets
@@ -247,9 +267,8 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 	
 	if (cache.param_vert >= 0)
 	{
-		const auto tablet_size = calc_tablet_size(width, height, texture);
-		const float half_w = tablet_size.x / 2;
-		const float half_h = tablet_size.y / 2;
+		const float half_w = width / 2;
+		const float half_h = height / 2;
 		Vec3 verts[] = 
 		{ 
 			{ -half_w, -half_h, 0 }, { half_w, -half_h, 0 }, 
@@ -301,11 +320,11 @@ static void create_tablet_cache(TabletCache& cache, int width, int height, Id te
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-	// TODO: rt texture size can become really big if width, height were set to real large?
+	// TODO: rt texture size can become really big if cols, rows were set to real large?
 	int glyph_w = tex_w / 16; // TODO: hard coded 16 x 16 page size here
 	int glyph_h = tex_h / 16;
-	int rt_w = width * glyph_w;
-	int rt_h = height * glyph_h;
+	int rt_w = cols * glyph_w;
+	int rt_h = rows * glyph_h;
 
 	// generate texture
 	GLuint texColorBuffer;
@@ -654,8 +673,8 @@ static void finalize_tablet_elems(Frame& frame, Id root_elem_id, Id first_elem_i
 	{
 		TabletElemWorker worker;
 		worker.id = root_elem_id;
-		worker.child_max_w = worker.layout.width = get_elem_attr_or_assert(frame, root_elem_id, attrs::width).to_int();
-		worker.child_max_h = worker.layout.height = get_elem_attr_or_assert(frame, root_elem_id, attrs::height).to_int();
+		worker.child_max_w = worker.layout.width = get_elem_attr_or_assert(frame, root_elem_id, attrs::tablet_columns);
+		worker.child_max_h = worker.layout.height = get_elem_attr_or_assert(frame, root_elem_id, attrs::tablet_rows);
 		stack.push_back(worker);
 
 		render_and_layout_common_element(render_buffer, frame, root_elem_id, worker.layout, worker.layout.width, worker.layout.height);
@@ -988,9 +1007,11 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 
 	const auto& root_layout = get_elem_attr_or_assert(frame, elem_id, attrs::tablet_layout);
 
-	const int width = root_layout.width;
-	const int height = root_layout.height;
+	const int cols = root_layout.width;
+	const int rows = root_layout.height;
 
+	const float width = get_elem_attr_or_assert(frame, elem_id, attrs::width).to_float();
+	const float height = get_elem_attr_or_assert(frame, elem_id, attrs::height).to_float();
 	const auto& texture = get_elem_attr_or_assert(frame, elem_id, attrs::texture);
 	const auto& shader = get_elem_attr_or_assert(frame, elem_id, attrs::shader);
 	const auto& quad_shader = get_elem_attr_or_assert(frame, elem_id, attrs::quad_shader);
@@ -1002,12 +1023,13 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	if (cache_index >= globals.tablet_caches.size())
 	{
 		auto& new_cache = globals.tablet_caches.emplace_back();
-		create_tablet_cache(new_cache, width, height, texture, shader, quad_shader);
+		create_tablet_cache(new_cache, width, height, cols, rows, texture, shader, quad_shader);
 	}
 
 	// TODO: recreate the cache if the dimensions or any other attributes changed
 	const auto& tablet_cache = globals.tablet_caches[cache_index];
 	asserts(tablet_cache.width == width && tablet_cache.height == height);
+	asserts(tablet_cache.cols == cols && tablet_cache.rows == rows);
 	asserts(tablet_cache.texture == texture && tablet_cache.shader_id == shader && tablet_cache.quad_shader_id == quad_shader);
 		
 	const auto& glyphs = render_buffer.glyphs;
@@ -1035,7 +1057,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(atlas_target, static_cast<GLuint>(tablet_cache.texture)); // texture for glyph atlas
 		glUseProgram(static_cast<GLuint>(tablet_cache.shader_id)); // glyph shader;
-		glUniform2i(tablet_cache.param_dims, tablet_cache.width, tablet_cache.height); // dimensions uniform
+		glUniform2i(tablet_cache.param_dims, tablet_cache.cols, tablet_cache.rows); // dimensions uniform
 		glBindVertexArray(static_cast<GLuint>(tablet_cache.vao)); // tablet glyph vao
 		glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(tablet_cache.glyph_buffer));
 
@@ -1214,13 +1236,14 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 static RaycastResult raycast_tablet(const Frame& frame, Id elem_id, const Mat44& transform, double x, double y)
 {
 	const auto& root_layout = get_elem_attr_or_assert(frame, elem_id, attrs::tablet_layout);
-	const int width = root_layout.width;
-	const int height = root_layout.height;
+	const int cols = root_layout.width;
+	const int rows = root_layout.height;
 	const auto& texture = get_elem_attr_or_assert(frame, elem_id, attrs::texture);
 
-	const auto tablet_size = calc_tablet_size(width, height, texture);
-	const float half_w = tablet_size.x / 2;
-	const float half_h = tablet_size.y / 2;
+	const float width = get_elem_attr_or_assert(frame, elem_id, attrs::width).to_float();
+	const float height = get_elem_attr_or_assert(frame, elem_id, attrs::height).to_float();
+	const float half_w = width / 2;
+	const float half_h = height / 2;
 	const Vec3 verts[] = 
 	{
 		{ -half_w, -half_h, 0 }, { half_w, -half_h, 0 },
@@ -1241,11 +1264,11 @@ static RaycastResult raycast_tablet(const Frame& frame, Id elem_id, const Mat44&
 
 		const Vec2 uv = uvs[i0] * result.w0 + uvs[i1] * result.w1 + uvs[i2] * result.w2;
 
-		const int cx = std::clamp((int)std::floor(uv.x * width), 0, width-1);
-		const int cy = std::clamp((int)std::floor(uv.y * height), 0, height-1);
+		const int cx = std::clamp((int)std::floor(uv.x * cols), 0, cols-1);
+		const int cy = std::clamp((int)std::floor(uv.y * rows), 0, rows-1);
 
 		hit_result.uv = uv;
-		hit_result.ruv = {uv.x * width, uv.y * height};
+		hit_result.ruv = {uv.x * cols, uv.y * rows};
 		hit_result.iuv = {cx, cy};
 
 		// loop backwards to find the deepest hit descendent

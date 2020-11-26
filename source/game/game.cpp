@@ -114,7 +114,7 @@ Game::Game()
 		world.init(stage_allocator());
 	}
 
-	in_editor = false;
+	in_editor = true;
 }
 
 
@@ -171,13 +171,13 @@ static inline Vec2i to_tablet_coords(const Vec2i& map_coords, const TabletLayout
 	return { layout.left + map_coords.x - map_min_coords.x, layout.top + layout.height - 1 - (map_coords.y - map_min_coords.y) };
 }
 
-static Id map_view(const Context ctx, World& world, const Globals& globals, EditorState& state, const Scalar& width, const Scalar& height)
+static Id map_view(const Context ctx, World& world, const Globals& globals, EditorState& state, int cols, int rows)
 {
 	EASY_FUNCTION();
 
 	const Id elem_id = make_element(ctx, null_id);
-	_attr(attrs::width, width);
-	_attr(attrs::height, height);
+	_attr(attrs::width, cols);
+	_attr(attrs::height, rows);
 
 	TabletLayout layout;
 	TabletRenderBuffer& render_buffer = access_tablet_render_buffer_and_layout(ctx, layout);
@@ -426,12 +426,12 @@ void Game::present(const Context& ctx)
 
 	const float aspect = window->aspect();
 
-	int tablet_width = 100;
-	int tablet_height = 80;
-	const Vec2 tablet_size = calc_tablet_size(tablet_width, tablet_height, atlas_texture);
+	const int tablet_rows = 80;
+	const float tablet_cell_size = 1.f;
+	const float tablet_height = tablet_rows * tablet_cell_size;
 
-	const float vp_width = (float)tablet_width;
-	const float vp_height = vp_width / aspect;
+	const float vp_width = tablet_height * aspect;
+	const float vp_height = tablet_height;
 
 	Viewpoint vp;
 	vp.projection = make_orthographic(vp_width / 2, aspect, 0.f, 100.f);
@@ -447,7 +447,8 @@ void Game::present(const Context& ctx)
 		// map view
 		float min_zoom = 0.25f;
 		float max_zoom = 2.0;
-		int map_size = (int)(tablet_width * max_zoom) + 4;
+		const int map_rows = (int)std::round(tablet_rows * max_zoom) + 4;;
+		const int map_cols = (map_rows * 2);
 		editor_state.map_scale += _mouse_wheel_delta * 0.001f;
 		const auto map_scale = editor_state.map_scale = std::clamp(editor_state.map_scale, 1/max_zoom, 1/min_zoom);
 		
@@ -464,9 +465,11 @@ void Game::present(const Context& ctx)
 				Vec2d ndc = calc_ndc({input.mouse_x, input.mouse_y}, window->width(), window->height());
 				double world_x = ndc.x * vp_width / (2 * map_scale) - editor_state.dragging_map_offset.x;
 				double world_y = ndc.y * vp_height / (2 * map_scale) + editor_state.dragging_map_offset.y;
-				int half_size = map_size / 2;
-				int tablet_x = std::clamp((int)std::floor(world_x), -half_size, half_size-1);
-				int tablet_y = std::clamp((int)std::floor(world_y), -half_size, half_size-1);
+				int half_cols = map_cols / 2;
+				int half_rows = map_rows / 2;
+				// TODO: world_x, y needs to be divided by tablet_cell_size to get translated to tablet cell coordinates
+				int tablet_x = std::clamp((int)std::floor(world_x), -half_cols, half_cols-1);
+				int tablet_y = std::clamp((int)std::floor(world_y), -half_rows, half_rows-1);
 				// TODO: since we are changing the map pose here, it will actually invalidate the iuv hit cell done by previous raycast
 				// which is stored in the curr_input.mouse_hit. When the later code is using that iuv (like in the map_view())
 				// the values there are no longer valid and will have 1 frame delay, so ideally we should calculate the hit 
@@ -488,15 +491,17 @@ void Game::present(const Context& ctx)
 		map_pose.pos.z = 1.f;
 		const auto map_scale_mat = make_mat44_scale({map_scale, map_scale, 1.f});
 		_attr(attrs::transform, map_scale_mat * to_mat44(map_pose));
-		_attr(attrs::width, map_size);
-		_attr(attrs::height, map_size);
+		_attr(attrs::width, map_cols * tablet_cell_size);
+		_attr(attrs::height, map_rows * tablet_cell_size);
+		_attr(attrs::tablet_columns, map_cols);
+		_attr(attrs::tablet_rows, map_rows);
 		_attr(attrs::texture, atlas_texture);
 		_attr(attrs::shader, tablet_shader);
 		_attr(attrs::quad_shader, tablet_screen_shader);
 
 		_children
 		{
-			map_view(_ctx, world, globals, editor_state, map_size, map_size);
+			map_view(_ctx, world, globals, editor_state, map_cols, map_rows);
 		}
 
 		if (in_editor)
@@ -513,11 +518,15 @@ void Game::present(const Context& ctx)
 
 			// overlay
 			tablet(_ctx);
+			const int left_cols = 40;
+			const float left_width = (left_cols * tablet_cell_size);
 			Pose overlay_tablet_pose;
-			overlay_tablet_pose.pos.y = (vp_height - tablet_size.y) / 2;
+			overlay_tablet_pose.pos.x = -(vp_width - left_width) / 2;
 			_attr(attrs::transform, to_mat44(overlay_tablet_pose));
-			_attr(attrs::width, tablet_width);
+			_attr(attrs::width, left_width);
 			_attr(attrs::height, tablet_height);
+			_attr(attrs::tablet_columns, left_cols);
+			_attr(attrs::tablet_rows, tablet_rows);
 			_attr(attrs::texture, atlas_texture);
 			_attr(attrs::shader, tablet_shader);
 			_attr(attrs::quad_shader, tablet_screen_shader);
@@ -541,16 +550,17 @@ void Game::present(const Context& ctx)
 		}
 		else
 		{
-			const int ui_tablet_width = 100;
-			const int ui_tablet_height = 80;
-			const Vec2 ui_tablet_size = calc_tablet_size(tablet_width, tablet_height, ui_texture);
+			const int ui_left_cols = 100;
+			const float ui_left_width = calc_tablet_width(ui_left_cols, tablet_rows, tablet_height, ui_texture);
 
 			tablet(_ctx);
 			Pose ui_tablet_pose;
-			ui_tablet_pose.pos.y = (vp_height - ui_tablet_size.y) / 2;
+			ui_tablet_pose.pos.x = -(vp_width - ui_left_width) / 2;
 			_attr(attrs::transform, to_mat44(ui_tablet_pose));
-			_attr(attrs::width, ui_tablet_width);
-			_attr(attrs::height, ui_tablet_height);
+			_attr(attrs::width, ui_left_width);
+			_attr(attrs::height, tablet_height);
+			_attr(attrs::tablet_columns, ui_left_cols);
+			_attr(attrs::tablet_rows, tablet_rows);
 			_attr(attrs::texture, ui_texture);
 			_attr(attrs::shader, tablet_shader);
 			_attr(attrs::quad_shader, tablet_screen_shader);
