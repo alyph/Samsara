@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cmath>
+#include <algorithm>
 
 class Color
 {
@@ -19,10 +20,10 @@ inline Color32 to_color32(const Color& color)
 {
 	return 
 	{ 
-		(uint8_t)std::round(255 * color.r),
-		(uint8_t)std::round(255 * color.g),
-		(uint8_t)std::round(255 * color.b),
-		(uint8_t)std::round(255 * color.a),
+		(uint8_t)std::clamp((int)std::round(255 * color.r), 0, 255),
+		(uint8_t)std::clamp((int)std::round(255 * color.g), 0, 255),
+		(uint8_t)std::clamp((int)std::round(255 * color.b), 0, 255),
+		(uint8_t)std::clamp((int)std::round(255 * color.a), 0, 255),
 	};
 }
 
@@ -69,5 +70,33 @@ constexpr Color operator"" _rgba(unsigned long long v)
 	uint8_t b = (v >> 8 & 0xff);
 	uint8_t a = (v & 0xff);
 	return to_color(Color32{ r, g, b, a });
+}
+
+inline Color operator*(const Color& c, float s)
+{
+	return
+	{
+		c.r * s,
+		c.g * s,
+		c.b * s,
+		c.a * s,
+	};
+}
+
+inline Color32 operator*(const Color32& c, float s)
+{
+	return to_color32(to_color(c) * s);
+}
+
+inline Color32 power(const Color32& c, float p)
+{
+	const auto c2 = to_color(c);
+	return to_color32(Color
+	{
+		std::pow(c2.r, p),
+		std::pow(c2.g, p),
+		std::pow(c2.b, p),
+		std::pow(c2.a, p),
+	});
 }
 

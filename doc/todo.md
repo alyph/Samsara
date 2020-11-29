@@ -71,6 +71,7 @@
 ### allocator
 - [ ] handle Allocator::none, maybe we should get idx = (allocator - 1)
 - [X] ~~*allow allocate 0 bytes data, which will return an empty handle but record the allocator and later can use reallocate to get real memory*~~ [2020-11-25]
+- [ ] contextual perm allocator (no stack, always scoped, one time use)
 
 ### input
 - [X] ~~*mouse wheel event*~~ [2020-11-25]

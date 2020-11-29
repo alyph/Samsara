@@ -76,6 +76,8 @@
         "xlocbuf": "cpp",
         "xlocmes": "cpp",
         "xlocmon": "cpp",
-        "xloctime": "cpp"
+        "xloctime": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp"
     }
 }

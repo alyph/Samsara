@@ -44,6 +44,6 @@ void main()
 		// http://apoorvaj.io/alpha-compositing-opengl-blending-and-premultiplied-alpha.html
 		color.a = back_a * (1 - fore_a) + fore_a;
 		if (color.a <= 0.01) discard;
-		color.rgb = inColor1.rgb * back_a * (1 - fore_a) * back_a + inColor2.rgb * fore_a;
+		color.rgb = inColor1.rgb * back_a * (1 - fore_a) + inColor2.rgb * fore_a;
 	}
 }
