@@ -41,8 +41,8 @@ Game::Game()
 	const auto ref_map_shader = create_shader(desc);
 
 	// TODO: just one pixel per tile, will adjust it later if needed
-	const float half_w = 3648 / 2; // note: integer
-	const float half_h = 3004 / 2;
+	const float half_w = 3648 / 4; // note: integer
+	const float half_h = 3004 / 4;
 	const Color mesh_tint{ 1.f, 1.f, 1.f, 0.3f };
 	Mesh mesh;
 	mesh.indices = { 0, 1, 2, 0, 2, 3 };
@@ -161,6 +161,40 @@ static void paint_line(Map& map, Id terrain_type, const Vec2i& start, const Vec2
 	}
 }
 
+static void draw_border(const Box2i& box, Color32 border_color, Color32 back_color, TabletRenderBuffer& render_buffer, Id elem_id)
+{
+	GlyphData glyph;
+	glyph.color1 = back_color;
+	glyph.color2 = border_color;
+	auto draw = [&](uint16_t code, const Vec2i& coords, const Vec2i& size)
+	{
+		glyph.code = code;
+		glyph.coords = coords;
+		glyph.size = size;
+		render_buffer.push_glyph(elem_id, glyph);
+	};
+
+	// border
+	const int w = (box.max.x - box.min.x + 1);
+	const int h = (box.max.y - box.min.y + 1);
+	asserts(w >= 2 && h >= 2);
+	uint16_t border_codes[] = { 0x00da, 0x00c4, 0x00bf, 0x00b3, 0x00d9, 0x00c0 };
+	draw(border_codes[0], box.min, {1, 1});
+	draw(border_codes[2], {box.max.x, box.min.y}, {1, 1});
+	draw(border_codes[4], box.max, {1, 1});
+	draw(border_codes[5], {box.min.x, box.max.y}, {1, 1});
+	if (w > 2)
+	{
+		draw(border_codes[1], {box.min.x + 1, box.min.y}, {w - 2, 1});
+		draw(border_codes[1], {box.min.x + 1, box.max.y}, {w - 2, 1});
+	}
+	if (h > 2)
+	{
+		draw(border_codes[3], {box.max.x, box.min.y + 1}, {1, h - 2});
+		draw(border_codes[3], {box.min.x, box.min.y + 1}, {1, h - 2});
+	}
+}
+
 static const constexpr uint16_t sel_brush_glyph = 0x02f1;
 static const constexpr Color32 sel_brush_color = 0xffffff_rgb32;
 static const constexpr uint16_t city_brush_glyph = 0x02e1;
@@ -168,7 +202,7 @@ static const constexpr Color32 city_brush_color = 0xffff00_rgb32;
 
 static inline Vec2i to_tablet_coords(const Vec2i& map_coords, const TabletLayout& layout, const Vec2i& map_min_coords)
 {
-	return { layout.left + map_coords.x - map_min_coords.x, layout.top + layout.height - 1 - (map_coords.y - map_min_coords.y) };
+	return { layout.left + map_coords.x - map_min_coords.x, layout.top + map_coords.y - map_min_coords.y };
 }
 
 static Id map_view(const Context ctx, World& world, const Globals& globals, EditorState& state, int cols, int rows)
@@ -210,12 +244,12 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, Edit
 	if (state.selected_city_id)
 	{
 		const auto& city = world.cities.get(state.selected_city_id);
-		GlyphData glyph;
-		glyph.code = 0;
-		glyph.color1 = 0xffffff50_rgba32;
-		glyph.coords = to_tablet_coords({city.wall_bounds.min.x, city.wall_bounds.max.y}, layout, map_min);
-		glyph.size = {city.wall_bounds.max.x - city.wall_bounds.min.x + 1, city.wall_bounds.max.y - city.wall_bounds.min.y + 1};
-		render_buffer.push_glyph(elem_id, glyph);
+		Box2i border_box
+		{
+			to_tablet_coords(city.wall_bounds.min - Vec2i{1, 1}, layout, map_min),
+			to_tablet_coords(city.wall_bounds.max + Vec2i{1, 1}, layout, map_min),
+		};
+		draw_border(border_box, 0xff2020e0_rgba32, 0xc0_rgba32, render_buffer, elem_id);
 	}
 
 	if (_hover)

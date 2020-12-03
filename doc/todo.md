@@ -111,6 +111,8 @@
     - [X] ~~*reference map*~~ [2020-11-25]
     - [ ] multi-stage zoom
   - [ ] toggle between game/editor
+  - [ ] toggle ref images
+  - [ ] multiple ref images and move and scale
   - [ ] add a save/load button
 
 ## game
