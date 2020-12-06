@@ -7,6 +7,7 @@
 - actions take time to complete and takes up slots
   - some actions have some regular interactions (e.g. adjust marching order in a military campaign)
 - actions usually cost some of the realm points
+  - destiny - handles meta level interactions (other possible names: Chronicle, fate, divinity)
   - ministry (or governance) - administration work, bureaucracy, reign in peaceful time, usually for improving social and economic status of a realm
   - influence - political power and influence, used for diplomacy, coersion, negotiation, projecting power without military means
   - stratagem - for military related actions, ruse and plots, war planning, war strategy etc.

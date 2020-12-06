@@ -39,6 +39,7 @@ static constexpr const GLenum atlas_target = GL_TEXTURE_2D_ARRAY;
 
 struct TabletCache
 {
+	Id guid{};
 	Id vao{};
 	Id vao_screen{};
 	Id vert_buffer;
@@ -67,9 +68,9 @@ struct TabletCache
 
 struct TabletGlobals
 {
-	Id last_rendered_frame{};
-	size_t next_tablet_index{};
-	std::vector<TabletCache> tablet_caches;
+	// Id last_rendered_frame{};
+	// size_t next_tablet_index{};
+	std::vector<TabletCache> tablet_caches; // TODO: use Array, but be careful about init order (must be after allocator creations)
 };
 
 SingletonHandle<TabletGlobals> tablet_globals;
@@ -359,6 +360,29 @@ static void create_tablet_cache(TabletCache& cache, float width, float height, i
 	cache.rt_texture = texColorBuffer;
 	cache.rt_width = rt_w;
 	cache.rt_height = rt_h;
+}
+
+static const TabletCache& find_or_add_tablet_cache(Id guid, float width, float height, int cols, int rows, Id texture, Id shader, Id quad_shader)
+{
+	auto& globals = engine().singletons.get(tablet_globals);
+
+	for (const auto& cache : globals.tablet_caches)
+	{
+		if (cache.guid == guid)
+		{
+			// TODO: recreate the cache if the dimensions or any other attributes changed
+			asserts(cache.width == width && cache.height == height);
+			asserts(cache.cols == cols && cache.rows == rows);
+			asserts(cache.texture == texture && cache.shader_id == shader && cache.quad_shader_id == quad_shader);
+			return cache;
+		}
+	}
+
+	// create a new cache for the given tablet
+	auto& new_cache = globals.tablet_caches.emplace_back();
+	create_tablet_cache(new_cache, width, height, cols, rows, texture, shader, quad_shader);
+	new_cache.guid = guid;
+	return new_cache;
 }
 
 // const TabletCache& TabletStore::tablet_cache(Id tablet_id) const
@@ -998,13 +1022,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	GLint viewport[4];
 	glGetIntegerv(GL_VIEWPORT, viewport);
 
-	auto& globals = engine().singletons.get(tablet_globals);
-	if (frame.frame_id != globals.last_rendered_frame)
-	{
-		globals.next_tablet_index = 0;
-		globals.last_rendered_frame = frame.frame_id;
-	}
-
+	const auto& elem = get_element(frame, elem_id);
 	const auto& root_layout = get_elem_attr_or_assert(frame, elem_id, attrs::tablet_layout);
 
 	const int cols = root_layout.width;
@@ -1017,21 +1035,7 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 	const auto& quad_shader = get_elem_attr_or_assert(frame, elem_id, attrs::quad_shader);
 	const auto& render_buffer = get_elem_attr_or_assert(frame, elem_id, attrs::tablet_render_buffer);
 
-	// create cache for the given tablet
-	// TODO: match uuid of the element (not the elem_id since that's per frame)
-	const auto cache_index = globals.next_tablet_index++;
-	if (cache_index >= globals.tablet_caches.size())
-	{
-		auto& new_cache = globals.tablet_caches.emplace_back();
-		create_tablet_cache(new_cache, width, height, cols, rows, texture, shader, quad_shader);
-	}
-
-	// TODO: recreate the cache if the dimensions or any other attributes changed
-	const auto& tablet_cache = globals.tablet_caches[cache_index];
-	asserts(tablet_cache.width == width && tablet_cache.height == height);
-	asserts(tablet_cache.cols == cols && tablet_cache.rows == rows);
-	asserts(tablet_cache.texture == texture && tablet_cache.shader_id == shader && tablet_cache.quad_shader_id == quad_shader);
-		
+	const auto& tablet_cache = find_or_add_tablet_cache(elem.guid, width, height, cols, rows, texture, shader, quad_shader);
 	const auto& glyphs = render_buffer.glyphs;
 	const size_t num_glyphs = glyphs.size();
 

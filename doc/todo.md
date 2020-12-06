@@ -1,3 +1,6 @@
+## Board
+
+https://github.com/alyph/Samsara/projects/1
 
 ## engine
 
@@ -67,6 +70,7 @@
 - [X] ~~*string builder, string format*~~ [2020-11-25]
 - [X] ~~*perf: add a string layout which points directly to the pointer of a string literal*~~ [2020-11-25]
 - [ ] have custom allocator (declared as static variable and auto assign an allocator id, limited number 16 right now), the custom allocator should also be configurable (e.g. temp or not, reclaimation strategy)
+- [ ] better and simpler engine initialization, call a set of functions to perform all necessary init, rather than fully rely on the constructor init
 
 ### allocator
 - [ ] handle Allocator::none, maybe we should get idx = (allocator - 1)
