@@ -1,5 +1,4 @@
 #include "presenter.h"
-#include "input.h"
 #include "easy/profiler.h"
 
 struct PresentWorker

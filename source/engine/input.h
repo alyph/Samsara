@@ -162,6 +162,18 @@ enum class Keys : uint8_t
 	max,
 };
 
+enum class ModKeys : uint8_t
+{
+	none = 0x00,
+	shift = 0x01,
+	ctrl = 0x02,
+	alt = 0x04,
+	ctrl_shift = (ctrl | shift),
+	ctrl_alt = (ctrl | alt),
+	shift_alt = (shift | alt),
+	ctrl_shift_alt = (ctrl | shift | alt),
+	any = 0xff,
+};
 
 struct InputEvent
 {

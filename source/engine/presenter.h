@@ -10,9 +10,9 @@
 #include "macros.h"
 #include "string.h"
 #include "types.h"
+#include "input.h"
 #include <functional>
 
-struct InputEvent;
 struct Frame;
 struct Context;
 struct ScopedChildrenBlock;
@@ -21,8 +21,6 @@ struct Element;
 struct ElementType;
 struct ElementTypeSetup;
 struct RaycastResult;
-enum class Keys : uint8_t;
-enum class MouseButtons : uint8_t;
 
 using FinalizerFunc = void(*)(Frame& frame, Id root_elem_id, Id first_elem_id, Id last_elem_id);
 // x, y in screen space (in pixels)
@@ -98,7 +96,7 @@ extern bool is_elem_hover(const Context& context);
 extern bool is_elem_down(const Context& context, MouseInteraction interaction);
 extern bool was_elem_clicked(const Context& context);
 extern bool was_elem_pressed(const Context& context);
-inline bool is_key_down(const Context& context, Keys key);
+inline bool was_key_pressed(const Context& context, Keys key, ModKeys mod = ModKeys::none);
 inline bool is_mouse_down(const Context& context, MouseButtons button);
 inline int mouse_wheel_delta(const Context& context);
 
@@ -112,6 +110,7 @@ inline int mouse_wheel_delta(const Context& context);
 #define _clicked (was_elem_clicked(ctx))
 #define _pressed (was_elem_pressed(ctx))
 #define _mouse_wheel_delta (mouse_wheel_delta(ctx))
+#define _key_pressed(key, ...) (was_key_pressed(ctx, key, __VA_ARGS__))
 
 
 struct ScopeEntry
@@ -392,12 +391,34 @@ void set_elem_post_attr(Frame& frame, Id elem_id, const Attribute<T>& attr, cons
 	frame.post_attr_table.set_attr(elem.post_attrs, attr, val);
 }
 
-inline bool is_key_down(const Context& context, Keys key)
+inline bool test_key_down(const InputState& input, Keys key)
 {
 	const int idx = (int)key / 64;
 	const int bit = (int)key % 64;
 	uint64_t mask = (((uint64_t)1ull) << bit);
-	return (context.frame->curr_input.key_button_down[idx] & mask);
+	return (input.key_button_down[idx] & mask);
+}
+
+inline bool test_mod_keys(const Context& context, ModKeys mod)
+{
+	if (mod == ModKeys::any)
+	{
+		return true;
+	}
+
+	static_assert((int)Keys::control == ((int)Keys::shift+1) && (int)Keys::alt == ((int)Keys::control+1));
+	constexpr const int mod_idx = (int)Keys::shift / 64;
+	constexpr const int mod_bit = (int)Keys::shift % 64;
+	static_assert((int)Keys::alt / 64 == mod_idx);
+	const uint64_t mod_mask = ((context.frame->curr_input.key_button_down[mod_idx] >> mod_bit) & (uint64_t)7ull);
+	return (mod_mask == (uint64_t)mod);
+}
+
+inline bool was_key_pressed(const Context& context, Keys key, ModKeys mod)
+{
+	return !test_key_down(context.frame->prev_input, key) &&
+		test_key_down(context.frame->curr_input, key) &&
+		test_mod_keys(context, mod);
 }
 
 inline bool is_mouse_down(const Context& context, MouseButtons button)
