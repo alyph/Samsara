@@ -20,3 +20,10 @@ The growth of a development type involves the following:
 - The demand for the goods and services this development produces
 - The workforce of the given development (shortage vs. oversupply)
 - The investment, management and other involvement from upper classes 
+
+### Amenities
+
+amenities represent the features, building or infrustructures (usually in a urban center) that are not represented by bigger projects. like the common courts, schools, shops, taverns, public baths, theaters, bothels, streets, sewers etc.
+- what amenities are available depending on the culture, technology and the development and wealth of a city
+- some projects after becoming common may turn into amenities
+

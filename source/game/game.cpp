@@ -114,7 +114,7 @@ Game::Game()
 		world.init(stage_allocator());
 	}
 
-	in_editor = true;
+	in_editor = false;
 }
 
 
@@ -205,7 +205,7 @@ static inline Vec2i to_tablet_coords(const Vec2i& map_coords, const TabletLayout
 	return { layout.left + map_coords.x - map_min_coords.x, layout.top + map_coords.y - map_min_coords.y };
 }
 
-static Id map_view(const Context ctx, World& world, const Globals& globals, EditorState& state, int cols, int rows)
+static Id map_view(const Context ctx, World& world, const Globals& globals, bool in_editor, EditorState& state, int cols, int rows)
 {
 	EASY_FUNCTION();
 
@@ -260,7 +260,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, Edit
 		{
 			const Vec2i map_cursor{map_x + cursor.x - layout.left, map_y + cursor.y - layout.top};
 
-			if (state.selected_brush == (int)Brush::selection)
+			if (!in_editor || (state.selected_brush == (int)Brush::selection))
 			{
 				if (_pressed)
 				{
@@ -476,6 +476,11 @@ void Game::present(const Context& ctx)
 	_attr(attrs::viewpoint, vp);
 	_attr(attrs::background_color, (Color{0.f, 0.f, 0.f, 1.f}));
 
+	if (_key_pressed(Keys::grave_accent, ModKeys::ctrl))
+	{
+		in_editor = !in_editor;
+	}
+
 	_children
 	{
 		// map view
@@ -535,7 +540,7 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			map_view(_ctx, world, globals, editor_state, map_cols, map_rows);
+			map_view(_ctx, world, globals, in_editor, editor_state, map_cols, map_rows);
 		}
 
 		if (in_editor)
