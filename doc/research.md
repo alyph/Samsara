@@ -6,6 +6,7 @@
 - Campaign 161 - The Third Crusade 1191
 - Campaign 019 - Hattin 1187
 - Campaign 154 - Acre 1291
+- Campaign 262 - Manzikert 1071
 - Essential Histories 001 - The crusades
 - Warrior 018 - Knight of outremer
 - [The Crusades: The Authoritative History of the War for the Holy Land](https://www.amazon.com/dp/0060787295/?coliid=IBVM36JJR9RGO&colid=21FTDS5E9KELF&psc=1&ref_=lv_ov_lig_dp_it)
