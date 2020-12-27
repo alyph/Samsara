@@ -127,42 +127,69 @@ static inline uint8_t calc_neighbor_matching_structure_mask(const Map& map, uint
 
 void Map::update_glyphs(const Box2i dirty_tiles, const Globals& globals)
 {
+	Tile empty_tile{};
+	const auto& default_terrain = globals.terrain_types.get(null_id);
 	for (int y = (dirty_tiles.min.y - 1); y <= (dirty_tiles.max.y + 1); y++)
 	{
 		for (int x = (dirty_tiles.min.x - 1); x <= (dirty_tiles.max.x + 1); x++)
 		{
 			const Vec2i tile_coords{x, y};
 			Id tid = tile_id(tile_coords);
-			if (tid)
+			const Tile& tile = tid ? tiles[id_to_index(tid)] : empty_tile;
+			TileGlyph glyph;
+			if (tile.structure)
 			{
-				const Tile& tile = tiles[id_to_index(tid)];
-				TileGlyph& glyph = ground_glyphs[id_to_index(tid)];
-				if (tile.structure)
+				const auto& struct_type = globals.structure_types.get(tile.structure);
+				glyph.code = struct_type.glyph;
+				glyph.color = struct_type.color;
+				// TODO: probably more than just wall
+				if (struct_type.category == StructureCategory::wall)
 				{
-					const auto& struct_type = globals.structure_types.get(tile.structure);
-					glyph.code = struct_type.glyph;
-					glyph.color = struct_type.color;
-					// TODO: probably more than just wall
-					if (struct_type.category == StructureCategory::wall)
+					glyph.code += calc_neighbor_matching_structure_mask(*this, tile.structure, tile_coords);
+				}
+			}
+			else
+			{
+				const auto& terrain_type = globals.terrain_types.get(tile.terrain);
+				glyph.code = terrain_type.glyph;
+				glyph.color = terrain_type.color_a;
+				if (terrain_type.flags & TileTypeFlags::water)
+				{
+					const auto mask = calc_neighbor_water_mask(*this, globals.terrain_types, tile_coords);
+					if (mask)
 					{
-						glyph.code += calc_neighbor_matching_structure_mask(*this, tile.structure, tile_coords);
+						// TODO: maybe provide a function to truncate the code within the page
+						glyph.code = (terrain_type.glyph + water_tile_mask.codes[mask]);
 					}
 				}
-				else
+			}
+
+			if (glyph.code != default_terrain.glyph)
+			{
+				if (!tid)
 				{
-					const auto& terrain_type = globals.terrain_types.get(tile.terrain);
-					glyph.code = terrain_type.glyph;
-					glyph.color = terrain_type.color_a;
-					if (terrain_type.flags & TileTypeFlags::water)
+					ensure_tiles_for_chunk(tile_to_chunk_coords(tile_coords));
+					tid = tile_id(tile_coords);
+					asserts(tid);
+				}
+
+				const auto tile_idx = id_to_index(tid);
+				if (tile_idx >= ground_glyphs.size())
+				{
+					const auto old_size = ground_glyphs.size();
+					ground_glyphs.resize((tile_idx / map_chunk_tile_count + 1) * map_chunk_tile_count);
+					asserts(ground_glyphs.size() <= tiles.size());
+
+					// init all glyphs to the default terrain glyph
+					TileGlyph default_glyph;
+					default_glyph.code = default_terrain.glyph;
+					default_glyph.color = default_terrain.color_a;
+					for (size_t i = old_size; i < ground_glyphs.size(); i++)
 					{
-						const auto mask = calc_neighbor_water_mask(*this, globals.terrain_types, tile_coords);
-						if (mask)
-						{
-							// TODO: maybe provide a function to truncate the code within the page
-							glyph.code = (terrain_type.glyph + water_tile_mask.codes[mask]);
-						}
+						ground_glyphs[i] = default_glyph;
 					}
 				}
+				ground_glyphs[tile_idx] = glyph;
 			}
 		}
 	}

@@ -83,10 +83,10 @@ Game::Game()
 	const auto alloc = perm_allocator();
 
 	globals.terrain_types.alloc(64, alloc);
-	globals.terrain_types.set(0, "clear", {0, "clear", '_', 0, 0_rgb32, 0_rgb32});
+	globals.terrain_types.set(0, "ocean", {0, "ocean", '~', 0x0300, 0x103060_rgb32, 0x80c0f0_rgb32, TileTypeFlags::water});
+	globals.terrain_types.set("clear", {0, "clear", '.', 0, 0_rgb32, 0_rgb32});
 	globals.terrain_types.set("forest", {0, "forest", 'T', 0x0105, 0x30ff50_rgb32, 0x30ff50_rgb32});
 	globals.terrain_types.set("hill", {0, "hill", '^', 0x0218, 0x606070_rgb32, 0x606070_rgb32});
-	globals.terrain_types.set("coast", {0, "coast", '=', 0x0300, 0x103060_rgb32, 0x80c0f0_rgb32, TileTypeFlags::water});
 
 	globals.structure_types.alloc(1024, alloc);
 	globals.structure_types.set(0, "none", {0, "none", 0, 0_rgb32, StructureCategory::none, 0});
@@ -220,23 +220,26 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 	const Vec2i map_min{map_x, map_y};
 
 	Map& map = world.map;
+	const auto& default_terrain = globals.terrain_types.get(null_id);
+	TileGlyph default_glyph;
+	default_glyph.code = default_terrain.glyph;
+	default_glyph.color = default_terrain.color_a;
 	for (int y = 0; y < layout.height; y++)
 	{
 		for (int x = 0; x < layout.width; x++)
 		{		
 			Vec2i tile_coords{ map_x + x, map_y + y };
 			Id tile_id = map.tile_id(tile_coords);
-			if (tile_id)
+			const auto& ground_glyph = (tile_id && id_to_index(tile_id) < map.ground_glyphs.size()) ?
+				map.ground_glyphs[id_to_index(tile_id)] : default_glyph;
+
+			if (ground_glyph.code > 0)
 			{
-				const auto& ground_glyph = map.ground_glyphs[id_to_index(tile_id)];
-				if (ground_glyph.code > 0)
-				{
-					GlyphData glyph;
-					glyph.code = ground_glyph.code;
-					glyph.color2 = ground_glyph.color;
-					glyph.coords = { layout.left + x, layout.top + y };
-					render_buffer.push_glyph(elem_id, glyph);
-				}
+				GlyphData glyph;
+				glyph.code = ground_glyph.code;
+				glyph.color2 = ground_glyph.color;
+				glyph.coords = { layout.left + x, layout.top + y };
+				render_buffer.push_glyph(elem_id, glyph);
 			}
 		}
 	}

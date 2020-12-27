@@ -25,6 +25,7 @@ struct TileGlyph
 };
 
 static constexpr const int map_chunk_size = 64;
+static constexpr const int map_chunk_tile_count = (map_chunk_size * map_chunk_size);
 
 struct Map
 {
@@ -55,6 +56,11 @@ inline int tile_to_chunk(int tile_coord)
 {
 	return tile_coord >= 0 ? (tile_coord / map_chunk_size) : 
 		-((-tile_coord + map_chunk_size - 1) / map_chunk_size);
+}
+
+inline Vec2i tile_to_chunk_coords(const Vec2i& tile_coords)
+{
+	return { tile_to_chunk(tile_coords.x), tile_to_chunk(tile_coords.y) };
 }
 
 inline int chunk_first_tile(int chunk_coord)
@@ -116,9 +122,7 @@ inline Id Map::ensure_tiles_for_chunk(const Vec2i& coords)
 	{
 		// add tiles for the chunk
 		first_tile_id = index_to_id(tiles.size());
-		asserts(tiles.size() == ground_glyphs.size());
 		tiles.resize(tiles.size() + (map_chunk_size * map_chunk_size));
-		ground_glyphs.resize(tiles.size());
 	}
 	return first_tile_id;
 }
