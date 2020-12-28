@@ -22,7 +22,7 @@ COMPILER_FLAGS := /Od /W3 /WX /Zi /MD /GR- /MP /utf-8 /std:c++latest /D_HAS_EXCE
 LINKER_FLAGS := /INCREMENTAL:NO /LIBPATH:external\glfw\bin\win64 /LIBPATH:external\easy_profiler\bin /LIBPATH:external\freetype\bin\win64
 LIBS := opengl32.lib User32.lib Gdi32.lib easy_profiler.lib freetype.lib
 
-.PHONY: all engine clean makedirs game $(TESTS)
+.PHONY: all engine clean makedirs copyext game $(TESTS)
 
 
 all: game $(TESTS)
@@ -43,7 +43,7 @@ $(GAME_EXE): $(GAME_SRC) engine
 
 # $(ENGINE_OBJ): $(BUILD_DIR)/%.obj : $(SRC_DIR)/%.cpp
 # $(ENGINE_OBJ): $(ENGINE_SRC)
-engine: makedirs $(ENGINE_OBJ) $(ENGINE_SRC)
+engine: makedirs copyext $(ENGINE_OBJ) $(ENGINE_SRC)
 	cl $(COMPILER_FLAGS) /c $(ENGINE_SRC) /Fo$(BUILD_DIR)\\ /Fd$(BUILD_DIR)\\
 
 $(ENGINE_OBJ):	
@@ -57,3 +57,10 @@ clean:
 makedirs:
 	@if not exist $(BIN_DIR) (md "$(BIN_DIR)")
 	@if not exist $(BUILD_DIR) (md "$(BUILD_DIR)")
+
+copyext: makedirs
+	@if not exist $(BIN_DIR)\freetype.dll (copy "external\freetype\bin\win64\freetype.dll" "$(BIN_DIR)\freetype.dll")
+	@if not exist $(BIN_DIR)\freetype.pdb (copy "external\freetype\bin\win64\freetype.pdb" "$(BIN_DIR)\freetype.pdb")
+	@if not exist $(BIN_DIR)\easy_profiler.dll (copy "external\easy_profiler\bin\easy_profiler.dll" "$(BIN_DIR)\easy_profiler.dll")
+
+
