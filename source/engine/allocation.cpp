@@ -146,15 +146,17 @@ void AllocatorGlobals::reallocate(AllocHandle& handle, size_t size)
 	{
 		// this memory block is in the middle, move everything to a new block, mark old block free
 		const size_t ptr = allocate_bytes(allocator_data, size);
+		const Buffer& old_buffer = allocator_data.pages[header.page];
 		const Buffer& new_buffer = allocator_data.pages[allocator_data.curr_page];
 		const size_t alloc_size = (new_buffer.size() - ptr);
 		
 		// copy old data to new location
-		std::memcpy(new_buffer.get(ptr), buffer.get(header.ptr), header.size);
+		std::memcpy(new_buffer.get(ptr), old_buffer.get(header.ptr), header.size);
 
 		// update header and handle
 		header.ptr = ptr;
 		header.size = alloc_size;
+		header.page = static_cast<decltype(header.page)>(allocator_data.curr_page);
 
 		handle.ptr = new_buffer.get(ptr);
 
