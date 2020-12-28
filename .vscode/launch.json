@@ -57,6 +57,17 @@
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/bin/win64",
             "environment": [],
+            "externalConsole": false
+        },
+        {
+            "name": "run allocation test",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "allocation_test.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/bin/win64",
+            "environment": [],
             "externalConsole": true
         }
     ]

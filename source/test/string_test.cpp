@@ -4,7 +4,12 @@
 
 int main()
 {
+	printf("String Test Begin...\n");
+	
 	scoped_engine_init();
+
+	push_perm_allocator(Allocator::app);
+
 
 	String str1 = "good man whatever ok";
 	asserts(str1.str_data.is_short());
@@ -119,8 +124,9 @@ int main()
 	asserts(built_str.size() == str4_view.size() * 2);
 	printf("built string: %s\n", built_str.c_str());
 
+	printf("String Test Done.\n");
 
-	std::system("pause");
+	//std::system("pause");
 
 	return 0;
 }

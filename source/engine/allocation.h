@@ -23,15 +23,12 @@
 
 // basic allocator functions
 
-// ------------------------------------------------------------------------------------------------------------------------------------
-//  function     | effect                      | new ptr                     | handle                  | ptr            
-// ------------------------------------------------------------------------------------------------------------------------------------
-//  allocate     | alloc new memory            | new block                   | N/A                     | N/A
-//  deallocate   | mark memory reclaimable     | null                        | valid until reclaimed   | valid until reclaimed
-//  reallocate   | move memory to fit new size | same if fit, diff otherwise | valid                   | not valid if moved, retrievable
-//  reuse-alloc  | alloc memory over the old   | same if fit, diff otherwise | not valid               | not valid, not retrievable 
-//  transallocate| move to fit and dealloc old | same if fit, diff otherwise | same if fit, or dealloc | valid if fit, or valid until reclaimed
-// ------------------------------------------------------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------------------------
+//  function     | effect                      | new ptr                     | old ptr            
+// ----------------------------------------------------------------------------------------------------------
+//  allocate     | alloc new memory            | new block                   | N/A
+//  reallocate   | move memory to fit new size | same if fit, diff otherwise | intact but stale
+// ----------------------------------------------------------------------------------------------------------
 
 
 struct AllocatorGlobals;
@@ -67,8 +64,8 @@ struct AllocHandle
 
 	inline Allocator allocator_type() const;
 	inline void* get() const { return ptr; }
-	inline size_t capacity(AllocatorGlobals& globals) const;
-	inline bool valid(AllocatorGlobals& globals) const;
+	inline size_t capacity(const AllocatorGlobals& globals) const;
+	inline bool valid(const AllocatorGlobals& globals) const;
 };
 
 struct AllocatorData
@@ -110,7 +107,7 @@ inline Allocator AllocHandle::allocator_type() const
 	return static_cast<Allocator>(allocator_idx);
 }
 
-inline bool AllocHandle::valid(AllocatorGlobals& globals) const
+inline bool AllocHandle::valid(const AllocatorGlobals& globals) const
 {
 	if (alloc_id != 0)
 	{
@@ -132,7 +129,7 @@ inline void* AllocHandle::get(AllocatorGlobals& globals) const
 }
 #endif
 
-inline size_t AllocHandle::capacity(AllocatorGlobals& globals) const
+inline size_t AllocHandle::capacity(const AllocatorGlobals& globals) const
 {
 	asserts(valid(globals));
 	return access_alloc_header(globals, header).size;

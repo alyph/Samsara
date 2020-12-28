@@ -14,4 +14,7 @@ jobs:
     - name: Build all
       run: build all
       shell: cmd
+    - name: Test
+      run: test
+      shell: cmd
 
