@@ -33,7 +33,7 @@
 
 #### destiny points
 
-- destiny points are used in power actions and events that alter the trajectory of the history
+- destiny points are used in powerful actions and events that alter the trajectory of the history
   - these events are usually considered as occur by random chance
   - think these as divine intervention
 - destiny points come from many sources
@@ -49,7 +49,7 @@
   - it's almost always going down and rarely healed back
   - it's just a matter of time before a realm gets all strikes
 - a realm can get a strike for many reasons
-  - disastrous events (e.g. major state's capitol occupied by invading forces, ruler died without an heir)
+  - disastrous events and crisis (e.g. major state's capitol occupied by invading forces, ruler died without an heir)
   - realm engulfed in turmoil (too many internal and external wars for too long, or simply a measure of very low stability for long time)
   - realm falls into decadence
   - failed revolution or revolt (player instigated)

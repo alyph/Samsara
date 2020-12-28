@@ -2,6 +2,15 @@
 ### Design considerations
 
 
+#### discreet/hard and soft scaling
+- the availability of goods is hard guage
+  - the different levels can be: scarce, available, abundant, center of production etc.
+  - these levels directly determines the eligibility of actions that has resource requirements (e.g. constructing projects or recruit troops)
+- the amount of production (a.k.a supply vs. demands) is soft scaling
+  - these generally influences the price of the goods and wealth it generates
+  - the production and consumption of goods then influences the quality of life of all people and their wealth flow
+- trading will affect both of these hard and soft factors, and these factors are also related to each other
+
 #### represented goods
 - not all goods in real life are represented
 - only goods that have economic or cultural significance will be represented

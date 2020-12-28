@@ -27,3 +27,9 @@ amenities represent the features, building or infrustructures (usually in a urba
 - what amenities are available depending on the culture, technology and the development and wealth of a city
 - some projects after becoming common may turn into amenities
 
+
+### Traditions
+
+cities may have different levels of traditions (e.g. culture, industry etc.) based on the history of development
+
+
