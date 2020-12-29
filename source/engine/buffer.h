@@ -12,6 +12,10 @@ public:
 	static const constexpr size_t alignment = alignof(std::max_align_t);
 	static const constexpr size_t alignment_mask = (alignment - 1);
 
+	uint8_t* data{};
+	size_t _size{};
+	size_t _capacity{};
+
 	Buffer() = default;
 	~Buffer();
 	inline Buffer(const Buffer& other) = delete;
@@ -31,11 +35,6 @@ public:
 
 	inline static bool is_aligned(size_t ptr);
 	inline static size_t get_next_aligned(size_t ptr);
-
-private:
-	uint8_t* data{};
-	size_t _size{};
-	size_t _capacity{};
 };
 
 #if 0

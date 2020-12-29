@@ -19,6 +19,14 @@ namespace filesystem
 	{
 		return std::filesystem::exists(make_std_path(path));
 	}
+
+	inline std::uintmax_t file_size(const String& path)
+	{
+		std::error_code ec;
+		const auto size = std::filesystem::file_size(make_std_path(path), ec);
+		asserts(!ec);
+		return size;
+	}
 }
 
 

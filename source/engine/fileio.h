@@ -35,6 +35,7 @@ public:
 	inline bool peek(char& out_ch);
 	inline size_t tell();
 	inline void seek(size_t pos);
+	inline size_t read(uint8_t* data, size_t size);
 };
 
 
@@ -42,12 +43,12 @@ class FileTokenWriteStream
 {
 public:
 	inline void open(const String& path);
-	inline size_t emit_delim(Delimiter del);
+	inline void emit_delim(Delimiter del);
 	template<typename T>
-	inline size_t emit_number(T num);
-	inline size_t emit_string(const String& str);
-	inline size_t emit_newline();
-	inline size_t emit_char(char ch);
+	inline void emit_number(T num);
+	inline void emit_string(const String& str);
+	inline void emit_newline();
+	inline void emit_char(char ch);
 	inline operator bool() const { return file.fp != nullptr; }
 
 private:
@@ -60,7 +61,7 @@ private:
 class FileTokenReadStream
 {
 public:
-	inline void open(const String& path);
+	void open(const String& path);
 	inline size_t emit_delim(Delimiter del);
 	template<typename T>
 	inline size_t emit_number(T& num);
@@ -75,26 +76,27 @@ public:
 	inline size_t skip_spaces(bool stop_at_eol);
 	inline size_t cursor() const;
 	inline void seek(size_t pos);
-	inline operator bool() const { return file.fp != nullptr; }
+	inline operator bool() const { return buffer.data != nullptr; }
 
 private:
 	struct NextTokenInfo
 	{
 		TokenType type{};
-		char first{};
+		char first{}; // TODO: maybe we don't need first anymore
+		size_t begin{};
 	};
 
-	File file;
+	Buffer buffer;
 	size_t current{};
 	NextTokenInfo next_token;
-	Array<char> read_buffer{0, 1024, Allocator::temp};
 
-	inline void rewind();
+	inline bool eof(size_t pos) { return pos >= buffer.size(); }
+	inline char char_at(size_t pos) { return *buffer.get(pos); }
+	inline bool test_char_at(size_t pos, char& out_ch);
 	inline Delimiter consume_delimiter();
-	inline const char* consume_number();
+	inline const char* consume_number(size_t& end_pos); // end_pos is one beyond the last char of the number
 	inline const char* consume_string(size_t& len);
-	inline void do_skip_spaces(bool stop_at_eol);
-	inline void reposition();
+	inline size_t next_non_space(bool stop_at_eol);
 };
 
 template<SerializeOpType T, class TContext>
@@ -113,9 +115,12 @@ struct FileOpSelector<SerializeOpType::write, TContext>
 };
 
 template<SerializeOpType T, class TContext>
-inline typename FileOpSelector<T, TContext>::type make_file_op(const String& path, const TContext& context)
+using FileOpType = typename FileOpSelector<T, TContext>::type;
+
+template<SerializeOpType T, class TContext>
+inline FileOpType<T, TContext> make_file_op(const String& path, const TContext& context)
 {
-	typename FileOpSelector<T, TContext>::type op{};
+	FileOpType<T, TContext> op{};
 	op.context = context;
 	op.token_stream.open(path);
 	asserts(op.token_stream); // TODO: have a way to indicate error occured
@@ -224,6 +229,11 @@ inline void File::seek(size_t pos)
 	asserts(ret == 0);
 }
 
+inline size_t File::read(uint8_t* data, size_t size)
+{
+	return std::fread(data, sizeof(uint8_t), size, fp);
+}
+
 
 inline void FileTokenWriteStream::open(const String& path)
 {
@@ -231,16 +241,15 @@ inline void FileTokenWriteStream::open(const String& path)
 	file.open(path, FileMode::write);
 }
 
-inline size_t FileTokenWriteStream::emit_delim(Delimiter del)
+inline void FileTokenWriteStream::emit_delim(Delimiter del)
 {
 	const auto ch = static_cast<char>(del);
 	prepare_next_token(TokenType::delimiter, ch);
 	file.put(ch);
-	return file.tell();
 }
 
 template<typename T>
-inline size_t FileTokenWriteStream::emit_number(T num)
+inline void FileTokenWriteStream::emit_number(T num)
 {
 	prepare_next_token(TokenType::number, 0);
 	if constexpr (std::is_integral_v<T>)
@@ -264,10 +273,9 @@ inline size_t FileTokenWriteStream::emit_number(T num)
 	{
 		static_assert(false, "unsupported number type");
 	}
-	return file.tell();
 }
 
-inline size_t FileTokenWriteStream::emit_string(const String& str)
+inline void FileTokenWriteStream::emit_string(const String& str)
 {
 	prepare_next_token(TokenType::string, 0);
 	// TODO: space in string etc.
@@ -276,23 +284,20 @@ inline size_t FileTokenWriteStream::emit_string(const String& str)
 	{
 		file.put(*(begin + i));
 	}
-	return file.tell();
 }
 
-inline size_t FileTokenWriteStream::emit_newline()
+inline void FileTokenWriteStream::emit_newline()
 {
 	file.put(newline_char);
 	last_token_type = TokenType::none;
 	last_token_char = 0;
-	return file.tell();
 }
 
-inline size_t FileTokenWriteStream::emit_char(char ch)
+inline void FileTokenWriteStream::emit_char(char ch)
 {
 	file.put(ch);
 	last_token_type = TokenType::none;
 	last_token_char = 0;
-	return file.tell();
 }
 
 inline void FileTokenWriteStream::prepare_next_token(TokenType next_type, char next_char)
@@ -336,11 +341,6 @@ inline void FileTokenWriteStream::prepare_next_token(TokenType next_type, char n
 }
 
 
-inline void FileTokenReadStream::open(const String& path)
-{
-	*this = {};
-	file.open(path, FileMode::read);
-}
 
 inline size_t FileTokenReadStream::emit_delim(Delimiter del)
 {
@@ -361,27 +361,32 @@ inline size_t FileTokenReadStream::emit_number(T& num)
 {
 	if (peek() == TokenType::number)
 	{
-		auto num_str = consume_number();
-		char* end;
+		size_t end_pos{};
+		auto num_str = consume_number(end_pos);
+		auto end_ptr = buffer.get(end_pos);
+		const auto old_end_ch = *end_ptr;
+		*end_ptr = 0; // null terminate, so the c functions can work
+		char* dummy_end;
 		if constexpr (std::is_integral_v<T>)
 		{
-			num = static_cast<T>(std::strtoll(num_str, &end, 10));
+			num = static_cast<T>(std::strtoll(num_str, &dummy_end, 10));
 		}
 		else if constexpr (std::is_floating_point_v<T>)
 		{
 			if constexpr (sizeof(T) <= 4)
 			{
-				num = static_cast<T>(std::strtof(num_str, &end));
+				num = static_cast<T>(std::strtof(num_str, &dummy_end));
 			}
 			else
 			{
-				num = static_cast<T>(std::strtod(num_str, &end));
+				num = static_cast<T>(std::strtod(num_str, &dummy_end));
 			}
 		}
 		else
 		{
 			static_assert(false, "unsupported number type");
 		}
+		*end_ptr = old_end_ch; // set it back
 	}
 	else
 	{
@@ -415,7 +420,7 @@ inline size_t FileTokenReadStream::emit_matched_string(const String& str)
 		if (str != make_string_view(start, len))
 		{
 			asserts(false); // report error
-			seek(prev_pos);
+			current = prev_pos; // NOTE: consume_string() is not destructive but merely move the current, so it's safe to simply move the current back
 		}
 	}
 	else
@@ -427,46 +432,55 @@ inline size_t FileTokenReadStream::emit_matched_string(const String& str)
 
 inline bool FileTokenReadStream::emit_char(char& ch, bool stop_at_eol)
 {
-	rewind();
-	if (file.get(ch))
+	// NOTE: no need rewind or clear next token, since if we progress past the next token position it will be auto invalidated
+	if (!eof(current))
 	{
-		if (ch != newline_char || !stop_at_eol)
+		const auto next_ch = char_at(current);
+		if (next_ch != newline_char || !stop_at_eol)
 		{
-			current = file.tell();
+			ch = next_ch;
+			current++;
 			return true;
 		}
-		file.unget(ch);
 	}
 	return false;
 }
 
 inline size_t FileTokenReadStream::emit_newline()
 {
-	rewind();
-	do_skip_spaces(true);
-	char ch;
-	if (file.get(ch))
+	// NOTE: since we only skip white spaces (including new liens), it shouldn't affect the next token info
+	const auto pos = next_non_space(true);
+	if (!eof(pos))
 	{
-		if (ch != newline_char)
+		const auto next_ch = char_at(pos);
+		if (next_ch == newline_char)
 		{
-			file.unget(ch);
+			current = (pos + 1);
+		}
+		else
+		{
 			asserts(false); // report error
 		}
 	}
-	// silently stop here if at eof
-	return (current = file.tell());
+	else
+	{
+		// silently stop here if at eof
+		current = pos;
+	}
+	return current;
 }
 
 inline TokenType FileTokenReadStream::peek()
 {
-	if (next_token.type == TokenType::none)
+	if (next_token.type == TokenType::none || current > next_token.begin)
 	{
-		do_skip_spaces(false);
+		auto pos = next_non_space(false);
 		next_token.type = TokenType::eof;
 		next_token.first = '\0';
-		char ch{};
-		while (file.get(ch))
+		next_token.begin = pos;
+		while (!eof(pos))
 		{
+			const auto ch = char_at(pos);
 			if (std::isdigit(ch))
 			{
 				next_token.type = TokenType::number;
@@ -478,7 +492,7 @@ inline TokenType FileTokenReadStream::peek()
 			else if (ch == '.')
 			{
 				char next_ch{};
-				if (file.peek(next_ch) && std::isdigit(next_ch))
+				if (test_char_at(pos+1, next_ch) && std::isdigit(next_ch))
 				{
 					next_token.type = TokenType::number;
 				}
@@ -490,7 +504,7 @@ inline TokenType FileTokenReadStream::peek()
 			else if (ch == '+' || ch == '-')
 			{
 				char next_ch{};
-				if (file.peek(next_ch) && (next_ch == '.' || std::isdigit(next_ch)))
+				if (test_char_at(pos+1, next_ch) && (next_ch == '.' || std::isdigit(next_ch))) // TODO: if it's "+.???" test the next next char
 				{
 					next_token.type = TokenType::number;
 				}
@@ -508,6 +522,7 @@ inline TokenType FileTokenReadStream::peek()
 				continue;
 			}
 			next_token.first = ch;
+			next_token.begin = pos;
 			break;
 		}
 
@@ -527,25 +542,23 @@ inline bool FileTokenReadStream::peek_delim(Delimiter& out_delim)
 
 inline bool FileTokenReadStream::peek_eol()
 {
-	rewind();
 	char ch;
-	if (file.get(ch))
+	if (test_char_at(current, ch))
 	{
-		file.unget(ch);
 		return (ch == newline_char);
 	}
-	return true;
+	return true; // eof treated as eol
 }
 
 inline bool FileTokenReadStream::seek_next_line()
 {
-	rewind();
+	// NOTE: no need rewind or clear next token, since if we progress past the next token position it will be auto invalidated
 	char ch;
-	while (file.get(ch))
+	while (test_char_at(current, ch))
 	{
+		current++;
 		if (ch == newline_char)
 		{
-			current = file.tell();
 			return true;
 		}
 	}
@@ -554,9 +567,8 @@ inline bool FileTokenReadStream::seek_next_line()
 
 inline size_t FileTokenReadStream::skip_spaces(bool stop_at_eol)
 {
-	rewind();
-	do_skip_spaces(stop_at_eol);
-	return (current = file.tell());
+	// NOTE: since token always at next non-space, no need to clear peeked tokens
+	return (current = next_non_space(stop_at_eol));
 }
 
 inline size_t FileTokenReadStream::cursor() const
@@ -566,114 +578,110 @@ inline size_t FileTokenReadStream::cursor() const
 
 inline void FileTokenReadStream::seek(size_t pos)
 {
-	file.seek(pos);
-	reposition();
+	asserts(pos <= buffer.size()); // allow to position to the eof (== buffer.size())
+	next_token = NextTokenInfo{}; // random repositioning, so the next token must be invalidated
+	current = pos;
 }
 
-inline void FileTokenReadStream::rewind()
+inline bool FileTokenReadStream::test_char_at(size_t pos, char& out_ch)
 {
-	// Only peek functions can move file pos ahead of the current pos
-	// and those will always mark the next token type, if none marked,
-	// that means the file pos hasn't been moved, and this should be a noop
-	if (next_token.type != TokenType::none)
+	if (!eof(pos))
 	{
-		file.seek(current);
-		reposition();
+		out_ch = char_at(pos);
+		return true;
 	}
+	return false;
 }
 
 inline Delimiter FileTokenReadStream::consume_delimiter()
 {
 	const auto delim = static_cast<Delimiter>(next_token.first);
-	reposition();
+	current = (next_token.begin + 1); // NOTE: we are skipping past the token position, so the previous token will be auto invalidated
 	return delim;
 }
 
-inline const char* FileTokenReadStream::consume_number()
+inline const char* FileTokenReadStream::consume_number(size_t& end_pos)
 {
-	read_buffer.clear();
-	read_buffer.push_back(next_token.first);
-
-	char ch{};
+	auto num_str = reinterpret_cast<const char*>(buffer.get(next_token.begin));
+	
 	bool expect_decimal = (next_token.first != '.');
 	bool expect_Exp = true;
-	while (file.get(ch))
+	auto pos = (next_token.begin + 1);
+	while (!eof(pos))
 	{
+		const auto ch = char_at(pos);
 		if (expect_decimal && ch == '.')
 		{
 			expect_decimal = false;
-			read_buffer.push_back(ch);
 		}
 		else if (expect_Exp && (ch == 'e' || ch == 'E'))
 		{
 			expect_Exp = false;
 			expect_decimal = false;
-			read_buffer.push_back(ch);
-			if (file.get(ch) && (ch == '+' || ch == '-'))
+			char next_ch;
+			char next_next_ch;
+			if (test_char_at(pos+1, next_ch))
 			{
-				read_buffer.push_back(ch);
+				if (std::isdigit(next_ch))
+				{
+					pos++; // further skip the digit
+				}
+				else if ((next_ch == '+' || next_ch == '-') && test_char_at(pos+2, next_next_ch) && std::isdigit(next_next_ch))
+				{
+					pos += 2; // skip the sign and a digit
+				}
+				else
+				{
+					// dangling e/E, terminate
+					break;
+				}
 			}
-			else
-			{
-				file.unget(ch);
-			}
-		}
-		else if (std::isdigit(ch))
-		{
-			read_buffer.push_back(ch);
 		}
 		// TODO: maybe allow underscore?
-		else
+		else if (!std::isdigit(ch))
 		{
-			file.unget(ch);
 			break;
 		}
+		pos++;
 	}
-	read_buffer.push_back('\0');
-	reposition();
-	return read_buffer.data();
+	current = end_pos = pos; // NOTE: we are skipping past the token position, so the previous token will be auto invalidated
+	return num_str;
 }
 
 inline const char* FileTokenReadStream::consume_string(size_t& len)
 {
-	read_buffer.clear();
-	read_buffer.push_back(next_token.first);
-	char ch{};
-	while (file.get(ch))
+	auto str = reinterpret_cast<const char*>(buffer.get(next_token.begin));
+	auto pos = (next_token.begin + 1);
+	while (!eof(pos))
 	{
+		const auto ch = char_at(pos);
 		if (std::isalpha(ch) || ch == '_')
 		{
-			read_buffer.push_back(ch);
+			pos++;
 		}
 		else
 		{
-			file.unget(ch);
 			break;
 		}
 	}
-	read_buffer.push_back('\0');
-	len = (read_buffer.size() - 1);
-	reposition();
-	return read_buffer.data();
+	len = (pos - next_token.begin);
+	current = pos; // NOTE: we are skipping past the token position, so the previous token will be auto invalidated
+	return str;
 }
 
-inline void FileTokenReadStream::do_skip_spaces(bool stop_at_eol)
+inline size_t FileTokenReadStream::next_non_space(bool stop_at_eol)
 {
-	char ch;
-	while (file.get(ch))
+	auto pos = current;
+	while (!eof(pos))
 	{
+		const auto ch = char_at(pos);
 		if (!std::isspace(ch) || (ch == newline_char && stop_at_eol))
 		{
-			file.unget(ch);
 			break;
 		}
+		pos++;
 	}
-}
-
-inline void FileTokenReadStream::reposition()
-{
-	current = file.tell();
-	next_token = NextTokenInfo{};
+	return pos;
 }
 
 
