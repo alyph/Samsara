@@ -9,7 +9,9 @@
 #include "engine/font.h"
 #include "easy/profiler.h"
 
-static constexpr const Vec2i initial_map_vp{ (map_chunk_size / 2), (map_chunk_size / 2) };
+// static constexpr const Vec2i initial_map_vp{ (map_chunk_size / 2), (map_chunk_size / 2) };
+// TODO: hard code this vp for now, later should load from user session data
+static constexpr const Vec2i initial_map_vp{ 400, 250 };
 static const String main_scenario_dir = "../../data/game/scenarios/main";
 
 Game::Game()
