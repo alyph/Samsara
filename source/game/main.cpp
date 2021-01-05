@@ -3,6 +3,10 @@
 
 int main()
 {
-	return run_app<Game>();
+	AppConfig config;
+	config.window_width = 1920;
+	config.window_height = 1080;
+
+	return run_app<Game>(config);
 }
 

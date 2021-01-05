@@ -10,7 +10,7 @@ class Font;
 extern void init_font_api();
 extern void term_font_api();
 extern Font create_font(const String& font_file, unsigned int size_w, unsigned int size_h);
-extern Id create_font_texture(int width, int height, int pages, const Array<uint32_t>& codes, const Font& font);
+extern Id create_font_texture(int width, int height, int pages, const Array<uint32_t>& codes, const Font& font, int advance=0);
 
 class Font
 {

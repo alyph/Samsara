@@ -11,6 +11,13 @@ enum class Brush: int
 	max,
 };
 
+struct GameState
+{
+	bool in_editor{};
+	bool hover_over_map{};
+	Vec2i hover_over_map_pos;
+};
+
 struct EditorState
 {
 	// TODO: maybe this should be the internal state of the map view
@@ -49,8 +56,8 @@ private:
 
 	Globals globals;
 	World world;
+	GameState game_state;
 	EditorState editor_state;
-	bool in_editor;
 };
 
 

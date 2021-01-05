@@ -6,8 +6,14 @@
 #include "easy/profiler.h"
 #include <chrono>
 
+struct AppConfig
+{
+	int window_width = 1024;
+	int window_height = 768;
+};
+
 template<class AppT>
-int run_app()
+int run_app(const AppConfig& config = {})
 {
 	profiler::startListen();
 	scoped_engine_init();
@@ -18,8 +24,8 @@ int run_app()
 	push_perm_allocator(Allocator::app);
 
 	WindowCreationParams params;
-	params.width = 1024;
-	params.height = 768;
+	params.width = config.window_width;
+	params.height = config.window_height;
 	params.title.store(get_executable_name());
 	auto window = Window::create(params);
 	if (!window) {

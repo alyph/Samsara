@@ -54,13 +54,13 @@ static int round_fixed26_6_to_pixel(FT_Long fixed_pixels)
 	return static_cast<int>(std::lround(static_cast<double>(fixed_pixels) / 64.0));
 }
 
-Id create_font_texture(int width, int height, int pages, const Array<uint32_t>& codes, const Font& font)
+Id create_font_texture(int width, int height, int pages, const Array<uint32_t>& codes, const Font& font, int advance)
 {
 	asserts(width > 0 && height > 0 && pages > 0);
 	asserts((width * height * pages) == codes.size());
 	FT_Face font_face = reinterpret_cast<FT_Face>(font.handle);
 
-	const int glyph_width = (font_face->size->metrics.max_advance >> 6);
+	const int glyph_width = advance > 0 ? advance : (font_face->size->metrics.max_advance >> 6);
 	const int glyph_height = round_fixed26_6_to_pixel(FT_MulFix(font_face->height, font_face->size->metrics.y_scale));
 	const int glyph_left = 0;
 	const int glyph_right = glyph_left + glyph_width - 1;
@@ -74,7 +74,7 @@ Id create_font_texture(int width, int height, int pages, const Array<uint32_t>& 
 	const int sheet_width = width;//16;	
 	const int sheet_height = height;//(num_glyphs / sheet_width);
 	asserts(num_glyphs % sheet_width == 0);
-	const int pixels_per_row = (sheet_width * glyph_width);	
+	const int pixels_per_row = (sheet_width * glyph_width);
 	const int pixel_height = (sheet_height * glyph_height);
 	const int pixels_per_page = (pixels_per_row * pixel_height);
 	ArrayTemp<uint8_t> bitmap{(size_t)(pixels_per_page * pages)};
@@ -100,12 +100,17 @@ Id create_font_texture(int width, int height, int pages, const Array<uint32_t>& 
 			const auto char_code = codes[page * num_glyphs + i];
 			FT_Load_Char(font_face, char_code, FT_LOAD_RENDER);
 
-			int clipped_left = std::clamp(font_face->glyph->bitmap_left, glyph_left, glyph_right);
-			int clipped_right = std::clamp(font_face->glyph->bitmap_left + (int)font_face->glyph->bitmap.width - 1, glyph_left, glyph_right);
-			int clipped_top = std::clamp(font_face->glyph->bitmap_top, glyph_bottom, glyph_top);
-			int clipped_bottom = std::clamp(font_face->glyph->bitmap_top - (int)font_face->glyph->bitmap.rows + 1, glyph_bottom, glyph_top);
+			int clipped_left = std::max(font_face->glyph->bitmap_left, glyph_left);
+			int clipped_right = std::min(font_face->glyph->bitmap_left + (int)font_face->glyph->bitmap.width - 1, glyph_right);
+			int clipped_top = std::min(font_face->glyph->bitmap_top, glyph_top);
+			int clipped_bottom = std::max(font_face->glyph->bitmap_top - (int)font_face->glyph->bitmap.rows + 1, glyph_bottom);
 			int clipped_width = (clipped_right - clipped_left + 1);
 			int clipped_height = (clipped_top - clipped_bottom + 1);
+
+			if (clipped_width <= 0 || clipped_height <= 0)
+			{
+				continue;
+			}
 
 			int x = ((i % sheet_width) * glyph_width) + clipped_left - glyph_left;
 			int y = ((i / sheet_width) * glyph_height) + glyph_top - clipped_top;

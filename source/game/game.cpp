@@ -62,15 +62,19 @@ Game::Game()
 	ref_map_mesh = add_mesh(std::move(mesh), ref_map_shader);
 	ref_map_texture = load_texture("../../data/images/europe1054ref.png");
 
-	const auto font = create_font("../../data/fonts/DejaVuSansMono.ttf", 0, 36);
-	const int w{16}, h{16}, pages{1};
-	const int num = (w * h * pages);
-	ArrayTemp<uint32_t> codes{(size_t)num};
-	for (int i = 0; i < num; i++)
+	// const auto font = create_font("../../data/fonts/unscii-16.ttf", 0, 44);
+	// const int w{16}, h{16}, pages{1};
+	// const int num = (w * h * pages);
+	// ArrayTemp<uint32_t> codes{(size_t)num};
+	// for (int i = 0; i < num; i++)
+	// {
+	// 	codes[i] = i;
+	// }
+	// ui_texture = create_font_texture(w, h, pages, codes, font);
+	ui_texture = load_texture_array(
 	{
-		codes[i] = i;
-	}
-	ui_texture = create_font_texture(w, h, pages, codes, font);
+		"../../data/fonts/Lord_Nightmare-Fixedsys-03.png",
+	});
 
 	const auto make_dev_type = [&](const String& dev_key, const String& struct_key, const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> DevelopmentType&
 	{
@@ -114,7 +118,7 @@ Game::Game()
 		world.init(stage_allocator());
 	}
 
-	in_editor = false;
+	game_state.in_editor = false;
 }
 
 
@@ -122,6 +126,14 @@ void Game::update()
 {
 }
 
+
+struct GameModel
+{
+	const Globals& globals;
+	World& world;
+	GameState& game;
+	EditorState& editor;
+};
 
 
 static void paint_square(Map& map, Id terrain_type, const Vec2i& center, int radius, const Globals& globals)
@@ -205,7 +217,7 @@ static inline Vec2i to_tablet_coords(const Vec2i& map_coords, const TabletLayout
 	return { layout.left + map_coords.x - map_min_coords.x, layout.top + map_coords.y - map_min_coords.y };
 }
 
-static Id map_view(const Context ctx, World& world, const Globals& globals, bool in_editor, EditorState& state, int cols, int rows)
+static Id map_view(const Context ctx, World& world, const Globals& globals, bool in_editor, EditorState& state, int cols, int rows, const GameModel& model)
 {
 	EASY_FUNCTION();
 
@@ -255,6 +267,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 		draw_border(border_box, 0xff2020e0_rgba32, 0xc0_rgba32, render_buffer, elem_id);
 	}
 
+	model.game.hover_over_map = false;
 	if (_hover)
 	{
 		const Vec2i& cursor = ctx.frame->curr_input.mouse_hit.iuv;
@@ -262,6 +275,8 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 			cursor.y >= layout.top && cursor.y < (layout.top + layout.height))
 		{
 			const Vec2i map_cursor{map_x + cursor.x - layout.left, map_y + cursor.y - layout.top};
+			model.game.hover_over_map = true;
+			model.game.hover_over_map_pos = map_cursor;
 
 			if (!in_editor || (state.selected_brush == (int)Brush::selection))
 			{
@@ -470,6 +485,20 @@ void Game::present(const Context& ctx)
 	const float vp_width = tablet_height * aspect;
 	const float vp_height = tablet_height;
 
+	const int ui_rows = 64;
+	const float ui_cell_w = calc_tablet_width(1, ui_rows, tablet_height, ui_texture);
+	const float ui_cell_h = calc_tablet_height(1, 1, ui_cell_w, ui_texture);
+
+	Color fore_color{0.8f, 0.8f, 1.f, 1.f};
+
+	GameModel model
+	{
+		globals,
+		world,
+		game_state,
+		editor_state,
+	};
+
 	Viewpoint vp;
 	vp.projection = make_orthographic(vp_width / 2, aspect, 0.f, 100.f);
 
@@ -481,7 +510,7 @@ void Game::present(const Context& ctx)
 
 	if (_key_pressed(Keys::grave_accent, ModKeys::ctrl))
 	{
-		in_editor = !in_editor;
+		game_state.in_editor = !game_state.in_editor;
 	}
 
 	_children
@@ -543,10 +572,10 @@ void Game::present(const Context& ctx)
 
 		_children
 		{
-			map_view(_ctx, world, globals, in_editor, editor_state, map_cols, map_rows);
+			map_view(_ctx, world, globals, game_state.in_editor, editor_state, map_cols, map_rows, model);
 		}
 
-		if (in_editor)
+		if (game_state.in_editor)
 		{
 			// reference image
 			mesh(_ctx);
@@ -593,7 +622,7 @@ void Game::present(const Context& ctx)
 		else
 		{
 			const int ui_left_cols = 100;
-			const float ui_left_width = calc_tablet_width(ui_left_cols, tablet_rows, tablet_height, ui_texture);
+			const float ui_left_width = calc_tablet_width(ui_left_cols, ui_rows, tablet_height, ui_texture);
 
 			tablet(_ctx);
 			Pose ui_tablet_pose;
@@ -602,15 +631,13 @@ void Game::present(const Context& ctx)
 			_attr(attrs::width, ui_left_width);
 			_attr(attrs::height, tablet_height);
 			_attr(attrs::tablet_columns, ui_left_cols);
-			_attr(attrs::tablet_rows, tablet_rows);
+			_attr(attrs::tablet_rows, ui_rows);
 			_attr(attrs::texture, ui_texture);
 			_attr(attrs::shader, tablet_shader);
 			_attr(attrs::quad_shader, tablet_screen_shader);
 
 			_children
 			{
-				Color fore_color{0.8f, 0.1f, 0.5f, 1.f};
-
 				node(_ctx);
 				_attr(attrs::height, 2);
 
@@ -635,6 +662,41 @@ void Game::present(const Context& ctx)
 				_attr(attrs::text, str);
 				_attr(attrs::foreground_color, fore_color);
 			}
+		}
+
+		const int ui_full_cols = 400; // TODO: we can probably calculate this based on the widest aspect ratio we want to support, or we could add support for mutable sized tablets
+		const int ui_bottom_rows = 2;
+
+		const float ui_bottom_w = ui_cell_w * ui_full_cols;
+		const float ui_bottom_h = ui_cell_h * ui_bottom_rows;
+
+		tablet(_ctx);
+		Pose ui_bottom_pose;
+		ui_bottom_pose.pos.y = -(vp_height - ui_bottom_h) / 2;
+		_attr(attrs::transform, to_mat44(ui_bottom_pose));
+		_attr(attrs::width, ui_bottom_w);
+		_attr(attrs::height, ui_bottom_h);
+		_attr(attrs::tablet_columns, ui_full_cols);
+		_attr(attrs::tablet_rows, ui_bottom_rows);
+		_attr(attrs::texture, ui_texture);
+		_attr(attrs::shader, tablet_shader);
+		_attr(attrs::quad_shader, tablet_screen_shader);
+		_attr(attrs::background_color, (Color{0.f, 0.f, 0.f, 0.5f}));
+
+		_children
+		{
+			int visible_ui_cols = (int)std::floor(vp_width / ui_cell_w);
+			int left = std::max(0, (ui_full_cols - visible_ui_cols) / 2) + 1;
+			int top = 0;
+
+			auto map_pos_str = format_str("(%d, %d)", game_state.hover_over_map_pos.x, game_state.hover_over_map_pos.y);
+
+			node(_ctx);
+			_attr(attrs::placement, ElementPlacement::loose);
+			_attr(attrs::left, left);
+			_attr(attrs::top, top);
+			_attr(attrs::foreground_color, fore_color);
+			_attr(attrs::text, map_pos_str);
 		}
 	}
 }
