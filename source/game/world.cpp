@@ -3,10 +3,32 @@
 #include "engine/serialization.h"
 #include "engine/fileio.h"
 
-static void add_development(City& city, Map& map, Id dev_type, const Vec2i& coords, const Globals& globals)
+static constexpr inline auto total_development_level(const City& city)
 {
-	city.devs.push_back({to_type_id(dev_type), coords});	
-	map.set_structure(coords, globals.development_types.get(dev_type).structure_type);	
+	static_assert((int)DevelopmentArea::count == 2);
+	return city.development_level[0] + city.development_level[1];
+}
+
+static constexpr inline auto urban_development_level(const City& city)
+{
+	return city.development_level[(int)DevelopmentArea::urban];
+}
+
+static constexpr inline auto rural_development_level(const City& city)
+{
+	return city.development_level[(int)DevelopmentArea::rural];
+}
+
+static void add_development(City& city, Map& map, DevelopmentArea area, const Vec2i& pos, const Globals& globals)
+{
+	city.development_level[(int)area] += 1;
+	size_t total = 0;
+	for (int i = 0; i <= (int)area; i++)
+	{
+		total += city.development_level[i];
+	}
+	city.visual.development_positions.insert(total-1, pos);
+	map.set_structure(pos, globals.development_types[(int)area].structure_type);
 }
 
 static void set_wall_tiles(Map& map, const Box2i& wall_bounds, Id wall_type)
@@ -29,9 +51,10 @@ static void set_wall_tiles(Map& map, const Box2i& wall_bounds, Id wall_type)
 static void setup_walls(City& city, Map& map, Id wall_type, const Globals& globals)
 {
 	// destroy old walls if there is any
-	for (int y = city.wall_bounds.min.y; y <= city.wall_bounds.max.y; y++)
+	auto& wall_bounds = city.visual.wall_bounds;
+	for (int y = wall_bounds.min.y; y <= wall_bounds.max.y; y++)
 	{
-		for (int x = city.wall_bounds.min.x; x <= city.wall_bounds.max.x; x++)
+		for (int x = wall_bounds.min.x; x <= wall_bounds.max.x; x++)
 		{
 			Tile* tile = map.get_tile({x, y});
 			if (tile && tile->structure && globals.structure_types.get(tile->structure).category == StructureCategory::wall)
@@ -42,21 +65,19 @@ static void setup_walls(City& city, Map& map, Id wall_type, const Globals& globa
 	}
 
 	// create new walls
-	auto min = city.coords;
+	auto min = city.center;
 	auto max = min;
-	for (const auto& dev : city.devs)
+	const auto urban_level = urban_development_level(city);
+	for (int i = 0; i < urban_level; i++)
 	{
-		const auto& dev_type = globals.development_types.get(dev.type);
-		if (dev_type.area == DevelopmentArea::urban)
-		{
-			min = comp_min(min, dev.coords);
-			max = comp_max(max, dev.coords);
-		}
+		const auto& dev_pos = city.visual.development_positions[i];
+		min = comp_min(min, dev_pos);
+		max = comp_max(max, dev_pos);
 	}
 
 	min = (min - Vec2i{1, 1});
 	max = (max + Vec2i{1, 1});
-	city.wall_bounds = {min, max};
+	wall_bounds = {min, max};
 
 	// TODO: we don't want to destroy existing structures, so check and may need to relocate some of the devs
 	// for (int x = min.x; x <= max.x; x++)
@@ -70,27 +91,26 @@ static void setup_walls(City& city, Map& map, Id wall_type, const Globals& globa
 	// 	map.set_structure({min.x, y}, wall_type);
 	// 	map.set_structure({max.x, y}, wall_type);
 	// }
-	set_wall_tiles(map, city.wall_bounds, wall_type);
+	set_wall_tiles(map, wall_bounds, wall_type);
 
 	// TODO: we should fill empty spaces in the wall with a "city ground" structure type
 }
 
-Id create_city(World& world, const Vec2i& coords, const Globals& globals)
+Id create_city(World& world, const Vec2i& center, const Globals& globals)
 {
 	push_perm_allocator(world.allocator);
 	City& city = world.cities.emplace();
-	city.coords = coords;
+	city.center = center;
 	// TODO: everytime we create new city a new array is allocated
 	// ideally we could reuse it as the cities collection is essentially a pool
 	// maybe Array should provide a function optionally allocate (only if the handle has not been allocated)
 	// TODO: some terrains may be changed when city is placed for example forests will be cleared
 	// some terrain may remain e.g. the hilly area
 	// some terrain may prevent city from being placed e.g. mountainous, water etc.
-	city.devs.alloc(0, 128, world.allocator);
-	add_development(city, world.map, globals.defines.starting_dev_type, coords, globals);
-	city.wall_bounds = to_box(coords);
+	add_development(city, world.map, DevelopmentArea::urban, center, globals);
+	city.visual.wall_bounds = to_box(center);
 	setup_walls(city, world.map, globals.defines.starting_wall_type, globals);
-	world.map.update_glyphs(city.wall_bounds, globals);
+	world.map.update_glyphs(city.visual.wall_bounds, globals);
 	pop_perm_allocator();
 	return city.id;
 }
@@ -140,24 +160,22 @@ inline Vec2i to_ring_tile_pos(const Vec2i& center, int ring, size_t idx)
 	return center;
 }
 
-static Vec2i find_tile_for_dev(const City& city, const Map& map, const DevelopmentType& dev_type, const Globals& globals)
+static Vec2i find_tile_for_dev(const City& city, const Map& map, DevelopmentArea area, const Globals& globals)
 {
-	if (dev_type.area == DevelopmentArea::urban)
+	if (area == DevelopmentArea::urban)
 	{
-		auto occupied = make_temp_array<int>(0, city.devs.size() * 2);
+		const auto urban_level = urban_development_level(city);
+		auto occupied = make_temp_array<int>(0, urban_level * 2);
 		size_t max_occupied_ring = 0;
-		for (const auto& dev : city.devs)
+		for (int i = 0; i < urban_level; i++)
 		{
-			if (globals.development_types.get(dev.type).area == DevelopmentArea::urban)
+			const auto ring_idx = to_ring_index(city.visual.development_positions[i] - city.center);
+			max_occupied_ring = std::max(ring_idx, max_occupied_ring);
+			if (ring_idx >= occupied.size())
 			{
-				const auto ring_idx = to_ring_index(dev.coords - city.coords);
-				max_occupied_ring = std::max(ring_idx, max_occupied_ring);
-				if (ring_idx >= occupied.size())
-				{
-					occupied.resize(ring_idx + 1);
-				}
-				occupied[ring_idx] = 1;
+				occupied.resize(ring_idx + 1);
 			}
+			occupied[ring_idx] = 1;
 		}
 
 		const int tile_pool_size = 5;
@@ -171,7 +189,7 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, const Developme
 		{
 			if (idx >= occupied.size() || occupied[idx] == 0)
 			{
-				new_tiles.push_back(to_ring_tile_pos(city.coords, ring, idx));
+				new_tiles.push_back(to_ring_tile_pos(city.center, ring, idx));
 			}
 			if (++idx >= next_ring_idx)
 			{
@@ -188,29 +206,29 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, const Developme
 		auto scale_up_vec = [&scale_up](const Vec2i& v) -> Vec2i { return {scale_up(v.x), scale_up(v.y)}; };
 		auto scale_down_vec = [&scale_down](const Vec2i& v) -> Vec2i { return {scale_down(v.x), scale_down(v.y)}; };
 
+		const auto& wall_bounds = city.visual.wall_bounds;
 		Box2i scaled_bounds;
-		const auto r = scaled_bounds.max.x = scale_up(city.wall_bounds.max.x - city.coords.x);
-		const auto t = scaled_bounds.max.y = scale_up(city.wall_bounds.max.y - city.coords.y);
-		const auto l = scaled_bounds.min.x = scale_up(city.wall_bounds.min.x - city.coords.x);
-		const auto b = scaled_bounds.min.y = scale_up(city.wall_bounds.min.y - city.coords.y);
+		const auto r = scaled_bounds.max.x = scale_up(wall_bounds.max.x - city.center.x);
+		const auto t = scaled_bounds.max.y = scale_up(wall_bounds.max.y - city.center.y);
+		const auto l = scaled_bounds.min.x = scale_up(wall_bounds.min.x - city.center.x);
+		const auto b = scaled_bounds.min.y = scale_up(wall_bounds.min.y - city.center.y);
 
 		const int max_wall_ring = std::max({std::abs(scaled_bounds.max.x), std::abs(scaled_bounds.max.y), std::abs(scaled_bounds.min.x), std::abs(scaled_bounds.min.y)});
 		const int starting_ring = max_wall_ring + 1;
 
-		auto occupied = make_temp_array<int>(0, city.devs.size() * 2);
+		const auto urban_level = urban_development_level(city);
+		const auto rural_level = rural_development_level(city);
+		auto occupied = make_temp_array<int>(0, urban_level * 2);
 		size_t max_occupied_ring = 0;
-		for (const auto& dev : city.devs)
+		for (int i = urban_level; i < (urban_level + rural_level); i++)
 		{
-			if (globals.development_types.get(dev.type).area == DevelopmentArea::rural)
+			const auto ring_idx = to_ring_index(scale_up_vec(city.visual.development_positions[i] - city.center));
+			max_occupied_ring = std::max(ring_idx, max_occupied_ring);
+			if (ring_idx >= occupied.size())
 			{
-				const auto ring_idx = to_ring_index(scale_up_vec(dev.coords - city.coords));
-				max_occupied_ring = std::max(ring_idx, max_occupied_ring);
-				if (ring_idx >= occupied.size())
-				{
-					occupied.resize(ring_idx + 1);
-				}
-				occupied[ring_idx] += 1;
+				occupied.resize(ring_idx + 1);
 			}
+			occupied[ring_idx] += 1;
 		}
 		// TODO: road occupation
 
@@ -248,7 +266,7 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, const Developme
 		}
 
 		const auto selected_big_tile = big_tiles[rand_int(big_tiles.size())];
-		const auto center_tile = city.coords + scale_down_vec(selected_big_tile);
+		const auto center_tile = city.center + scale_down_vec(selected_big_tile);
 		auto new_tiles = make_temp_array<Vec2i>(0, 9);
 		for (int y = -1; y <= 1; y++)
 		{
@@ -267,22 +285,20 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, const Developme
 	}
 }
 
-void develop_city(World& world, Id city_id, Id dev_type, const Globals& globals)
+void develop_city(World& world, Id city_id, DevelopmentArea area, const Globals& globals)
 {
 	auto& city = world.cities.get(city_id);
 	auto& map = world.map;
-	const auto& dev = globals.development_types.get(dev_type);
-	const auto dev_coords = find_tile_for_dev(city, map, dev, globals);
-	city.devs.push_back({to_type_id(dev_type), dev_coords});
-	map.set_structure(dev_coords, dev.structure_type);
-	if (dev.area == DevelopmentArea::urban)
+	const auto dev_pos = find_tile_for_dev(city, map, area, globals);
+	add_development(city, map, area, dev_pos, globals);
+	if (area == DevelopmentArea::urban)
 	{
 		setup_walls(city, map, globals.defines.starting_wall_type, globals);
-		world.map.update_glyphs(city.wall_bounds, globals);
+		world.map.update_glyphs(city.visual.wall_bounds, globals);
 	}
 	else
 	{
-		world.map.update_glyphs(to_box(dev_coords), globals);
+		world.map.update_glyphs(to_box(dev_pos), globals);
 	}
 }
 
@@ -293,16 +309,11 @@ namespace serialization
 	template<class T>
 	static void serialize(T& op, RefType<T, City> city)
 	{
-		op.prop("pos", city.coords);
-		op.prop("wall", city.wall_bounds);
-		op.prop("devs", city.devs);
-	}
-
-	template<class T>
-	static void serialize(T& op, RefType<T, Development> dev)
-	{
-		op.value<NamedIdValue>(dev.type, op.context.globals->development_types);
-		op.value(dev.coords);
+		op.prop("center", city.center);
+		op.prop("dev_urban", city.development_level[(int)DevelopmentArea::urban]);
+		op.prop("dev_rural", city.development_level[(int)DevelopmentArea::rural]);
+		op.prop("vis_wall", city.visual.wall_bounds);
+		op.prop("vis_dev_tiles", city.visual.development_positions);
 	}
 
 	template<class T>
@@ -443,14 +454,23 @@ World load_world(const String& path, const Globals& globals, Allocator alloc)
 	serialization::serialize_world<SerializeOpType::read>(world, path, globals);
 	for (const auto& city : world.cities)
 	{
-		for (const auto& dev : city.devs)
+		const auto dev_level = total_development_level(city);
+		int start = 0;
+		for (int area = 0; area < (int)DevelopmentArea::count; area++)
 		{
-			const auto& dev_type = globals.development_types.get(dev.type);
-			world.map.set_structure(dev.coords, dev_type.structure_type);
-			world.map.update_glyphs(to_box(dev.coords), globals);
+			const auto dev_level = city.development_level[area];
+			const auto& dev_type = globals.development_types[area];
+			for (int i = start; i < start + dev_level; i++)
+			{
+				const auto dev_pos = city.visual.development_positions[i];
+				world.map.set_structure(dev_pos, dev_type.structure_type);
+				world.map.update_glyphs(to_box(dev_pos), globals);
+			}
+			start += dev_level;
 		}
-		set_wall_tiles(world.map, city.wall_bounds, globals.defines.starting_wall_type); // TODO: store wall type of the city
-		world.map.update_glyphs(city.wall_bounds, globals);
+
+		set_wall_tiles(world.map, city.visual.wall_bounds, globals.defines.starting_wall_type); // TODO: store wall type of the city
+		world.map.update_glyphs(city.visual.wall_bounds, globals);
 	}
 	pop_perm_allocator();
 	return world;

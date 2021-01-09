@@ -28,6 +28,7 @@ struct EditorState
 	Id selected_city_id{};
 
 	Vec2i map_vp;
+	Vec2 ref_image_offset;
 	Vec2 map_pose_offset;
 	bool dragging_map{};
 	Vec2i dragging_map_coord{};

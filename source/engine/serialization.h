@@ -603,5 +603,14 @@ namespace serialization
 			}
 		}
 	};
+
+	// Common serialization functions
+
+	template<class TOp, class T>
+	inline std::enable_if_t<std::is_arithmetic_v<T>>
+	serialize(TOp& op, T& v)
+	{
+		op.number(v);
+	}
 }
 

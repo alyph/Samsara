@@ -4,18 +4,19 @@
 #include "map.h"
 #include "engine/collection.h"
 
-struct Development
+struct CityVisual
 {
-	TypeId type;
-	Vec2i coords;
+	Box2i wall_bounds;
+	Array<Vec2i> development_positions{0, 128};
 };
 
 struct City
 {
 	Id id;
-	Vec2i coords;
-	Box2i wall_bounds;
-	Array<Development> devs{0, 128};
+	Vec2i center;
+	int32_t development_level[(int)DevelopmentArea::count]{};
+
+	CityVisual visual;
 };
 
 struct World
@@ -27,8 +28,8 @@ struct World
 	inline void init(Allocator alloc);
 };
 
-extern Id create_city(World& world, const Vec2i& coords, const Globals& globals);
-extern void develop_city(World& world, Id city_id, Id dev_type, const Globals& globals);
+extern Id create_city(World& world, const Vec2i& center, const Globals& globals);
+extern void develop_city(World& world, Id city_id, DevelopmentArea area, const Globals& globals);
 
 extern void save_world(const World& world, const String& path, const Globals& globals);
 extern World load_world(const String& path, const Globals& globals, Allocator alloc);

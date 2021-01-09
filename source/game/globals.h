@@ -26,7 +26,6 @@ struct TerrainType
 
 struct Defines
 {
-	Id starting_dev_type;
 	Id starting_wall_type;
 };
 
@@ -52,11 +51,11 @@ enum class DevelopmentArea: uint8_t
 {
 	urban,
 	rural,
+	count,
 };
 
 struct DevelopmentType
 {
-	Id id{};
 	String name;
 	DevelopmentArea area;
 	Id structure_type;
@@ -67,6 +66,6 @@ struct Globals
 	Defines defines;
 	Collection<TerrainType> terrain_types;
 	Collection<StructureType> structure_types;
-	Collection<DevelopmentType> development_types;
+	DevelopmentType development_types[(int)DevelopmentArea::count]{};
 };
 

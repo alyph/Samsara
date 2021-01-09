@@ -78,10 +78,10 @@ Game::Game()
 		"../../data/fonts/Lord_Nightmare-Fixedsys-03.png",
 	});
 
-	const auto make_dev_type = [&](const String& dev_key, const String& struct_key, const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> DevelopmentType&
+	const auto make_dev_type = [&](const String& struct_key, const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> DevelopmentType&
 	{
-		auto& dev = globals.development_types.set(dev_key, {0, name, area, 0});
-		auto& structure = globals.structure_types.set(struct_key, {0, name, glyph, color, StructureCategory::dev, dev.id});
+		auto& dev = globals.development_types[(int)area] = {name, area, 0};
+		auto& structure = globals.structure_types.set(struct_key, {0, name, glyph, color, StructureCategory::dev, (Id)area});
 		dev.structure_type = structure.id;
 		return dev;
 	};
@@ -97,19 +97,18 @@ Game::Game()
 	globals.structure_types.alloc(1024, alloc);
 	globals.structure_types.set(0, "none", {0, "none", 0, 0_rgb32, StructureCategory::none, 0});
 
-	globals.development_types.alloc(512, alloc);
-	const auto& governing_dev = make_dev_type("gov", "d_gov", "governing", DevelopmentArea::urban, 0x007f, 0xe000e0_rgb32);
-	make_dev_type("comm", "d_comm", "commercial", DevelopmentArea::urban, 0x007f, 0xf0f000_rgb32);
-	make_dev_type("ind", "d_ind", "industrial", DevelopmentArea::urban, 0x007f, 0x0030f0_rgb32);
-	make_dev_type("farm", "d_farm", "farming", DevelopmentArea::rural, 0x007f, 0x40ef20_rgb32);
+	make_dev_type("dev_urban", "urban", DevelopmentArea::urban, 0x007f, 0xd0c0f0_rgb32);
+	make_dev_type("dev_rural", "rural", DevelopmentArea::rural, 0x007f, 0x50e020_rgb32);
 
 	const auto& wall_struct = globals.structure_types.set("wall", {0, "wall", 0x0320, 0xafafaf_rgb32, StructureCategory::wall, 0});
 
-	globals.defines.starting_dev_type = governing_dev.id;
 	globals.defines.starting_wall_type = wall_struct.id;
 
 	editor_state.selected_brush = 1;
 	editor_state.map_vp = initial_map_vp;
+	// TODO: this is the legacy problem, we made the map based on this initial ref image offset
+	// later we should have ways to shift map as well as the ref images
+	editor_state.ref_image_offset = { (map_chunk_size / 2), -(map_chunk_size / 2) };
 	
 	if (filesystem::exists(main_scenario_dir))
 	{
@@ -263,8 +262,8 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 		const auto& city = world.cities.get(state.selected_city_id);
 		Box2i border_box
 		{
-			to_tablet_coords(city.wall_bounds.min - Vec2i{1, 1}, layout, map_min),
-			to_tablet_coords(city.wall_bounds.max + Vec2i{1, 1}, layout, map_min),
+			to_tablet_coords(city.visual.wall_bounds.min - Vec2i{1, 1}, layout, map_min),
+			to_tablet_coords(city.visual.wall_bounds.max + Vec2i{1, 1}, layout, map_min),
 		};
 		draw_border(border_box, 0xff2020e0_rgba32, 0xc0_rgba32, render_buffer, elem_id);
 	}
@@ -286,7 +285,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 				{
 					for (const auto& city : world.cities)
 					{
-						if (encompasses(city.wall_bounds, map_cursor))
+						if (encompasses(city.visual.wall_bounds, map_cursor))
 						{
 							state.selected_city_id = city.id;
 							break;
@@ -457,18 +456,18 @@ static void brush_size_palette(const Context ctx, EditorState& state, int& row)
 static void city_dev_palette(const Context ctx, Id sel_city, const Globals& globals, World& world, int& row)
 {
 	int begin_row = row;
-	int sel_dev_type = 0;
+	int sel_dev_type = -1;
 	int idx = 0;
 	for (const auto& dev_type : globals.development_types)
 	{
 		const StructureType& struct_type = globals.structure_types.get(dev_type.structure_type);
-		row = palette_button(_ctx_id(idx), idx, begin_row, struct_type.glyph, struct_type.color, (int)dev_type.id, sel_dev_type);
+		row = palette_button(_ctx_id(idx), idx, begin_row, struct_type.glyph, struct_type.color, (int)dev_type.area, sel_dev_type);
 		idx++;
 	}
 
-	if (sel_dev_type > 0)
+	if (sel_dev_type >= 0)
 	{
-		develop_city(world, sel_city, sel_dev_type, globals);
+		develop_city(world, sel_city, (DevelopmentArea)sel_dev_type, globals);
 	}
 }
 
@@ -582,9 +581,9 @@ void Game::present(const Context& ctx)
 			// reference image
 			mesh(_ctx);
 			Pose mesh_pose;
-			auto vp_offset = to_vec2(editor_state.map_vp - initial_map_vp);
+			auto vp_offset = to_vec2(editor_state.map_vp);
 			vp_offset.y = -vp_offset.y;
-			mesh_pose.pos = to_vec3(editor_state.map_pose_offset - vp_offset, 0.5);
+			mesh_pose.pos = to_vec3(editor_state.map_pose_offset - vp_offset + editor_state.ref_image_offset, 0.5);
 			_attr(attrs::mesh_id, ref_map_mesh);
 			_attr(attrs::transform, map_scale_mat * to_mat44(mesh_pose));
 			_attr(attrs::texture, ref_map_texture);
