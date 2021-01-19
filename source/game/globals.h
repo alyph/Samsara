@@ -26,15 +26,20 @@ struct TerrainType
 
 struct Defines
 {
-	Id starting_wall_type;
+	Id starting_wall_type{};
+	Id urban_vacancy_type{};
 };
 
-enum class StructureCategory: uint8_t
+enum class StructureFlags: uint32_t
 {
-	none,
-	dev,
-	wall,
-	road,
+	none		= 0x00000000,
+	dev 		= 0x00000001,
+	wall 		= 0x00000002,
+	road 		= 0x00000004,
+	urban 		= 0x00000010,
+	rural 		= 0x00000020,
+	vacancy 	= 0x00000040,
+
 };
 
 struct StructureType
@@ -43,7 +48,7 @@ struct StructureType
 	String name;
 	uint16_t glyph;
 	Color32 color;
-	StructureCategory category;
+	StructureFlags flags;
 	Id entity_type;
 };
 

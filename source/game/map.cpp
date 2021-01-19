@@ -1,5 +1,12 @@
 #include "map.h"
 
+static inline constexpr uint8_t surrounding_to_adjacent_maks(uint8_t surrounding_mask)
+{
+	return ((surrounding_mask & 0x01)
+		| ((surrounding_mask & 0x04) >> 1)
+		| ((surrounding_mask & 0x10) >> 2)
+		| ((surrounding_mask & 0x40) >> 3)) & 0x0f;
+}
 
 // mask encodes 1 for the directions that are not water
 // total 8 bits for 8 directions, ordered as follows:
@@ -39,6 +46,45 @@ struct WaterTileMask
 };
 static const constexpr WaterTileMask water_tile_mask{};
 
+// mask encodes 1 for the directions that are urban tile
+// total 8 bits for 8 directions, ordered as follows:
+//     7 0 1    | -> +X
+//     6 - 2    V 
+//     5 4 3    +Y 
+//
+// code encodes 1 for neighbors that need wall connections
+// total 4 bits for 4 neighbors, ordered as follows:
+//       0      | -> +X
+//     3 - 1    V 
+//       2      +Y 
+struct WallTileMask
+{
+	uint8_t codes[256];
+	constexpr WallTileMask(): codes{}
+	{
+		for (unsigned int i = 0; i < 256; i++)
+		{
+			uint8_t code = 0;
+			uint8_t mask = (uint8_t)i;
+			if 		(mask == 0x02) { code = (0x01 | 0x02); }
+			else if (mask == 0x08) { code = (0x02 | 0x04); }
+			else if (mask == 0x20) { code = (0x04 | 0x08); }
+			else if (mask == 0x80) { code = (0x08 | 0x01); }
+			else
+			{
+				mask = surrounding_to_adjacent_maks(mask);
+				if (mask == 0) { code = 0; }
+				else if (mask == 0x01) { code = (0x08 | 0x02); }
+				else if (mask == 0x02) { code = (0x01 | 0x04); }
+				else if (mask == 0x04) { code = (0x02 | 0x08); }
+				else if (mask == 0x08) { code = (0x04 | 0x01); }
+				else { code = (~mask & 0x0f); }
+			}
+			codes[i] = code;
+		}
+	}
+};
+static const constexpr WallTileMask wall_tile_mask{};
 
 void Map::expand_to_fit_chunk(const Vec2i& coords)
 {
@@ -143,9 +189,10 @@ void Map::update_glyphs(const Box2i dirty_tiles, const Globals& globals)
 				glyph.code = struct_type.glyph;
 				glyph.color = struct_type.color;
 				// TODO: probably more than just wall
-				if (struct_type.category == StructureCategory::wall)
+				if (has_all(struct_type.flags, StructureFlags::wall))
 				{
-					glyph.code += calc_neighbor_matching_structure_mask(*this, tile.structure, tile_coords);
+					const auto mask = calc_surrounding_structure_mask(*this, tile_coords, StructureFlags::urban, globals);
+					glyph.code += wall_tile_mask.codes[mask];
 				}
 			}
 			else
@@ -164,33 +211,33 @@ void Map::update_glyphs(const Box2i dirty_tiles, const Globals& globals)
 				}
 			}
 
-			if (glyph.code != default_terrain.glyph)
+			const bool put_default_glyph = (glyph.code == default_terrain.glyph);
+			if (!tid)
 			{
-				if (!tid)
-				{
-					ensure_tiles_for_chunk(tile_to_chunk_coords(tile_coords));
-					tid = tile_id(tile_coords);
-					asserts(tid);
-				}
-
-				const auto tile_idx = id_to_index(tid);
-				if (tile_idx >= ground_glyphs.size())
-				{
-					const auto old_size = ground_glyphs.size();
-					ground_glyphs.resize((tile_idx / map_chunk_tile_count + 1) * map_chunk_tile_count);
-					asserts(ground_glyphs.size() <= tiles.size());
-
-					// init all glyphs to the default terrain glyph
-					TileGlyph default_glyph;
-					default_glyph.code = default_terrain.glyph;
-					default_glyph.color = default_terrain.color_a;
-					for (size_t i = old_size; i < ground_glyphs.size(); i++)
-					{
-						ground_glyphs[i] = default_glyph;
-					}
-				}
-				ground_glyphs[tile_idx] = glyph;
+				if (put_default_glyph) continue;
+				ensure_tiles_for_chunk(tile_to_chunk_coords(tile_coords));
+				tid = tile_id(tile_coords);
+				asserts(tid);
 			}
+
+			const auto tile_idx = id_to_index(tid);
+			if (tile_idx >= ground_glyphs.size())
+			{
+				if (put_default_glyph) continue;
+				const auto old_size = ground_glyphs.size();
+				ground_glyphs.resize((tile_idx / map_chunk_tile_count + 1) * map_chunk_tile_count);
+				asserts(ground_glyphs.size() <= tiles.size());
+
+				// init all glyphs to the default terrain glyph
+				TileGlyph default_glyph;
+				default_glyph.code = default_terrain.glyph;
+				default_glyph.color = default_terrain.color_a;
+				for (size_t i = old_size; i < ground_glyphs.size(); i++)
+				{
+					ground_glyphs[i] = default_glyph;
+				}
+			}
+			ground_glyphs[tile_idx] = glyph;
 		}
 	}
 }

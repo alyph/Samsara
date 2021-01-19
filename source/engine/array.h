@@ -231,6 +231,9 @@ public:
 template<typename T>
 inline Array<T> make_temp_array(size_t size, size_t capacity);
 
+template<typename T>
+inline Array<T> make_temp_array(size_t size) { return make_temp_array<T>(size, size); }
+
 // TODO: consider renaming this
 // essentially this is a trivially copyable array that does not deep copy each element when copied
 template<typename T>

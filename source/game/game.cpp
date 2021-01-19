@@ -81,7 +81,8 @@ Game::Game()
 	const auto make_dev_type = [&](const String& struct_key, const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> DevelopmentType&
 	{
 		auto& dev = globals.development_types[(int)area] = {name, area, 0};
-		auto& structure = globals.structure_types.set(struct_key, {0, name, glyph, color, StructureCategory::dev, (Id)area});
+		const auto struct_flags = StructureFlags::dev | (area == DevelopmentArea::urban ? StructureFlags::urban : StructureFlags::none);
+		auto& structure = globals.structure_types.set(struct_key, {0, name, glyph, color, struct_flags, (Id)area});
 		dev.structure_type = structure.id;
 		return dev;
 	};
@@ -95,16 +96,17 @@ Game::Game()
 	globals.terrain_types.set("hill", {0, "hill", '^', 0x0218, 0x606070_rgb32, 0x606070_rgb32});
 
 	globals.structure_types.alloc(1024, alloc);
-	globals.structure_types.set(0, "none", {0, "none", 0, 0_rgb32, StructureCategory::none, 0});
+	globals.structure_types.set(0, "none", {0, "none", 0, 0_rgb32, StructureFlags::none, 0});
 
-	make_dev_type("dev_urban", "urban", DevelopmentArea::urban, 0x007f, 0xd0c0f0_rgb32);
+	make_dev_type("dev_urban", "urban", DevelopmentArea::urban, 0x007f, 0xa04080_rgb32);
 	make_dev_type("dev_rural", "rural", DevelopmentArea::rural, 0x007f, 0x50e020_rgb32);
 
-	const auto& wall_struct = globals.structure_types.set("wall", {0, "wall", 0x0320, 0xafafaf_rgb32, StructureCategory::wall, 0});
+	const auto& wall_struct = globals.structure_types.set("wall", {0, "wall", 0x0320, 0xafafaf_rgb32, StructureFlags::wall, 0});
+	const auto& urban_vacancy = globals.structure_types.set("vacancy", {0, "vacancy", 0x00f9, 0x602040_rgb32, StructureFlags::urban|StructureFlags::vacancy, 0});
 
 	globals.defines.starting_wall_type = wall_struct.id;
+	globals.defines.urban_vacancy_type = urban_vacancy.id;
 
-	editor_state.selected_brush = 1;
 	editor_state.map_vp = initial_map_vp;
 	// TODO: this is the legacy problem, we made the map based on this initial ref image offset
 	// later we should have ways to shift map as well as the ref images
@@ -119,7 +121,8 @@ Game::Game()
 		world.init(stage_allocator());
 	}
 
-	game_state.in_editor = false;
+	game_state.in_editor = true;
+	editor_state.selected_brush = (int)Brush::selection;
 }
 
 
@@ -257,13 +260,39 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 		}
 	}
 
+	const int cell_x_min = tile_to_cell(map_x);
+	const int cell_x_max = tile_to_cell(map_x + layout.width - 1);
+	const int cell_y_min = tile_to_cell(map_y);
+	const int cell_y_max = tile_to_cell(map_y + layout.height - 1);
+
+	for (int cell_y = cell_y_min; cell_y <= cell_y_max; cell_y++)
+	{
+		const int shift = (cell_y % 2 == 0) ? 0 : 1;
+		const int cell_x_begin = cell_x_min / 2 * 2 + shift;
+		const int cell_x_end = cell_x_max / 2 * 2 + shift;
+		const int x_begin = cell_x_begin * map_cell_size - map_x + layout.left;
+		const int x_end = cell_x_end * map_cell_size - map_x + layout.left;
+		const int y = cell_y * map_cell_size - map_y + layout.top;
+		for (int x = x_begin; x <= x_end; x += (map_cell_size * 2))
+		{
+			GlyphData glyph;
+			glyph.code = 0;
+			glyph.color1 = 0xffffff10_rgba32;
+			glyph.coords = { x, y };
+			glyph.size = {map_cell_size, map_cell_size};
+			render_buffer.push_glyph(elem_id, glyph);
+		}
+	}
+
 	if (state.selected_city_id)
 	{
 		const auto& city = world.cities.get(state.selected_city_id);
+		auto bounds = city.urban_bounds;
+		pad_box(bounds, 1);
 		Box2i border_box
 		{
-			to_tablet_coords(city.visual.wall_bounds.min - Vec2i{1, 1}, layout, map_min),
-			to_tablet_coords(city.visual.wall_bounds.max + Vec2i{1, 1}, layout, map_min),
+			to_tablet_coords(bounds.min, layout, map_min),
+			to_tablet_coords(bounds.max, layout, map_min),
 		};
 		draw_border(border_box, 0xff2020e0_rgba32, 0xc0_rgba32, render_buffer, elem_id);
 	}
@@ -285,7 +314,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 				{
 					for (const auto& city : world.cities)
 					{
-						if (encompasses(city.visual.wall_bounds, map_cursor))
+						if (encompasses(city.urban_bounds, map_cursor))
 						{
 							state.selected_city_id = city.id;
 							break;
@@ -297,6 +326,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 			{
 				uint16_t code{};
 				Color32 color{};
+				Vec2i center{cursor.x, cursor.y};
 				int r{};
 
 				int terrain_brush = (state.selected_brush - (int)Brush::max);
@@ -326,11 +356,17 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 				{
 					// city
 					code = city_brush_glyph;
-					color = city_brush_color;
-
-					if (_pressed)
+					if (valid_urban_tile(map, map_cursor, globals))
 					{
-						create_city(world, map_cursor, globals);
+						color = city_brush_color;
+						if (_pressed)
+						{
+							create_city(world, map_cursor, globals);
+						}
+					}
+					else
+					{
+						color = 0xff0000_rgb32;
 					}
 				}
 
@@ -339,7 +375,7 @@ static Id map_view(const Context ctx, World& world, const Globals& globals, bool
 				glyph.code = code;
 				glyph.color2 = color;
 				glyph.color1 = 0x303030_rgb32;
-				glyph.coords = { cursor.x - r, cursor.y - r };
+				glyph.coords = { center.x - r, center.y - r };
 				glyph.size = { d, d };
 				render_buffer.push_glyph(elem_id, glyph);
 			}

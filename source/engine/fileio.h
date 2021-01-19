@@ -579,6 +579,7 @@ inline size_t FileTokenReadStream::cursor() const
 inline void FileTokenReadStream::seek(size_t pos)
 {
 	asserts(pos <= buffer.size()); // allow to position to the eof (== buffer.size())
+	// TODO: we should only clear if we seek to the previous location, if we seek to future location then the token info can self validate
 	next_token = NextTokenInfo{}; // random repositioning, so the next token must be invalidated
 	current = pos;
 }

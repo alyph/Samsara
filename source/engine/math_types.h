@@ -118,16 +118,23 @@ inline Vec4 operator*(const Vec4& v, float s);
 // Vec2i
 inline Vec2i operator+(const Vec2i& v0, const Vec2i& v1);
 inline Vec2i operator-(const Vec2i& v0, const Vec2i& v1);
+inline Vec2i operator*(const Vec2i& v, int32_t s);
+inline Vec2i operator/(const Vec2i& v, int32_t d);
 inline bool operator==(const Vec2i& v0, const Vec2i& v1);
 inline bool operator!=(const Vec2i& v0, const Vec2i& v1);
 inline Vec2i comp_min(const Vec2i& v0, const Vec2i& v1);
 inline Vec2i comp_max(const Vec2i& v0, const Vec2i& v1);
+inline Vec2i comp_clamp(const Vec2i& v, const Vec2i& min, const Vec2i& max);
+inline int32_t manhattan_length(const Vec2i& v);
 inline Vec2 to_vec2(const Vec2i& v);
 
 // Box2i
 inline Box2i to_box(const Vec2i& v) { return {v, v}; }
 inline Box2i make_box_wh(int32_t x, int32_t y, int32_t w, int32_t h) { return { {x, y}, {x + w - 1, y + h - 1} }; }
+inline Vec2i box_size(const Box2i& box) { return (box.max - box.min + Vec2i{1, 1}); }
 inline bool encompasses(const Box2i& box, const Vec2i& v);
+inline void expand_box(Box2i& box, Vec2i point);
+inline void pad_box(Box2i& box, int32_t padding);
 
 // Mat33
 inline Quat to_quat(const Mat33& m);
@@ -303,6 +310,16 @@ inline Vec2i operator-(const Vec2i& v0, const Vec2i& v1)
 	return { v0.x - v1.x, v0.y - v1.y };
 }
 
+inline Vec2i operator*(const Vec2i& v, int32_t s)
+{
+	return { v.x * s, v.y * s };
+}
+
+inline Vec2i operator/(const Vec2i& v, int32_t d)
+{
+	return { v.x / d, v.y / d };
+}
+
 inline bool operator==(const Vec2i& v0, const Vec2i& v1)
 {
 	return (v0.x == v1.x) && (v0.y == v1.y);
@@ -323,6 +340,16 @@ inline Vec2i comp_max(const Vec2i& v0, const Vec2i& v1)
 	return { std::max(v0.x, v1.x), std::max(v0.y, v1.y) };
 }
 
+inline Vec2i comp_clamp(const Vec2i& v, const Vec2i& min, const Vec2i& max)
+{
+	return comp_min(comp_max(v, min), max);
+}
+
+inline int32_t manhattan_length(const Vec2i& v)
+{
+	return std::abs(v.x) + std::abs(v.y);
+}
+
 inline Vec2 to_vec2(const Vec2i& v)
 {
 	return Vec2{ static_cast<float>(v.x), static_cast<float>(v.y) };
@@ -333,6 +360,20 @@ inline Vec2 to_vec2(const Vec2i& v)
 inline bool encompasses(const Box2i& box, const Vec2i& v)
 {
 	return (v.x >= box.min.x && v.x <= box.max.x && v.y >= box.min.y && v.y <= box.max.y);
+}
+
+inline void expand_box(Box2i& box, Vec2i point)
+{
+	box.min = comp_min(box.min, point);
+	box.max = comp_max(box.max, point);
+}
+
+inline void pad_box(Box2i& box, int32_t padding)
+{
+	box.min.x -= padding;
+	box.min.y -= padding;
+	box.max.x += padding;
+	box.max.y += padding;
 }
 
 // Mat33 Impl

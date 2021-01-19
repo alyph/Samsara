@@ -194,8 +194,8 @@ std::unique_ptr<Window> Window::create(const WindowCreationParams& params)
 		return nullptr;
 	}
 
-	// vsync on
-	wglSwapIntervalEXT(1);
+	// vsync off
+	wglSwapIntervalEXT(0);
 
 	ShowWindow(wnd, SW_SHOW);
 

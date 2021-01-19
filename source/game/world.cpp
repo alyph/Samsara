@@ -2,6 +2,26 @@
 #include "engine/random.h"
 #include "engine/serialization.h"
 #include "engine/fileio.h"
+#include <array>
+
+struct UrbanMask
+{
+	uint8_t should_fill[256];
+	constexpr UrbanMask(): should_fill{}
+	{
+		constexpr const uint8_t corners = (0x02 | 0x08 | 0x20 | 0x80);
+		for (unsigned int i = 0; i < 256; i++)
+		{
+			uint8_t mask = (uint8_t)i;
+			if (mask & 0x01) { mask |= (0x80 | 0x02); }
+			if (mask & 0x04) { mask |= (0x02 | 0x08); }
+			if (mask & 0x10) { mask |= (0x08 | 0x20); }
+			if (mask & 0x40) { mask |= (0x20 | 0x80); }			
+			should_fill[i] = (mask & corners) == corners ? 1 : 0;
+		}
+	}
+};
+static const constexpr UrbanMask urban_mask{};
 
 static constexpr inline auto total_development_level(const City& city)
 {
@@ -19,6 +39,31 @@ static constexpr inline auto rural_development_level(const City& city)
 	return city.development_level[(int)DevelopmentArea::rural];
 }
 
+static inline bool is_urban_tile(const Map& map, Vec2i tile_pos, const Globals& globals)
+{
+	const auto& tile = map.get_tile_or_empty(tile_pos);
+	return (tile.structure && has_all(globals.structure_types.get(tile.structure).flags, StructureFlags::urban));
+}
+
+static inline Box2i urban_tile_bounds(City& city, const Map& map, const Globals& globals)
+{
+	auto bounds = to_box(city.center);
+	for (int i = 0; i < city.num_urban_cells; i++)
+	{
+		const auto tile_top_left = cell_to_tile_coords(city.occupied_cells[i]);
+		for (int ti = 0; ti < map_cell_size * map_cell_size; ti++)
+		{
+			const auto tile_pos = tile_top_left + Vec2i{ti % map_cell_size, ti / map_cell_size};
+			if (is_urban_tile(map, tile_pos, globals))
+			{
+				expand_box(bounds, tile_pos);
+			}
+		}
+	}
+	pad_box(bounds, 1); // pad 1 to include walls
+	return bounds;
+}
+
 static void add_development(City& city, Map& map, DevelopmentArea area, const Vec2i& pos, const Globals& globals)
 {
 	city.development_level[(int)area] += 1;
@@ -27,10 +72,11 @@ static void add_development(City& city, Map& map, DevelopmentArea area, const Ve
 	{
 		total += city.development_level[i];
 	}
-	city.visual.development_positions.insert(total-1, pos);
+	city.dev_tiles.insert(total-1, pos);
 	map.set_structure(pos, globals.development_types[(int)area].structure_type);
 }
 
+#if 0
 static void set_wall_tiles(Map& map, const Box2i& wall_bounds, Id wall_type)
 {
 	const auto& min = wall_bounds.min;
@@ -57,7 +103,7 @@ static void setup_walls(City& city, Map& map, Id wall_type, const Globals& globa
 		for (int x = wall_bounds.min.x; x <= wall_bounds.max.x; x++)
 		{
 			Tile* tile = map.get_tile({x, y});
-			if (tile && tile->structure && globals.structure_types.get(tile->structure).category == StructureCategory::wall)
+			if (tile && tile->structure && has_all(globals.structure_types.get(tile->structure).flags, StructureFlags::wall))
 			{
 				tile->structure = 0;
 			}
@@ -95,12 +141,58 @@ static void setup_walls(City& city, Map& map, Id wall_type, const Globals& globa
 
 	// TODO: we should fill empty spaces in the wall with a "city ground" structure type
 }
+#endif
+
+static void setup_walls(City& city, Map& map, const Globals& globals)
+{
+	for (int i = 0; i < city.num_urban_cells; i++)
+	{
+		const auto cell_pos = city.occupied_cells[i];
+		const auto top_left_tile = cell_to_tile_coords(cell_pos);
+		Box2i bounds;
+		bool has_walls = false;
+		for (int y = -1; y < map_cell_size + 2; y++)
+		{
+			for (int x = -1; x < map_cell_size + 2; x++)
+			{
+				const auto tile_pos = top_left_tile + Vec2i{x, y};
+				if (!is_urban_tile(map, tile_pos, globals))
+				{
+					for (const auto offset : surrounding_offsets)
+					{
+						if (is_urban_tile(map, tile_pos + offset, globals))
+						{
+							map.set_structure(tile_pos, globals.defines.starting_wall_type); // TODO: use city wall type
+							if (has_walls)
+							{
+								expand_box(bounds, tile_pos);
+							}
+							else
+							{
+								bounds = to_box(tile_pos);
+								has_walls = true;
+							}
+							break;
+						}
+					}
+
+				}
+			}
+		}
+		if (has_walls)
+		{
+			map.update_glyphs(bounds, globals);
+		}
+	}
+}
 
 Id create_city(World& world, const Vec2i& center, const Globals& globals)
 {
 	push_perm_allocator(world.allocator);
 	City& city = world.cities.emplace();
 	city.center = center;
+	city.num_urban_cells = 1;
+	city.occupied_cells.push_back(tile_to_cell_coords(center));
 	// TODO: everytime we create new city a new array is allocated
 	// ideally we could reuse it as the cities collection is essentially a pool
 	// maybe Array should provide a function optionally allocate (only if the handle has not been allocated)
@@ -108,9 +200,8 @@ Id create_city(World& world, const Vec2i& center, const Globals& globals)
 	// some terrain may remain e.g. the hilly area
 	// some terrain may prevent city from being placed e.g. mountainous, water etc.
 	add_development(city, world.map, DevelopmentArea::urban, center, globals);
-	city.visual.wall_bounds = to_box(center);
-	setup_walls(city, world.map, globals.defines.starting_wall_type, globals);
-	world.map.update_glyphs(city.visual.wall_bounds, globals);
+	setup_walls(city, world.map, globals);
+	city.urban_bounds = urban_tile_bounds(city, world.map, globals);
 	pop_perm_allocator();
 	return city.id;
 }
@@ -162,126 +253,332 @@ inline Vec2i to_ring_tile_pos(const Vec2i& center, int ring, size_t idx)
 
 static Vec2i find_tile_for_dev(const City& city, const Map& map, DevelopmentArea area, const Globals& globals)
 {
-	if (area == DevelopmentArea::urban)
+	auto scale_up = [](int x) { return (x >= 0 ? (x + 1) : (x - 1)) / 3; };
+	auto scale_down = [](int x) { return x * 3; };
+	auto scale_up_vec = [&scale_up](const Vec2i& v) -> Vec2i { return {scale_up(v.x), scale_up(v.y)}; };
+	auto scale_down_vec = [&scale_down](const Vec2i& v) -> Vec2i { return {scale_down(v.x), scale_down(v.y)}; };
+
+	const auto& wall_bounds = city.urban_bounds;
+	Box2i scaled_bounds;
+	const auto r = scaled_bounds.max.x = scale_up(wall_bounds.max.x - city.center.x);
+	const auto t = scaled_bounds.max.y = scale_up(wall_bounds.max.y - city.center.y);
+	const auto l = scaled_bounds.min.x = scale_up(wall_bounds.min.x - city.center.x);
+	const auto b = scaled_bounds.min.y = scale_up(wall_bounds.min.y - city.center.y);
+
+	const int max_wall_ring = std::max({std::abs(scaled_bounds.max.x), std::abs(scaled_bounds.max.y), std::abs(scaled_bounds.min.x), std::abs(scaled_bounds.min.y)});
+	const int starting_ring = max_wall_ring + 1;
+
+	const auto urban_level = urban_development_level(city);
+	const auto rural_level = rural_development_level(city);
+	auto occupied = make_temp_array<int>(0, urban_level * 2);
+	size_t max_occupied_ring = 0;
+	for (int i = urban_level; i < (urban_level + rural_level); i++)
 	{
-		const auto urban_level = urban_development_level(city);
-		auto occupied = make_temp_array<int>(0, urban_level * 2);
-		size_t max_occupied_ring = 0;
-		for (int i = 0; i < urban_level; i++)
+		const auto ring_idx = to_ring_index(scale_up_vec(city.dev_tiles[i] - city.center));
+		max_occupied_ring = std::max(ring_idx, max_occupied_ring);
+		if (ring_idx >= occupied.size())
 		{
-			const auto ring_idx = to_ring_index(city.visual.development_positions[i] - city.center);
-			max_occupied_ring = std::max(ring_idx, max_occupied_ring);
-			if (ring_idx >= occupied.size())
+			occupied.resize(ring_idx + 1);
+		}
+		occupied[ring_idx] += 1;
+	}
+	// TODO: road occupation
+
+	const int tile_pool_size = 5;
+	auto big_tiles = make_temp_array<Vec2i>(0, (max_occupied_ring + 1) *  24);
+
+	int ring = starting_ring;
+	size_t idx = ring_starting_index(ring);
+	size_t next_ring_idx = ring_starting_index(ring+1);
+	int added_ideal_big_tiles = 0;
+
+	while (true)
+	{
+		int num_occupied = idx >= occupied.size() ? 0 : occupied[idx];
+		// TODO: check to make sure it has enough usable terrains and other structures
+		if (num_occupied <= 2)
+		{
+			const auto big_tile_rel_pos = to_ring_tile_pos({0, 0}, ring, idx);
+			int weight = 1;
+			if (num_occupied <= 1)
 			{
-				occupied.resize(ring_idx + 1);
+				weight = 3;
+				added_ideal_big_tiles++;
 			}
-			occupied[ring_idx] = 1;
+			for (int i = 0; i < weight; i++)
+			{
+				big_tiles.push_back(big_tile_rel_pos);
+			}
+		}
+		if (++idx >= next_ring_idx)
+		{
+			next_ring_idx = ring_starting_index(++ring + 1);
+			if (added_ideal_big_tiles >= tile_pool_size) break;
+		}
+	}
+
+	const auto selected_big_tile = big_tiles[rand_int(big_tiles.size())];
+	const auto center_tile = city.center + scale_down_vec(selected_big_tile);
+	auto new_tiles = make_temp_array<Vec2i>(0, 9);
+	for (int y = -1; y <= 1; y++)
+	{
+		for (int x = -1; x <= 1; x++)
+		{
+			const auto tile_pos = center_tile + Vec2i{x, y};
+			const auto tile = map.get_tile(tile_pos);
+			const auto flags = tile ? globals.structure_types.get(tile->structure).flags : StructureFlags::none;
+			if (!has_any(flags, StructureFlags::dev | StructureFlags::wall)) // TODO: road
+			{
+				new_tiles.push_back(tile_pos);
+			}
+		}
+	}
+	return new_tiles[rand_int(new_tiles.size())];
+}
+
+static inline bool expandable_urban_tile(const Map& map, Vec2i tile_pos, const Globals& globals)
+{
+	bool adjacent_to_urban_tiles = false;
+	for (const auto offset : adjacent_offsets)
+	{
+		if (is_urban_tile(map, tile_pos + offset, globals))
+		{
+			adjacent_to_urban_tiles = true;
+			break;
+		}
+	}
+	return adjacent_to_urban_tiles && valid_urban_tile(map, tile_pos, globals) && !is_urban_tile(map, tile_pos, globals);
+}
+
+static bool expand_urban_vacant_tile_in_cell(City& city, Map& map, Vec2i cell_pos, const Globals& globals, Array<Vec2i>& append_new_vacant_tiles)
+{
+	auto expand_tiles = make_temp_array<Vec2i>(0, map_cell_size);
+	const auto tile_top_left = cell_to_tile_coords(cell_pos);
+	for (int ti = 0; ti < map_cell_size * map_cell_size; ti++)
+	{
+		const auto tile_pos = tile_top_left + Vec2i{ti % map_cell_size, ti / map_cell_size};
+		if (expandable_urban_tile(map, tile_pos, globals))
+		{
+			expand_tiles.push_back(tile_pos);
+		}
+	}
+
+	if (expand_tiles.empty())
+	{
+		return false;
+	}
+
+	const auto new_tile = expand_tiles[rand_int(expand_tiles.size())];
+	map.set_structure(new_tile, globals.defines.urban_vacancy_type);
+	append_new_vacant_tiles.push_back(new_tile);
+	for (const auto offset : surrounding_offsets)
+	{
+		const auto other_tile_pos = new_tile + offset;
+		if (!is_urban_tile(map, other_tile_pos, globals))
+		{
+			const auto& other_tile = map.get_tile_or_empty(other_tile_pos);
+			const auto flags = globals.structure_types.get(other_tile.structure).flags;
+
+			// check if should fill vacancy
+			const auto mask = calc_surrounding_structure_mask(map, other_tile_pos, StructureFlags::urban, globals);
+			if (urban_mask.should_fill[mask])
+			{
+				map.set_structure(other_tile_pos, globals.defines.urban_vacancy_type);
+				append_new_vacant_tiles.push_back(other_tile_pos);
+			}
+			else
+			{
+				// otherwise is wall position (since it's surrounding an urban tile)
+				map.set_structure(other_tile_pos, globals.defines.starting_wall_type); // TODO: use city's wall type				
+			}
+		}
+	}
+	map.update_glyphs(make_box_wh(new_tile.x - 1, new_tile.y - 1, 3, 3), globals);
+	return true;
+}
+
+static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
+{
+	const auto bounds = urban_cells_bounds(city);
+	const auto bounds_size = box_size(bounds);
+	const auto rel_bounds = make_box_wh(0, 0, bounds_size.x, bounds_size.y);
+	auto urban_cells = make_temp_array<uint8_t>(bounds_size.x * bounds_size.y);
+	const auto center_cell = tile_to_cell_coords(city.center);
+	const auto center_cell_rel = center_cell - bounds.min;
+
+	struct ExpansionCell
+	{
+		Vec2i rel_pos;
+		int score;
+	};
+	auto available_cells = make_temp_array<ExpansionCell>(0, (bounds_size.x + 2) * (bounds_size.y + 2) - city.num_urban_cells);
+	auto vacant_tiles = make_temp_array<Vec2i>(0, city.num_urban_cells * map_cell_size * map_cell_size);
+	int num_occupied = 0;
+	int max_expansion_dist = 0;
+	for (int i = 0; i < city.num_urban_cells; i++)
+	{
+		const auto& cell_pos = city.occupied_cells[i];
+		const auto rel_pos = city.occupied_cells[i] - bounds.min;
+		const int idx = (rel_pos.y * bounds_size.x + rel_pos.x);
+		urban_cells[idx] = 1;
+		max_expansion_dist = std::max(max_expansion_dist, manhattan_length(rel_pos - center_cell_rel));
+
+		// TODO: make an iterator function
+		bool found_space_for_expansion = false;
+		const auto tile_top_left = cell_to_tile_coords(cell_pos);
+		for (int ti = 0; ti < map_cell_size * map_cell_size; ti++)
+		{
+			const auto tile_pos = tile_top_left + Vec2i{ti % map_cell_size, ti / map_cell_size};
+			if (is_urban_tile(map, tile_pos, globals))
+			{
+				const auto& tile = map.get_tile_or_empty(tile_pos);
+				const auto struct_type = tile.structure;
+				const auto flags = globals.structure_types.get(struct_type).flags;
+				if (has_all(flags, StructureFlags::vacancy))
+				{
+					vacant_tiles.push_back(tile_pos);
+				}
+				else
+				{
+					num_occupied++;
+				}
+			}
+			else if (expandable_urban_tile(map, tile_pos, globals))
+			{
+				found_space_for_expansion = true;
+			}
+		}
+		if (found_space_for_expansion)
+		{
+			available_cells.push_back({ rel_pos, 0 }); // score calculated later
+		}
+	}
+	max_expansion_dist += 1; // max distance from potential expansion cell to the center
+	const auto num_existing_available_cells = available_cells.size();
+
+	auto occupied = [&rel_bounds, &bounds_size, &urban_cells](const Vec2i& pos)
+	{
+		return encompasses(rel_bounds, pos) && (urban_cells[pos.y * bounds_size.x + pos.x] == 1);
+	};
+
+	const int expansion_threshold = (int)std::floor(num_occupied * 0.5f);
+	if (vacant_tiles.size() <= expansion_threshold)
+	{
+		// expand
+		// TODO: make an iterator function
+		for (int y = -1; y < bounds_size.y + 1; y++)
+		{
+			for (int x = -1; x < bounds_size.x + 1; x++)
+			{
+				// TODO: we cannot expand into other city's territory (either claimed or occupied)
+				const Vec2i rel_pos{x, y};
+				if (!occupied(rel_pos))
+				{
+					bool adjacent = false;
+					for (const auto& offset : adjacent_offsets)
+					{
+						const auto other_pos = rel_pos + offset;
+						if (occupied(other_pos))
+						{
+							adjacent = true;
+							break;
+						}
+					}
+
+					if (adjacent)
+					{
+						const auto cell_pos = (bounds.min + rel_pos);
+						const auto tile_top_left = cell_to_tile_coords(cell_pos);
+						for (int ti = 0; ti < map_cell_size * map_cell_size; ti++)
+						{
+							const auto tile_pos = tile_top_left + Vec2i{ti % map_cell_size, ti / map_cell_size};
+							if (expandable_urban_tile(map, tile_pos, globals))
+							{
+								available_cells.push_back({rel_pos, 0}); // score calculated later
+								break;
+							}
+
+						}
+					}
+				}
+			}
 		}
 
-		const int tile_pool_size = 5;
-		auto new_tiles = make_temp_array<Vec2i>(0, (max_occupied_ring + 1) *  8);
-
-		int ring = 1;
-		size_t idx = ring_starting_index(ring);
-		size_t next_ring_idx = ring_starting_index(ring+1);
-
-		while (true)		
+		if (!available_cells.empty())
 		{
-			if (idx >= occupied.size() || occupied[idx] == 0)
+			int total_score = 0;
+			for (auto& expand_cell : available_cells)
 			{
-				new_tiles.push_back(to_ring_tile_pos(city.center, ring, idx));
-			}
-			if (++idx >= next_ring_idx)
+				const auto dist = manhattan_length(expand_cell.rel_pos - center_cell_rel);
+				// TODO: maybe count number of adjacencies as well
+				expand_cell.score = (max_expansion_dist + 1 - dist); // score 1 at max dist, +1 for each step closer
+				total_score += expand_cell.score;
+			}		
+
+			const auto roll = rand_int(total_score);
+			Vec2i new_cell_pos;
+			int running = 0;
+			size_t chosen_cell_idx = 0;
+			for (const auto& cell : available_cells)
 			{
-				next_ring_idx = ring_starting_index(++ring + 1);
-				if (new_tiles.size() >= tile_pool_size) break;
+				running += cell.score;
+				if (roll < running)
+				{
+					new_cell_pos = (bounds.min + cell.rel_pos);
+					break;
+				}
+				chosen_cell_idx++;
 			}
+
+			// TODO: relocate if this is a rural cell
+
+			// mark urban cell if chose a new cell
+			if (chosen_cell_idx >= num_existing_available_cells)
+			{
+				city.occupied_cells.insert(city.num_urban_cells, new_cell_pos);
+				city.num_urban_cells++;
+			}
+
+			// expand a number of times if until no more available space
+			const int min_expansions = 2;
+			const int max_expansions = 5;
+			const auto num_expansions = rand_int(min_expansions, max_expansions);
+			for (int i = 0; i < num_expansions; i++)
+			{
+				if (!expand_urban_vacant_tile_in_cell(city, map, new_cell_pos, globals, vacant_tiles))
+				{
+					break;
+				}
+			}
+
+			// NOTE: we can't do this, since the chosen cell may not be fully new and may contain existing vacant tiles
+			// collect all the newly added urban vacant tiles in the new cell
+			// const auto tile_top_left = cell_to_tile_coords(new_cell_pos);
+			// for (int ti = 0; ti < map_cell_size * map_cell_size; ti++)
+			// {
+			// 	const auto tile_pos = tile_top_left + Vec2i{ti % map_cell_size, ti / map_cell_size};
+			// 	const auto& tile = map.get_tile_or_empty(tile_pos);
+			// 	const auto flags = globals.structure_types.get(tile.structure).flags;
+			// 	if (has_all(flags, (StructureFlags::urban | StructureFlags::vacancy)))
+			// 	{
+			// 		vacant_tiles.push_back(tile_pos);
+			// 	}
+			// }
 		}
-		return new_tiles[rand_int(new_tiles.size())];
+	}
+
+	if (!vacant_tiles.empty())
+	{
+		// pick a random vacant tile
+		const auto roll = rand_int(vacant_tiles.size());
+		return vacant_tiles[roll];
 	}
 	else
 	{
-		auto scale_up = [](int x) { return (x >= 0 ? (x + 1) : (x - 1)) / 3; };
-		auto scale_down = [](int x) { return x * 3; };
-		auto scale_up_vec = [&scale_up](const Vec2i& v) -> Vec2i { return {scale_up(v.x), scale_up(v.y)}; };
-		auto scale_down_vec = [&scale_down](const Vec2i& v) -> Vec2i { return {scale_down(v.x), scale_down(v.y)}; };
-
-		const auto& wall_bounds = city.visual.wall_bounds;
-		Box2i scaled_bounds;
-		const auto r = scaled_bounds.max.x = scale_up(wall_bounds.max.x - city.center.x);
-		const auto t = scaled_bounds.max.y = scale_up(wall_bounds.max.y - city.center.y);
-		const auto l = scaled_bounds.min.x = scale_up(wall_bounds.min.x - city.center.x);
-		const auto b = scaled_bounds.min.y = scale_up(wall_bounds.min.y - city.center.y);
-
-		const int max_wall_ring = std::max({std::abs(scaled_bounds.max.x), std::abs(scaled_bounds.max.y), std::abs(scaled_bounds.min.x), std::abs(scaled_bounds.min.y)});
-		const int starting_ring = max_wall_ring + 1;
-
-		const auto urban_level = urban_development_level(city);
-		const auto rural_level = rural_development_level(city);
-		auto occupied = make_temp_array<int>(0, urban_level * 2);
-		size_t max_occupied_ring = 0;
-		for (int i = urban_level; i < (urban_level + rural_level); i++)
-		{
-			const auto ring_idx = to_ring_index(scale_up_vec(city.visual.development_positions[i] - city.center));
-			max_occupied_ring = std::max(ring_idx, max_occupied_ring);
-			if (ring_idx >= occupied.size())
-			{
-				occupied.resize(ring_idx + 1);
-			}
-			occupied[ring_idx] += 1;
-		}
-		// TODO: road occupation
-
-		const int tile_pool_size = 5;
-		auto big_tiles = make_temp_array<Vec2i>(0, (max_occupied_ring + 1) *  24);
-
-		int ring = starting_ring;
-		size_t idx = ring_starting_index(ring);
-		size_t next_ring_idx = ring_starting_index(ring+1);
-		int added_ideal_big_tiles = 0;
-
-		while (true)		
-		{
-			int num_occupied = idx >= occupied.size() ? 0 : occupied[idx];
-			// TODO: check to make sure it has enough usable terrains and other structures
-			if (num_occupied <= 2)
-			{
-				const auto big_tile_rel_pos = to_ring_tile_pos({0, 0}, ring, idx);
-				int weight = 1;
-				if (num_occupied <= 1)
-				{
-					weight = 3;
-					added_ideal_big_tiles++;
-				}
-				for (int i = 0; i < weight; i++)
-				{
-					big_tiles.push_back(big_tile_rel_pos);
-				}
-			}
-			if (++idx >= next_ring_idx)
-			{
-				next_ring_idx = ring_starting_index(++ring + 1);
-				if (added_ideal_big_tiles >= tile_pool_size) break;
-			}
-		}
-
-		const auto selected_big_tile = big_tiles[rand_int(big_tiles.size())];
-		const auto center_tile = city.center + scale_down_vec(selected_big_tile);
-		auto new_tiles = make_temp_array<Vec2i>(0, 9);
-		for (int y = -1; y <= 1; y++)
-		{
-			for (int x = -1; x <= 1; x++)
-			{
-				const auto tile_pos = center_tile + Vec2i{x, y};
-				const auto tile = map.get_tile(tile_pos);
-				const auto category = tile ? globals.structure_types.get(tile->structure).category : StructureCategory::none;
-				if (category != StructureCategory::dev && category != StructureCategory::wall) // TODO: road
-				{
-					new_tiles.push_back(tile_pos);
-				}
-			}
-		}
-		return new_tiles[rand_int(new_tiles.size())];
+		// TODO: consolidate when the whole territory is full
+		// TODO: also we need leave spaces for rural territory
+		asserts(false);
+		return {};
 	}
 }
 
@@ -289,22 +586,65 @@ void develop_city(World& world, Id city_id, DevelopmentArea area, const Globals&
 {
 	auto& city = world.cities.get(city_id);
 	auto& map = world.map;
-	const auto dev_pos = find_tile_for_dev(city, map, area, globals);
-	add_development(city, map, area, dev_pos, globals);
+	Vec2i dev_pos;
 	if (area == DevelopmentArea::urban)
 	{
-		setup_walls(city, map, globals.defines.starting_wall_type, globals);
-		world.map.update_glyphs(city.visual.wall_bounds, globals);
+		dev_pos = make_urban_space(city, map, globals);
 	}
 	else
 	{
-		world.map.update_glyphs(to_box(dev_pos), globals);
+		dev_pos = find_tile_for_dev(city, map, area, globals);
 	}
+	add_development(city, map, area, dev_pos, globals);
+	world.map.update_glyphs(to_box(dev_pos), globals);
+	city.urban_bounds = urban_tile_bounds(city, world.map, globals);
 }
 
 namespace serialization
 {
 	struct MapTilesBlob;
+
+	struct UrbanStructureTiles
+	{
+		template<class TOp>
+		static inline void write(TOp& op, const City& city, Id type)
+		{
+			const Globals& globals = *op.context.globals;
+			const World& world = *op.context.world;
+			auto tiles = make_temp_array<Vec2i>(0, city.occupied_cells.size() * map_cell_size);
+			for (int i = 0; i < city.num_urban_cells; i++)
+			{
+				const auto tile_top_left = cell_to_tile_coords(city.occupied_cells[i]);
+				for (int ti = 0; ti < map_cell_size * map_cell_size; ti++)
+				{
+					const auto tile_pos = tile_top_left + Vec2i{ti % map_cell_size, ti / map_cell_size};
+					const auto& tile = world.map.get_tile_or_empty(tile_pos);
+					if (tile.structure == type)
+					{
+						tiles.push_back(tile_pos);
+					}
+				}
+			}
+			op.value(tiles);
+		}
+
+		template<class TOp>
+		static inline void read(TOp& op, City& city, Id type)
+		{
+			const Globals& globals = *op.context.globals;
+			World& world = *op.context.world;
+			auto tiles = make_temp_array<Vec2i>(0, city.occupied_cells.size() * map_cell_size);
+			op.value(tiles);
+			auto bounds = to_box(city.center);
+			for (const auto tile_pos : tiles)
+			{
+				world.map.set_structure(tile_pos, type);
+				expand_box(bounds, tile_pos);
+			}
+
+			world.map.update_glyphs(bounds, globals);
+		}
+	};
 
 	template<class T>
 	static void serialize(T& op, RefType<T, City> city)
@@ -312,8 +652,10 @@ namespace serialization
 		op.prop("center", city.center);
 		op.prop("dev_urban", city.development_level[(int)DevelopmentArea::urban]);
 		op.prop("dev_rural", city.development_level[(int)DevelopmentArea::rural]);
-		op.prop("vis_wall", city.visual.wall_bounds);
-		op.prop("vis_dev_tiles", city.visual.development_positions);
+		op.prop("num_urban_cells", city.num_urban_cells);
+		op.prop("cells", city.occupied_cells);
+		op.prop("dev_tiles", city.dev_tiles);
+		op.prop("vacant_tiles", city, UrbanStructureTiles{}, op.context.globals->defines.urban_vacancy_type);
 	}
 
 	template<class T>
@@ -424,18 +766,19 @@ namespace serialization
 	template<SerializeOpType E>
 	static void serialize_world(RefTypeE<E, World> world, const String& path, const Globals& globals)
 	{
-		struct WorldSerializationContext
+		struct
 		{
 			const Globals* globals{};
+			std::remove_reference_t<decltype(world)>* world{};
 		}
-		context{&globals};
+		context{&globals, &world};
 
-		auto op = make_file_op<E>(format_str("%s/%s", path, "world.dat"), context);
+		auto op = make_file_op<E>(format_str("%s/%s", path, "map.dat"), context);
+		serialize(op, world.map);
+
+		op = make_file_op<E>(format_str("%s/%s", path, "world.dat"), context);
 		op.section("cities");
 		op.collection(world.cities, "city");
-
-		op = make_file_op<E>(format_str("%s/%s", path, "map.dat"), context);
-		serialize(op, world.map);
 	}
 }
 
@@ -452,7 +795,7 @@ World load_world(const String& path, const Globals& globals, Allocator alloc)
 	World world;
 	world.init(alloc);
 	serialization::serialize_world<SerializeOpType::read>(world, path, globals);
-	for (const auto& city : world.cities)
+	for (auto& city : world.cities)
 	{
 		const auto dev_level = total_development_level(city);
 		int start = 0;
@@ -462,15 +805,14 @@ World load_world(const String& path, const Globals& globals, Allocator alloc)
 			const auto& dev_type = globals.development_types[area];
 			for (int i = start; i < start + dev_level; i++)
 			{
-				const auto dev_pos = city.visual.development_positions[i];
+				const auto dev_pos = city.dev_tiles[i];
 				world.map.set_structure(dev_pos, dev_type.structure_type);
 				world.map.update_glyphs(to_box(dev_pos), globals);
 			}
 			start += dev_level;
 		}
-
-		set_wall_tiles(world.map, city.visual.wall_bounds, globals.defines.starting_wall_type); // TODO: store wall type of the city
-		world.map.update_glyphs(city.visual.wall_bounds, globals);
+		setup_walls(city, world.map, globals);
+		city.urban_bounds = urban_tile_bounds(city, world.map, globals);
 	}
 	pop_perm_allocator();
 	return world;

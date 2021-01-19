@@ -82,6 +82,14 @@ public:
 		end_prop();
 	}
 
+	template<typename TProp, class TS, typename ...TArgs>
+	inline void prop(const String& key, const TProp& value, TS serializer, TArgs&&... args)
+	{
+		begin_prop(key);
+		TS::write(*this, value, std::forward<TArgs>(args)...);
+		end_prop();
+	}
+
 	// template<typename TProp>
 	// inline void prop_array(const String& key, const TProp& value)
 	// {
@@ -237,6 +245,7 @@ public:
 		delim(Delimiter::object_tag);
 		depth = 0;
 		heading = true;
+		found_props.clear();
 		return true;
 	}
 
@@ -254,6 +263,17 @@ public:
 		if (begin_prop(key))
 		{
 			::serialization::template TypeSerializer<TProp>::read(*this, value);
+			end_prop();
+		}
+	}
+
+	template<typename TProp, class TS, typename ...TArgs>
+	inline void prop(const String& key, TProp& value, TS serializer, TArgs&&... args)
+	{
+		static_assert(!std::is_const_v<TProp>);
+		if (begin_prop(key))
+		{
+			TS::read(*this, value, std::forward<TArgs>(args)...);
 			end_prop();
 		}
 	}
@@ -320,6 +340,22 @@ public:
 			{
 				return true;
 			}
+
+			if (found_props.empty())
+			{
+				found_props.push_back({parsed_key.hash(), parsed_key, token_stream.cursor()});
+			}
+		}
+
+		const auto key_hash = key.hash();
+		for (const auto& prop : found_props)
+		{
+			if (prop.key_hash == key_hash)
+			{
+				asserts(prop.key_name == key); // TODO: replace it with error report
+				token_stream.seek(prop.pos_after_key);
+				return true;
+			}
 		}
 
 		if (!found_props.empty())
@@ -336,17 +372,7 @@ public:
 			{
 				return true;
 			}
-		}
-
-		const auto key_hash = key.hash();
-		for (const auto& prop : found_props)
-		{
-			if (prop.key_hash == key_hash)
-			{
-				asserts(prop.key_name == key); // TODO: replace it with error report
-				token_stream.seek(prop.pos_after_key);
-				return true;
-			}
+			token_stream.seek_next_line();
 		}
 		return false;
 	}
