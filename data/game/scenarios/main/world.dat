@@ -2,15 +2,37 @@
 
 # city 1
 center (418 242)
-dev_urban 2
-dev_rural 1
-vis_wall (417 240 420 243)
-vis_dev_tiles [(418 242), (419 241), (411 242)]
+dev_urban 1
+dev_rural 0
+num_urban_cells 1
+cells [(104 60)]
+dev_tiles [(418 242)]
+vacant_tiles []
 
 # city 2
+center (487 211)
+dev_urban 1
+dev_rural 0
+num_urban_cells 1
+cells [(121 52)]
+dev_tiles [(487 211)]
+vacant_tiles []
+
+# city 3
+center (427 332)
+dev_urban 1
+dev_rural 0
+num_urban_cells 1
+cells [(106 83)]
+dev_tiles [(427 332)]
+vacant_tiles []
+
+# city 4
 center (398 390)
 dev_urban 1
 dev_rural 0
-vis_wall (397 389 399 391)
-vis_dev_tiles [(398 390)]
+num_urban_cells 1
+cells [(99 97)]
+dev_tiles [(398 390)]
+vacant_tiles []
 
