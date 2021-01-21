@@ -350,6 +350,124 @@ static inline bool expandable_urban_tile(const Map& map, Vec2i tile_pos, const G
 	return adjacent_to_urban_tiles && valid_urban_tile(map, tile_pos, globals) && !is_urban_tile(map, tile_pos, globals);
 }
 
+static bool should_fill_vacancy(const Map& map, Vec2i tile_pos, const Globals& globals)
+{
+	if (is_urban_tile(map, tile_pos, globals) || !valid_urban_tile(map, tile_pos, globals))
+	{
+		return false;
+	}
+
+	auto should_fill_with_delta = [&tile_pos, &map, &globals](Vec2i delta) -> bool
+	{
+		uint8_t mask = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			auto offset = surrounding_offsets[i];
+			if (offset.x * delta.x > 0) { offset.x += delta.x; }
+			if (offset.y * delta.y > 0) { offset.y += delta.y; }
+
+			const auto& tile = map.get_tile_or_empty(tile_pos + offset);
+			if (tile.structure && has_all(globals.structure_types.get(tile.structure).flags, StructureFlags::urban))
+			{
+				mask |= surrounding_bit_masks[i];
+			}
+		}
+		return urban_mask.should_fill[mask];
+	};
+
+	return (
+		should_fill_with_delta({0, 0}) ||
+		should_fill_with_delta({-1, 0}) ||
+		should_fill_with_delta({1, 0}) ||
+		should_fill_with_delta({0, -1}) ||
+		should_fill_with_delta({-1, -1}) ||
+		should_fill_with_delta({1, -1}) ||
+		should_fill_with_delta({1, 1}) ||
+		should_fill_with_delta({-1, 1}));
+}
+
+static void add_vacant_tile(City& city, Map& map, Vec2i tile_pos, const Globals& globals, Array<Vec2i>& append_new_vacant_tiles, Array<Vec2i>& append_additional_vacant_tiles_to_add)
+{
+	// const auto starting_vacant_tile_idx = append_new_vacant_tiles.size();
+
+	map.set_structure(tile_pos, globals.defines.urban_vacancy_type);
+	append_new_vacant_tiles.push_back(tile_pos);
+	auto to_update_bounds = to_box(tile_pos);
+
+	// printf("-- added at %d %d\n", tile_pos.x, tile_pos.y);
+
+	for (int i = 0; i < 5 * 5; i++)
+	{
+		const auto other_tile_pos = tile_pos + Vec2i{i % 5 - 2, i / 5 - 2};
+		if (should_fill_vacancy(map, other_tile_pos, globals))
+		{
+			map.set_structure(other_tile_pos, globals.defines.urban_vacancy_type);
+			append_new_vacant_tiles.push_back(other_tile_pos);
+			expand_box(to_update_bounds, other_tile_pos);
+			// printf("   filled at %d %d\n", other_tile_pos.x, other_tile_pos.y);
+		}
+	}
+
+	auto check_loop_bounds = to_update_bounds;
+	pad_box(check_loop_bounds, 1);
+
+	for (int i = 0; i < 5 * 5; i++)
+	{
+		const auto other_tile_pos = tile_pos + Vec2i{i % 5 - 2, i / 5 - 2};
+		if (!is_urban_tile(map, other_tile_pos, globals))
+		{
+			for (const auto offset : surrounding_offsets)
+			{
+				if (is_urban_tile(map, other_tile_pos + offset, globals))
+				{
+					map.set_structure(other_tile_pos, globals.defines.starting_wall_type); // TODO: use city wall type
+					expand_box(to_update_bounds, other_tile_pos);
+					break;
+				}
+			}
+		}
+	}
+	map.update_glyphs(to_update_bounds, globals);
+
+	// check surrounding tiles to make sure no loops being created
+	const auto size = box_size(check_loop_bounds);
+	for (int i = 0; i < size.x * size.y; i++)
+	{
+		const auto other_tile_pos = check_loop_bounds.min + Vec2i{i % size.x, i / size.x};
+		if (!is_urban_tile(map, other_tile_pos, globals))
+		{
+			const auto mask = calc_surrounding_structure_mask(map, other_tile_pos, StructureFlags::urban, globals);
+			// printf("   * checked at %d %d, mask %xu\n", other_tile_pos.x, other_tile_pos.y, mask);
+			if (mask == (0x02 | 0x20) ||
+				mask == (0x08 | 0x80) ||
+				mask == (0x01 | 0x08) ||
+				mask == (0x01 | 0x20) ||
+				mask == (0x04 | 0x20) ||
+				mask == (0x04 | 0x80) ||
+				mask == (0x10 | 0x80) ||
+				mask == (0x10 | 0x02) ||
+				mask == (0x40 | 0x02) ||
+				mask == (0x40 | 0x08))
+			{
+				// printf("!!!!!!!!!!!!!!!!!!!!!!! additiona added!!!!!!!!!!!!!!!!!!!\n");
+				append_additional_vacant_tiles_to_add.push_back(other_tile_pos);
+			}
+		}
+	}
+}
+
+static inline bool is_urban_cell(const City& city, Vec2i cell_pos)
+{
+	for (int i = 0; i < city.num_urban_cells; i++)
+	{
+		if (city.occupied_cells[i] == cell_pos)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 static bool expand_urban_vacant_tile_in_cell(City& city, Map& map, Vec2i cell_pos, const Globals& globals, Array<Vec2i>& append_new_vacant_tiles)
 {
 	auto expand_tiles = make_temp_array<Vec2i>(0, map_cell_size);
@@ -369,31 +487,83 @@ static bool expand_urban_vacant_tile_in_cell(City& city, Map& map, Vec2i cell_po
 	}
 
 	const auto new_tile = expand_tiles[rand_int(expand_tiles.size())];
+	
+	auto additional_vacant_tiles = make_temp_array<Vec2i>(0, 4);
+	add_vacant_tile(city, map, new_tile, globals, append_new_vacant_tiles, additional_vacant_tiles);
+
+	for (int i = 0; i < additional_vacant_tiles.size(); i++)
+	{
+		const auto additional_tile_pos = additional_vacant_tiles[i];
+		if (!is_urban_tile(map, additional_tile_pos, globals))
+		{
+			const auto additional_cell_pos = tile_to_cell_coords(additional_tile_pos);
+			if (!is_urban_cell(city, additional_cell_pos))
+			{
+				city.occupied_cells.insert(city.num_urban_cells, additional_cell_pos);
+				city.num_urban_cells++;
+			}
+			add_vacant_tile(city, map, additional_tile_pos, globals, append_new_vacant_tiles, additional_vacant_tiles);		
+		}
+	}
+
+#if 0
 	map.set_structure(new_tile, globals.defines.urban_vacancy_type);
 	append_new_vacant_tiles.push_back(new_tile);
-	for (const auto offset : surrounding_offsets)
+	auto to_update_bounds = to_box(new_tile);
+
+	for (int i = 0; i < 5 * 5; i++)
 	{
-		const auto other_tile_pos = new_tile + offset;
+		const auto other_tile_pos = new_tile + Vec2i{i % 5 - 2, i / 5 - 2};
+		if (should_fill_vacancy(map, other_tile_pos, globals))
+		{
+			map.set_structure(other_tile_pos, globals.defines.urban_vacancy_type);
+			append_new_vacant_tiles.push_back(other_tile_pos);
+			expand_box(to_update_bounds, other_tile_pos);
+		}
+	}
+
+	for (int i = 0; i < 5 * 5; i++)
+	{
+		const auto other_tile_pos = new_tile + Vec2i{i % 5 - 2, i / 5 - 2};
 		if (!is_urban_tile(map, other_tile_pos, globals))
 		{
-			const auto& other_tile = map.get_tile_or_empty(other_tile_pos);
-			const auto flags = globals.structure_types.get(other_tile.structure).flags;
-
-			// check if should fill vacancy
-			const auto mask = calc_surrounding_structure_mask(map, other_tile_pos, StructureFlags::urban, globals);
-			if (urban_mask.should_fill[mask])
+			for (const auto offset : surrounding_offsets)
 			{
-				map.set_structure(other_tile_pos, globals.defines.urban_vacancy_type);
-				append_new_vacant_tiles.push_back(other_tile_pos);
-			}
-			else
-			{
-				// otherwise is wall position (since it's surrounding an urban tile)
-				map.set_structure(other_tile_pos, globals.defines.starting_wall_type); // TODO: use city's wall type				
+				if (is_urban_tile(map, other_tile_pos + offset, globals))
+				{
+					map.set_structure(other_tile_pos, globals.defines.starting_wall_type); // TODO: use city wall type
+					expand_box(to_update_bounds, other_tile_pos);
+					break;
+				}
 			}
 		}
 	}
-	map.update_glyphs(make_box_wh(new_tile.x - 1, new_tile.y - 1, 3, 3), globals);
+
+	// for (const auto offset : surrounding_offsets)
+	// {
+	// 	const auto other_tile_pos = new_tile + offset;
+	// 	if (!is_urban_tile(map, other_tile_pos, globals))
+	// 	{
+	// 		// const auto& other_tile = map.get_tile_or_empty(other_tile_pos);
+	// 		// const auto flags = globals.structure_types.get(other_tile.structure).flags;
+
+	// 		// check if should fill vacancy
+	// 		const auto mask = calc_surrounding_structure_mask(map, other_tile_pos, StructureFlags::urban, globals);
+	// 		if (urban_mask.should_fill[mask])
+	// 		{
+	// 			map.set_structure(other_tile_pos, globals.defines.urban_vacancy_type);
+	// 			append_new_vacant_tiles.push_back(other_tile_pos);
+	// 		}
+	// 		else
+	// 		{
+	// 			// otherwise is wall position (since it's surrounding an urban tile)
+	// 			map.set_structure(other_tile_pos, globals.defines.starting_wall_type); // TODO: use city's wall type				
+	// 		}
+	// 	}
+	// }
+	map.update_glyphs(to_update_bounds, globals);
+
+#endif
 	return true;
 }
 
@@ -512,6 +682,15 @@ static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
 				const auto dist = manhattan_length(expand_cell.rel_pos - center_cell_rel);
 				// TODO: maybe count number of adjacencies as well
 				expand_cell.score = (max_expansion_dist + 1 - dist); // score 1 at max dist, +1 for each step closer
+				int num_sides_connected = 0;
+				for (const auto offset : adjacent_offsets)
+				{
+					if (occupied(expand_cell.rel_pos + offset))
+					{
+						num_sides_connected++;
+					}
+				}
+				expand_cell.score += std::max(1, num_sides_connected) - 1;
 				total_score += expand_cell.score;
 			}		
 
@@ -541,7 +720,7 @@ static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
 
 			// expand a number of times if until no more available space
 			const int min_expansions = 2;
-			const int max_expansions = 5;
+			const int max_expansions = 4;
 			const auto num_expansions = rand_int(min_expansions, max_expansions);
 			for (int i = 0; i < num_expansions; i++)
 			{

@@ -203,7 +203,7 @@ TabletUIApp::TabletUIApp()
 	atlas_texture = create_font_texture(w, h, pages, codes, font);
 }
 
-void TabletUIApp::update()
+void TabletUIApp::update(double dt)
 {
 }
 

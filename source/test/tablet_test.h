@@ -47,7 +47,7 @@ class TabletTestApp
 {
 public:
 	TabletTestApp();
-	void update();
+	void update(double dt);
 	bool ended();
 	void present(const Context& ctx);
 	void shutdown() {}

@@ -45,13 +45,17 @@ int run_app(const AppConfig& config = {})
 	int frame_count{};
 	std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
 
+	std::chrono::high_resolution_clock::time_point prev_update_time = std::chrono::high_resolution_clock::now();
+
 	while (!app.ended())
 	{
 		presenter.process_control(window->poll_events());
 		
-		app.update();
+		auto current_update_time = std::chrono::high_resolution_clock::now();
+		const auto dt = std::chrono::duration_cast<std::chrono::duration<double>>(current_update_time - prev_update_time).count();
+		prev_update_time = current_update_time;
+		app.update(dt);
 
-		const double dt = 1.0 / 60.0;
 		presenter.step_frame(dt);
 
 		// present

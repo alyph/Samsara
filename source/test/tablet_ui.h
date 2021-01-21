@@ -7,7 +7,7 @@ class TabletUIApp
 {
 public:
 	TabletUIApp();
-	void update();
+	void update(double dt);
 	bool ended();
 	void present(const Context& ctx);
 	void shutdown() {}

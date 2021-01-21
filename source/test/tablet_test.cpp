@@ -113,7 +113,7 @@ TabletTestApp::TabletTestApp()
 	// start_time = std::chrono::system_clock::now();
 }
 
-void TabletTestApp::update()
+void TabletTestApp::update(double dt)
 {
 	EASY_FUNCTION();
 

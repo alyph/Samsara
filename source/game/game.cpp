@@ -7,6 +7,7 @@
 #include "engine/mesh.h"
 #include "engine/filesystem.h"
 #include "engine/font.h"
+#include "engine/random.h"
 #include "easy/profiler.h"
 
 // static constexpr const Vec2i initial_map_vp{ (map_chunk_size / 2), (map_chunk_size / 2) };
@@ -98,11 +99,11 @@ Game::Game()
 	globals.structure_types.alloc(1024, alloc);
 	globals.structure_types.set(0, "none", {0, "none", 0, 0_rgb32, StructureFlags::none, 0});
 
-	make_dev_type("dev_urban", "urban", DevelopmentArea::urban, 0x007f, 0xa04080_rgb32);
+	make_dev_type("dev_urban", "urban", DevelopmentArea::urban, 0x007f, 0xa09060_rgb32);
 	make_dev_type("dev_rural", "rural", DevelopmentArea::rural, 0x007f, 0x50e020_rgb32);
 
 	const auto& wall_struct = globals.structure_types.set("wall", {0, "wall", 0x0320, 0xafafaf_rgb32, StructureFlags::wall, 0});
-	const auto& urban_vacancy = globals.structure_types.set("vacancy", {0, "vacancy", 0x00f9, 0x602040_rgb32, StructureFlags::urban|StructureFlags::vacancy, 0});
+	const auto& urban_vacancy = globals.structure_types.set("vacancy", {0, "vacancy", 0x00f9, 0x503010_rgb32, StructureFlags::urban|StructureFlags::vacancy, 0});
 
 	globals.defines.starting_wall_type = wall_struct.id;
 	globals.defines.urban_vacancy_type = urban_vacancy.id;
@@ -126,8 +127,23 @@ Game::Game()
 }
 
 
-void Game::update()
+void Game::update(double dt)
 {
+	// if (!game_state.in_editor)
+	// {
+	// 	timer += dt;
+	// 	if (timer >= 0.1)
+	// 	{
+	// 		timer = 0.0;
+
+	// 		for (auto& city : world.cities)
+	// 		{
+	// 			if (rand_int(6) < 4) {
+	// 				develop_city(world, city.id, DevelopmentArea::urban, globals);
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 

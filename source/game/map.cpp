@@ -66,19 +66,19 @@ struct WallTileMask
 		{
 			uint8_t code = 0;
 			uint8_t mask = (uint8_t)i;
-			if 		(mask == 0x02) { code = (0x01 | 0x02); }
+			if (mask == 0) { code = 0; }
+			else if (mask == 0x02) { code = (0x01 | 0x02); }
 			else if (mask == 0x08) { code = (0x02 | 0x04); }
 			else if (mask == 0x20) { code = (0x04 | 0x08); }
 			else if (mask == 0x80) { code = (0x08 | 0x01); }
+			else if ((mask & ~(0x80 | 0x02)) == 0x01) { code = (0x08 | 0x02); }
+			else if ((mask & ~(0x02 | 0x08)) == 0x04) { code = (0x01 | 0x04); }
+			else if ((mask & ~(0x08 | 0x20)) == 0x10) { code = (0x02 | 0x08); }
+			else if ((mask & ~(0x20 | 0x80)) == 0x40) { code = (0x04 | 0x01); }
 			else
 			{
 				mask = surrounding_to_adjacent_maks(mask);
-				if (mask == 0) { code = 0; }
-				else if (mask == 0x01) { code = (0x08 | 0x02); }
-				else if (mask == 0x02) { code = (0x01 | 0x04); }
-				else if (mask == 0x04) { code = (0x02 | 0x08); }
-				else if (mask == 0x08) { code = (0x04 | 0x01); }
-				else { code = (~mask & 0x0f); }
+				code = (~mask & 0x0f);
 			}
 			codes[i] = code;
 		}

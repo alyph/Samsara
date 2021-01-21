@@ -3,6 +3,7 @@
 #include "engine/presenter.h"
 #include "engine/texture.h"
 #include "world.h"
+#include <chrono>
 
 enum class Brush: int
 {
@@ -41,7 +42,7 @@ class Game
 {
 public:
 	Game();
-	void update();
+	void update(double dt);
 	bool ended();
 	void present(const Context& ctx);
 	void shutdown();
@@ -59,6 +60,8 @@ private:
 	World world;
 	GameState game_state;
 	EditorState editor_state;
+
+	// double timer = -2.0;
 };
 
 
