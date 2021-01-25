@@ -82,7 +82,7 @@ Game::Game()
 	const auto make_dev_type = [&](const String& struct_key, const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> DevelopmentType&
 	{
 		auto& dev = globals.development_types[(int)area] = {name, area, 0};
-		const auto struct_flags = StructureFlags::dev | (area == DevelopmentArea::urban ? StructureFlags::urban : StructureFlags::none);
+		const auto struct_flags = StructureFlags::dev | (area == DevelopmentArea::urban ? StructureFlags::urban : StructureFlags::rural);
 		auto& structure = globals.structure_types.set(struct_key, {0, name, glyph, color, struct_flags, (Id)area});
 		dev.structure_type = structure.id;
 		return dev;
@@ -100,7 +100,7 @@ Game::Game()
 	globals.structure_types.set(0, "none", {0, "none", 0, 0_rgb32, StructureFlags::none, 0});
 
 	make_dev_type("dev_urban", "urban", DevelopmentArea::urban, 0x007f, 0xa09060_rgb32);
-	make_dev_type("dev_rural", "rural", DevelopmentArea::rural, 0x007f, 0x50e020_rgb32);
+	make_dev_type("dev_rural", "rural", DevelopmentArea::rural, 0x007f, 0x50b080_rgb32);
 
 	const auto& wall_struct = globals.structure_types.set("wall", {0, "wall", 0x0320, 0xafafaf_rgb32, StructureFlags::wall, 0});
 	const auto& urban_vacancy = globals.structure_types.set("vacancy", {0, "vacancy", 0x00f9, 0x503010_rgb32, StructureFlags::urban|StructureFlags::vacancy, 0});
@@ -138,8 +138,10 @@ void Game::update(double dt)
 
 	// 		for (auto& city : world.cities)
 	// 		{
-	// 			if (rand_int(6) < 4) {
-	// 				develop_city(world, city.id, DevelopmentArea::urban, globals);
+	// 			if (rand_int(6) < 4)
+	// 			{
+	// 				const auto area = rand_int(6) < 2 ? DevelopmentArea::urban : DevelopmentArea::rural;
+	// 				develop_city(world, city.id, area, globals);
 	// 			}
 	// 		}
 	// 	}

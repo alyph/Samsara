@@ -1,8 +1,8 @@
 #include "world.h"
+#include "game_utils.h"
 #include "engine/random.h"
 #include "engine/serialization.h"
 #include "engine/fileio.h"
-#include <array>
 
 struct UrbanMask
 {
@@ -206,6 +206,7 @@ Id create_city(World& world, const Vec2i& center, const Globals& globals)
 	return city.id;
 }
 
+#if 0
 inline size_t ring_starting_index(int ring)
 {
 	return ring ? (ring * (ring - 1) * 4 + 1) : 0;
@@ -335,6 +336,279 @@ static Vec2i find_tile_for_dev(const City& city, const Map& map, DevelopmentArea
 	}
 	return new_tiles[rand_int(new_tiles.size())];
 }
+#endif
+
+static Vec2i make_rural_space(City& city, Map& map, const Globals& globals)
+{
+	const auto bounds = city_cells_bounds(city);
+	const auto bounds_size = box_size(bounds);
+	const auto rel_bounds = make_box_wh(0, 0, bounds_size.x, bounds_size.y);
+	auto city_cells_2d = make_temp_array<uint8_t>(bounds_size.x * bounds_size.y);
+	const auto center_cell = tile_to_cell_coords(city.center);
+	const auto center_cell_rel = center_cell - bounds.min;
+	const auto num_city_cells = city.occupied_cells.size();
+
+	int max_expansion_dist = 0;
+	for (int i = 0; i < city.occupied_cells.size(); i++)
+	{
+		const auto cell_pos = city.occupied_cells[i];
+		const auto rel_pos = cell_pos - bounds.min;
+		const int idx = (rel_pos.y * bounds_size.x + rel_pos.x);
+		city_cells_2d[idx] = 1 + (uint8_t)(i < city.num_urban_cells ? DevelopmentArea::urban : DevelopmentArea::rural);
+		max_expansion_dist = std::max(max_expansion_dist, manhattan_length(rel_pos - center_cell_rel));
+	}
+	max_expansion_dist += 1; // max distance from potential expansion cell to the center
+
+	auto occupied = [&rel_bounds, &bounds_size, &city_cells_2d](const Vec2i& pos)
+	{
+		return encompasses(rel_bounds, pos) && (city_cells_2d[pos.y * bounds_size.x + pos.x] > 0);
+	};
+	auto urban_occupied = [&rel_bounds, &bounds_size, &city_cells_2d](const Vec2i& pos)
+	{
+		return encompasses(rel_bounds, pos) && (city_cells_2d[pos.y * bounds_size.x + pos.x] == (1 + (uint8_t)DevelopmentArea::urban));
+	};
+	auto rural_occupied = [&rel_bounds, &bounds_size, &city_cells_2d](const Vec2i& pos)
+	{
+		return encompasses(rel_bounds, pos) && (city_cells_2d[pos.y * bounds_size.x + pos.x] == (1 + (uint8_t)DevelopmentArea::rural));
+	};
+
+	auto calc_rural_adjacency = [&map, &globals](Vec2i tile_pos)
+	{
+		// NOTE: when walls push into the the adjacent spots of the rural dev, we may not relocate it, hence it may be temporarily invalid, which is probably OK
+		return count_adjacent_structures_with_any_flag(map, tile_pos, StructureFlags::rural|StructureFlags::wall|StructureFlags::urban, globals);
+	};
+
+	const int max_adjacency = 1;
+	auto valid_rural_tile = [&map, &globals, &calc_rural_adjacency, max_adjacency](Vec2i tile_pos) -> bool
+	{
+		const auto& tile = map.get_tile_or_empty(tile_pos);
+		if (tile.structure || (globals.terrain_types.get(tile.terrain).flags & TileTypeFlags::water))
+		{
+			return false;
+		}
+		if (calc_rural_adjacency(tile_pos) > max_adjacency)
+		{
+			return false;
+		}
+		return true;
+	};
+
+	auto valid_rural_tile_bounds = [&map, &globals, &bounds, &urban_occupied](Vec2i cell_rel_pos, Vec2i& out_tile_top_left, Vec2i& out_bounds_size)
+	{
+		const auto cell_pos = bounds.min + cell_rel_pos;
+		out_tile_top_left = cell_to_tile_coords(cell_pos);
+		out_bounds_size = { map_cell_size, map_cell_size};
+		// TODO: need exclude 1 corner from the diagonal direction as well
+		// for (const auto offset : adjacent_offsets)
+		// {
+		// 	if (urban_occupied(cell_rel_pos + offset))
+		// 	{
+		// 		if (offset.x != 0)
+		// 		{
+		// 			out_bounds_size.x--;
+		// 			if (offset.x < 0) { out_tile_top_left.x += 1; }
+		// 		}
+		// 		else
+		// 		{
+		// 			out_bounds_size.y--;
+		// 			if (offset.y < 0) { out_tile_top_left.y += 1; }
+		// 		}
+		// 	}
+		// }
+	};
+
+	auto valid_new_rural_cell = [&occupied](const Vec2i& rel_cell_pos)
+	{
+		if (!occupied(rel_cell_pos))
+		{
+			for (const auto offset : adjacent_offsets)
+			{
+				if (occupied(rel_cell_pos + offset))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	};
+
+	struct Candidate
+	{
+		Vec2i pos;
+		int score;
+	};
+
+	// find all existing cells that contain potential rural spaces
+	auto available_cells = make_temp_array<Candidate>(0, std::max(num_city_cells - city.num_urban_cells, (bounds_size.x + 2) * (bounds_size.y + 2) - city.occupied_cells.size()));
+	int total_spaces = 0;
+	int total_occupied = 0;
+	for (int i = city.num_urban_cells; i < city.occupied_cells.size(); i++)
+	{
+		const auto& cell_pos = city.occupied_cells[i];
+		const auto rel_pos = city.occupied_cells[i] - bounds.min;
+		Vec2i tile_top_left, valid_cell_size;
+		valid_rural_tile_bounds(rel_pos, tile_top_left, valid_cell_size);
+				
+		int num_spaces = 0;
+		for (int ti = 0; ti < valid_cell_size.x * valid_cell_size.y; ti++)
+		{
+			const auto tile_pos = tile_top_left + Vec2i{ti % valid_cell_size.x, ti / valid_cell_size.x};
+			if (valid_rural_tile(tile_pos))
+			{
+				num_spaces++;
+			}
+			else if (has_all(tile_structure_flag(map, tile_pos, globals), StructureFlags::rural))
+			{
+				total_occupied++;
+			}
+		}
+
+		if (num_spaces > 0)
+		{
+			total_spaces += num_spaces;
+			available_cells.push_back({cell_pos, num_spaces});
+		}
+	}
+
+	// TODO: maybe it should expand more early on (e.g. less rural dev) and less when there are more rural dev????
+	// or maybe it could be constant expansion threshold like 50 then until it gets to 5 cells ish, it will keep expand and the more cell you have the less you need expand, i dont know...
+	// expand if no available existing cell or occupancy is over limit
+	bool use_new_rural_cell = false;
+	// const int expansion_threshold = (int)std::floor(total_occupied * 1.f);
+	const int expansion_threshold = (total_occupied % 8) * 16 + (int)std::floor(total_occupied * 1.0f);
+	// printf("-- threshold now: %d\n", expansion_threshold);
+	if (total_spaces <= expansion_threshold)
+	{
+		auto expansion_bounds = rel_bounds;
+		pad_box(expansion_bounds, 1);
+		auto expansion_size = box_size(expansion_bounds);
+		for (int i = 0; i < expansion_size.x * expansion_size.y; i++)
+		{
+			const auto cell_rel_pos = expansion_bounds.min + Vec2i{i % expansion_size.x, i / expansion_size.x};
+			if (valid_new_rural_cell(cell_rel_pos))
+			{
+				// TODO: adjacency requirements (or maybe just find any surrounding occupied cell, just don't completely dangle)
+
+				Vec2i tile_top_left, valid_cell_size;
+				valid_rural_tile_bounds(cell_rel_pos, tile_top_left, valid_cell_size);
+				bool found_space = false;
+				for (int ti = 0; ti < valid_cell_size.x * valid_cell_size.y; ti++)
+				{
+					const auto tile_pos = tile_top_left + Vec2i{ti % valid_cell_size.x, ti / valid_cell_size.x};
+					if (valid_rural_tile(tile_pos))
+					{
+						found_space = true;
+						break;
+					}
+				}
+
+				if (found_space)
+				{
+					const auto cell_pos = bounds.min + cell_rel_pos;
+					const auto dist = manhattan_length(cell_rel_pos - center_cell_rel);
+					// TODO: maybe count number of adjacencies as well
+					int score = (max_expansion_dist + 1 - dist); // score 1 at max dist, +1 for each step closer
+					asserts(score > 0);
+
+					// clear all available existing cells, now use new cells
+					if (!use_new_rural_cell)
+					{
+						use_new_rural_cell = true;
+						available_cells.clear();
+					}
+					available_cells.push_back({cell_pos, score});
+				}
+			}
+		}
+	}
+
+	if (!available_cells.empty())
+	{
+		// once cell is determined, roll from available tiles within the chosen cell
+		const auto chosen_idx = random_weighted_array_index(available_cells);
+		const auto chosen_cell_pos = available_cells[chosen_idx].pos;
+
+		if (use_new_rural_cell)
+		{
+			city.occupied_cells.push_back(chosen_cell_pos);
+		}
+
+		const auto cell_rel_pos = chosen_cell_pos - bounds.min;
+		Vec2i tile_top_left, valid_cell_size;
+		valid_rural_tile_bounds(cell_rel_pos, tile_top_left, valid_cell_size);
+		auto available_tiles = make_temp_array<Candidate>(0, valid_cell_size.x * valid_cell_size.y);
+		for (int ti = 0; ti < valid_cell_size.x * valid_cell_size.y; ti++)
+		{
+			const auto tile_pos = tile_top_left + Vec2i{ti % valid_cell_size.x, ti / valid_cell_size.x};
+			if (valid_rural_tile(tile_pos))
+			{
+				const auto adjacency = calc_rural_adjacency(tile_pos);
+				auto score = std::max((max_adjacency - adjacency) * (max_adjacency - adjacency) * 8, 1);
+				available_tiles.push_back({tile_pos, score});
+			}
+		}
+
+		asserts(!available_tiles.empty());
+		return random_weighted_array_element(available_tiles).pos;
+
+	}
+	else
+	{
+		// TODO: consolidate if no more space to fill
+		asserts(false);
+		return {};
+	}
+
+
+}
+
+static inline void relocate_rural_tile(City& city, Map& map, Vec2i tile_pos, Id rural_struct_type, const Globals& globals)
+{
+	const auto flags = globals.structure_types.get(rural_struct_type).flags;
+	asserts(has_all(flags, StructureFlags::dev|StructureFlags::rural));
+	int dev_idx = -1;
+	const auto urban_dev = urban_development_level(city);
+	const auto total_dev = total_development_level(city);
+	for (int i = urban_dev; i < total_dev; i++)
+	{
+		if (city.dev_tiles[i] == tile_pos)
+		{
+			dev_idx = i;
+			break;
+		}
+	}
+	asserts(dev_idx >= 0);
+	const auto new_rural_tile = make_rural_space(city, map, globals);
+	asserts(new_rural_tile != tile_pos);
+	city.dev_tiles[dev_idx] = new_rural_tile;
+	map.set_structure(new_rural_tile, rural_struct_type);
+	map.update_glyphs(to_box(new_rural_tile), globals);
+}
+
+static inline void relocate_rural_cell(City& city, Map& map, Vec2i cell_pos, const Globals& globals)
+{
+	bool relocated_any = false;
+	const auto tile_top_left = cell_to_tile_coords(cell_pos);
+	for (int ti = 0; ti < map_cell_size * map_cell_size; ti++)
+	{
+		const auto tile_pos = tile_top_left + Vec2i{ti % map_cell_size, ti / map_cell_size};
+		const auto structure = map.get_tile_or_empty(tile_pos).structure;
+		const auto flags = globals.structure_types.get(structure).flags;
+		// TODO: multi-tile structures
+		if (has_all(flags, StructureFlags::rural))
+		{
+			relocate_rural_tile(city, map, tile_pos, structure, globals);
+			map.set_structure(tile_pos, null_id);
+			relocated_any = true;
+		}
+	}
+
+	if (relocated_any)
+	{
+		map.update_glyphs(make_box_wh(tile_top_left.x, tile_top_left.y, map_cell_size, map_cell_size), globals);
+	}
+}
+
 
 static inline bool expandable_urban_tile(const Map& map, Vec2i tile_pos, const Globals& globals)
 {
@@ -411,6 +685,7 @@ static void add_vacant_tile(City& city, Map& map, Vec2i tile_pos, const Globals&
 	auto check_loop_bounds = to_update_bounds;
 	pad_box(check_loop_bounds, 1);
 
+	// fill walls
 	for (int i = 0; i < 5 * 5; i++)
 	{
 		const auto other_tile_pos = tile_pos + Vec2i{i % 5 - 2, i / 5 - 2};
@@ -420,8 +695,14 @@ static void add_vacant_tile(City& city, Map& map, Vec2i tile_pos, const Globals&
 			{
 				if (is_urban_tile(map, other_tile_pos + offset, globals))
 				{
+					const auto orig_struct = map.get_tile_or_empty(other_tile_pos).structure;
+					const auto orig_struct_flags = globals.structure_types.get(orig_struct).flags;
 					map.set_structure(other_tile_pos, globals.defines.starting_wall_type); // TODO: use city wall type
 					expand_box(to_update_bounds, other_tile_pos);
+					if (has_all(orig_struct_flags, StructureFlags::rural))
+					{
+						relocate_rural_tile(city, map, other_tile_pos, orig_struct, globals);
+					}
 					break;
 				}
 			}
@@ -468,6 +749,26 @@ static inline bool is_urban_cell(const City& city, Vec2i cell_pos)
 	return false;
 }
 
+static inline void add_urban_cell(City& city, Map& map, Vec2i cell_pos, const Globals& globals)
+{
+	// relocate if the cell is occupied by rural area
+	bool replacing_rural_cell = false;
+	for (int i = city.num_urban_cells; i < city.occupied_cells.size(); i++)
+	{
+		if (city.occupied_cells[i] == cell_pos)
+		{
+			std::swap(city.occupied_cells[city.num_urban_cells], city.occupied_cells[i]);
+			city.num_urban_cells++;
+			relocate_rural_cell(city, map, cell_pos, globals);
+			return;
+		}
+	}
+
+	// not replacing rural cells
+	city.occupied_cells.insert(city.num_urban_cells, cell_pos);
+	city.num_urban_cells++;
+}
+
 static bool expand_urban_vacant_tile_in_cell(City& city, Map& map, Vec2i cell_pos, const Globals& globals, Array<Vec2i>& append_new_vacant_tiles)
 {
 	auto expand_tiles = make_temp_array<Vec2i>(0, map_cell_size);
@@ -499,8 +800,7 @@ static bool expand_urban_vacant_tile_in_cell(City& city, Map& map, Vec2i cell_po
 			const auto additional_cell_pos = tile_to_cell_coords(additional_tile_pos);
 			if (!is_urban_cell(city, additional_cell_pos))
 			{
-				city.occupied_cells.insert(city.num_urban_cells, additional_cell_pos);
-				city.num_urban_cells++;
+				add_urban_cell(city, map, additional_cell_pos, globals);
 			}
 			add_vacant_tile(city, map, additional_tile_pos, globals, append_new_vacant_tiles, additional_vacant_tiles);		
 		}
@@ -714,8 +1014,7 @@ static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
 			// mark urban cell if chose a new cell
 			if (chosen_cell_idx >= num_existing_available_cells)
 			{
-				city.occupied_cells.insert(city.num_urban_cells, new_cell_pos);
-				city.num_urban_cells++;
+				add_urban_cell(city, map, new_cell_pos, globals);
 			}
 
 			// expand a number of times if until no more available space
@@ -772,7 +1071,7 @@ void develop_city(World& world, Id city_id, DevelopmentArea area, const Globals&
 	}
 	else
 	{
-		dev_pos = find_tile_for_dev(city, map, area, globals);
+		dev_pos = make_rural_space(city, map, globals);
 	}
 	add_development(city, map, area, dev_pos, globals);
 	world.map.update_glyphs(to_box(dev_pos), globals);

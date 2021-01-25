@@ -30,6 +30,7 @@ extern Id create_city(World& world, const Vec2i& center, const Globals& globals)
 extern void develop_city(World& world, Id city_id, DevelopmentArea area, const Globals& globals);
 static inline bool valid_urban_tile(const Map& map, Vec2i tile_pos, const Globals& globals);
 static inline Box2i urban_cells_bounds(const City& city);
+static inline Box2i city_cells_bounds(const City& city);
 
 extern void save_world(const World& world, const String& path, const Globals& globals);
 extern World load_world(const String& path, const Globals& globals, Allocator alloc);
@@ -68,5 +69,17 @@ static inline Box2i urban_cells_bounds(const City& city)
 	}
 	return bounds;
 }
+
+static inline Box2i city_cells_bounds(const City& city)
+{
+	const auto center_cell = tile_to_cell_coords(city.center);
+	auto bounds = to_box(center_cell);
+	for (const auto cell_pos : city.occupied_cells)
+	{
+		expand_box(bounds, cell_pos);
+	}
+	return bounds;
+}
+
 
 

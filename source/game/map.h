@@ -72,6 +72,9 @@ struct Map
 };
 
 static inline uint8_t calc_surrounding_structure_mask(const Map& map, Vec2i tile_pos, StructureFlags flags, const Globals& globals);
+static inline uint8_t calc_adjacent_structure_mask(const Map& map, Vec2i tile_pos, StructureFlags flags, const Globals& globals);
+static inline int count_adjacent_structures_with_any_flag(const Map& map, Vec2i tile_pos, StructureFlags flags, const Globals& globals);
+static inline StructureFlags tile_structure_flag(const Map& map, Vec2i tile_pos, const Globals& globals);
 
 inline int tile_to_chunk(int tile_coord)
 {
@@ -256,6 +259,26 @@ static inline uint8_t calc_adjacent_structure_mask(const Map& map, Vec2i tile_po
 		}
 	}
 	return mask;
+}
+
+static inline int count_adjacent_structures_with_any_flag(const Map& map, Vec2i tile_pos, StructureFlags flags, const Globals& globals)
+{
+	int num = 0;
+	for (int i = 0; i < 4; i++)
+	{
+		const auto& tile = map.get_tile_or_empty(tile_pos + adjacent_offsets[i]);
+		if (tile.structure && has_any(globals.structure_types.get(tile.structure).flags, flags))
+		{
+			num++;
+		}
+	}
+	return num;
+}
+
+static inline StructureFlags tile_structure_flag(const Map& map, Vec2i tile_pos, const Globals& globals)
+{
+	const auto& tile = map.get_tile_or_empty(tile_pos);
+	return tile.structure ? globals.structure_types.get(tile.structure).flags : StructureFlags::none;
 }
 
 
