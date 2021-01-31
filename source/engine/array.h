@@ -212,7 +212,7 @@ class Array: public ArrayBase<T>
 {
 public:
 	inline Array() = default;
-	inline Array(size_t size, size_t capacity) noexcept { this->alloc_impl(size, capacity, perm_allocator()); } // TODO: should not use default allocator, pass in a boolean to decide whether to use perm or temp allocator
+	inline Array(size_t size, size_t capacity) noexcept { this->alloc_impl(size, capacity, context_allocator()); } // TODO: should not use default allocator, pass in a boolean to decide whether to use perm or temp allocator
 	inline Array(size_t size, Allocator allocator) noexcept { this->alloc_impl(size, size, allocator); }
 	inline Array(size_t size, size_t capacity, Allocator allocator) noexcept { this->alloc_impl(size, capacity, allocator); }
 	// inline Array(const Array<T>& other) noexcept { *this = other; } // TODO: don't implement until we really need this
@@ -222,8 +222,8 @@ public:
 
 	inline void alloc(size_t size, size_t capacity, Allocator allocator) { this->alloc_impl(size, capacity, allocator); }
 	inline void alloc(Allocator allocator, std::initializer_list<T> il) { this->alloc_impl(allocator, il); }
-	inline void alloc_perm(size_t size, size_t capacity) { this->alloc_impl(size, capacity, perm_allocator()); }
-	inline void alloc_perm(std::initializer_list<T> il) { this->alloc_impl(perm_allocator(), il); }
+	inline void alloc_perm(size_t size, size_t capacity) { this->alloc_impl(size, capacity, context_allocator()); }
+	inline void alloc_perm(std::initializer_list<T> il) { this->alloc_impl(context_allocator(), il); }
 	inline void alloc_temp(size_t size, size_t capacity) { this->alloc_impl(size, capacity, temp_allocator()); }
 	inline void alloc_temp(std::initializer_list<T> il) { this->alloc_impl(temp_allocator(), il); }
 };

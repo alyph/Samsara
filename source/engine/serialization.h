@@ -19,6 +19,7 @@ enum class Delimiter: const char
 	value_open 		= '(',
 	value_close 	= ')',
 	value_separator	= ',',
+	quotation		= '"',
 	object_tag 		= '#',
 	custom1			= ';',
 	custom2			= ':',
@@ -166,6 +167,11 @@ public:
 		token_stream.emit_number(num);
 	}
 
+	inline void word(const String& str)
+	{
+		token_stream.emit_word(str);
+	}
+
 	inline void string(const String& str)
 	{
 		token_stream.emit_string(str);
@@ -173,7 +179,7 @@ public:
 
 	inline void label(const String& label)
 	{
-		token_stream.emit_string(label); // TODO: we don't wan this to form a quoted string, so maybe emit_string need take some argument to indicate what kind of strings is emitted
+		token_stream.emit_word(label); // TODO: we don't wan this to form a quoted string, so maybe emit_word need take some argument to indicate what kind of strings is emitted
 	}
 
 	// inline void character(char ch)
@@ -335,7 +341,7 @@ public:
 		String parsed_key;
 		if (token_stream.peek() == TokenType::string)
 		{
-			token_stream.emit_string(parsed_key);
+			token_stream.emit_word(parsed_key);
 			if (parsed_key == key)
 			{
 				return true;
@@ -366,7 +372,7 @@ public:
 
 		while (token_stream.peek() == TokenType::string)
 		{
-			token_stream.emit_string(parsed_key);
+			token_stream.emit_word(parsed_key);
 			found_props.push_back({parsed_key.hash(), parsed_key, token_stream.cursor()});
 			if (parsed_key == key)
 			{
@@ -429,16 +435,21 @@ public:
 		return false;
 	}
 
+	inline void word(String& str)
+	{
+		token_stream.emit_word(str);
+	}
+
 	inline void string(String& str)
 	{
 		token_stream.emit_string(str);
 	}
 
-	inline bool opt_string(String& str)
+	inline bool opt_word(String& str)
 	{
 		if (token_stream.peek() == TokenType::string)
 		{
-			string(str);
+			word(str);
 			return true;
 		}
 		return false;
@@ -446,7 +457,7 @@ public:
 
 	inline void label(const String& label)
 	{
-		token_stream.emit_matched_string(label);
+		token_stream.emit_matched_word(label);
 	}
 
 	inline void newline()
@@ -637,6 +648,19 @@ namespace serialization
 	serialize(TOp& op, T& v)
 	{
 		op.number(v);
+	}
+
+	template<class TOp>
+	void serialize(TOp& op, const String& v)
+	{
+		op.string(v);
+	}
+
+	template<class TOp>
+	void serialize(TOp& op, String& v)
+	{
+		op.string(v);
+		v.store(); // require a specified context allocator
 	}
 }
 

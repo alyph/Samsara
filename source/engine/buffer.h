@@ -33,8 +33,8 @@ public:
 	void resize(size_t new_size, size_t min_grow_size);
 	void reserve(size_t new_capacity);
 
-	inline static bool is_aligned(size_t ptr);
-	inline static size_t get_next_aligned(size_t ptr);
+	inline static constexpr bool is_aligned(size_t ptr);
+	inline static constexpr size_t get_next_aligned(size_t ptr);
 };
 
 #if 0
@@ -80,12 +80,12 @@ inline uint8_t* Buffer::get(size_t ptr) const
 	return (data + ptr);
 }
 
-inline bool Buffer::is_aligned(size_t ptr)
+inline constexpr bool Buffer::is_aligned(size_t ptr)
 {
 	return ((ptr & alignment_mask) == 0);
 }
 
-inline size_t Buffer::get_next_aligned(size_t ptr)
+inline constexpr size_t Buffer::get_next_aligned(size_t ptr)
 {
 	return ((ptr + alignment_mask) & (~alignment_mask));
 }

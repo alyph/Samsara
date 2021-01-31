@@ -590,18 +590,23 @@ static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, 
 	else if (auto glyphs = get_elem_defined_attr(frame, elem_id, attrs::glyphs))
 	{
 		const auto num_glyphs = glyphs->size();
-		if (w < 0) { w = std::min((int)num_glyphs, max_width); }
-		if (w > 0)
+		if (w < 0 || h < 0)
 		{
-			if (h < 0) { h = (((int)num_glyphs + w - 1) / w); }
-			const int max_size = std::min((int)num_glyphs, (w * h));
-			for (int i = 0; i < max_size; i++)
+			Vec2i bounds;
+			for (const auto& glyph : *glyphs)
 			{
-				const auto glyph_idx = render_buffer.push_glyph(elem_id, (*glyphs)[i]);
-				auto& glyph = render_buffer.mutate_glyph(glyph_idx);
-				glyph.coords.x += x;
-				glyph.coords.y += x;
+				bounds = comp_max(bounds, glyph.coords + glyph.size);
 			}
+			if (w < 0) { w = std::min(bounds.x, max_width); }
+			if (h < 0) { h = std::min(bounds.y, max_height); }
+		}
+
+		for (const auto& in_glyph : *glyphs)
+		{
+			const auto glyph_idx = render_buffer.push_glyph(elem_id, in_glyph);
+			auto& glyph = render_buffer.mutate_glyph(glyph_idx);
+			glyph.coords.x += x;
+			glyph.coords.y += y;
 		}
 	}
 	// TODO: image and other common elements

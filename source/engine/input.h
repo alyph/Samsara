@@ -4,6 +4,7 @@
 enum class InputEventType
 {
 	key,
+	character,
 	mouse_button,
 	mouse_move,
 	mouse_wheel,
@@ -175,6 +176,17 @@ enum class ModKeys : uint8_t
 	any = 0xff,
 };
 
+enum class ControlCodes : uint8_t
+{
+	null		= 0x00,
+	backspace	= 0x08,
+	tab			= 0x09,
+	line_feed	= 0x0a,
+	enter		= 0x0d, // carriage return
+	escape		= 0x1b,
+	del			= 0x7f,
+};
+
 struct InputEvent
 {
 	InputEventType type{};
@@ -197,6 +209,10 @@ struct InputEvent
 		struct
 		{
 			int delta;
+		};
+		struct
+		{
+			uint64_t char_code;
 		};
 	};
 };

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "globals.h"
-#include "engine/flag_utils.h"
+#include "engine/enum_utils.h"
 
 enum TileTypeFlags: uint32_t
 {

@@ -138,12 +138,14 @@ public:
 	inline String& operator=(String&& other);
 #endif
 
-	inline void store();
+	inline void store() { store(context_allocator()); }
+	inline void store(Allocator alloc);
 	template<size_t N>
 	inline void store(const char (&str)[N]);
 	template<size_t N>
 	inline void store(char (&str)[N]) = delete;
-	inline void store(const String& str);
+	inline void store(const String& str) { store(str, context_allocator()); }
+	inline void store(const String& str, Allocator alloc);
 
 	inline bool operator==(const String& other) const { return str_data.equal(other.str_data); }
 	inline bool operator!=(const String& other) const { return !str_data.equal(other.str_data); }
@@ -189,6 +191,33 @@ template<typename ...Ts>
 inline String format_str(const String& fmt, const Ts&... args);
 inline String cstr_to_str(const char* cstr); // TODO: maybe should impl const char* String constructor and assignment instead?
 
+template<size_t capacity>
+class LocalString final
+{
+public:
+	static_assert(capacity > 0 && capacity < std::numeric_limits<uint16_t>::max());
+
+	char chars[capacity];
+	uint16_t length{};
+
+	inline LocalString() { chars[0] = '\0'; }
+	template<size_t N>
+	inline LocalString(const char (&str)[N]);
+	template<size_t N>
+	inline LocalString(char (&str)[N]) = delete;
+	inline LocalString(const char* start, size_t size);
+	inline LocalString(const String& str);
+
+	template<size_t N>
+	inline LocalString& operator=(const char (&str)[N]);
+	template<size_t N>
+	inline LocalString& operator=(char (&str)[N]) = delete;
+	inline LocalString& operator=(const String& str);
+
+	inline String str() const;
+};
+
+
 // string assignment
 
 inline void assign_short_string(StringData& str_data, const char* start, size_t size)
@@ -233,11 +262,11 @@ inline void assign_temp_string(StringData& str_data, const char* start, size_t s
 	}
 	else
 	{
-		assign_normal_string(str_data, start, size, engine().allocators.current_temp_allocator);
+		assign_normal_string(str_data, start, size, temp_allocator());
 	}
 }
 
-inline void assign_stored_string(StringData& str_data, const char* start, size_t size)
+inline void assign_stored_string(StringData& str_data, const char* start, size_t size, Allocator alloc)
 {
 	if (size <= max_short_string_size)
 	{
@@ -246,7 +275,7 @@ inline void assign_stored_string(StringData& str_data, const char* start, size_t
 	else
 	{
 		// TODO: maybe we should force user to select an explicit allocator instead
-			assign_normal_string(str_data, start, size, perm_allocator());
+			assign_normal_string(str_data, start, size, alloc);
 		str_data.header()->ref_count = 1;
 	}
 }
@@ -441,28 +470,33 @@ inline String& String::operator=(String&& other)
 }
 #endif
 
-inline void String::store()
+inline void String::store(Allocator alloc)
 {
 	if (str_data.is_temp_allocated())
 	{
 		// TODO: maybe just call assign_normal_string()??
-		assign_stored_string(str_data, str_data.data(), str_data.size());
+		assign_stored_string(str_data, str_data.data(), str_data.size(), alloc);
+	}
+	else
+	{
+		// TODO: we are not handling assigning strings across different allocators, so if this ever fails then we need implement it
+		asserts(!str_data.is_normal() || str_data.normal_data.alloc_handle.allocator_type() == alloc);
 	}
 }
 
 template<size_t N>
 inline void String::store(const char (&str)[N])
 {
-#if STRING_REF_COUNT	
+#if STRING_REF_COUNT
 	dispose();
 #endif
 	assign_string_literal(str_data, str, (N - 1));
 }
 
-inline void String::store(const String& str)
+inline void String::store(const String& str, Allocator alloc)
 {
 	*this = str;
-	store();
+	store(alloc);
 }
 
 inline Id String::hash() const
@@ -578,7 +612,54 @@ inline String StringBuilder::to_str()
 	return str;
 }
 
+template<size_t capacity>
+inline void assign_local_string(LocalString<capacity>& local_str, const char* start, size_t len)
+{
+	asserts(len < capacity);
+	std::memcpy(local_str.chars, start, len);
+	local_str.length = static_cast<decltype(local_str.length)>(len);
+	local_str.chars[len] = '\0';
+}
 
+template<size_t capacity>
+template<size_t N>
+inline LocalString<capacity>::LocalString(const char (&str)[N])
+{
+	assign_local_string(*this, str, N-1);
+}
+
+template<size_t capacity>
+inline LocalString<capacity>::LocalString(const char* start, size_t size)
+{
+	assign_local_string(*this, start, size);
+}
+
+template<size_t capacity>
+inline LocalString<capacity>::LocalString(const String& str)
+{
+	assign_local_string(*this, str.data(), str.size());
+}
+
+template<size_t capacity>
+template<size_t N>
+inline LocalString<capacity>& LocalString<capacity>::operator=(const char (&str)[N])
+{
+	assign_local_string(*this, str, N-1);
+	return *this;
+}
+
+template<size_t capacity>
+inline LocalString<capacity>& LocalString<capacity>::operator=(const String& str)
+{
+	assign_local_string(*this, str.data(), str.size());
+	return *this;
+}
+
+template<size_t capacity>
+inline String LocalString<capacity>::str() const
+{
+	return String{chars, length};
+}
 
 
 

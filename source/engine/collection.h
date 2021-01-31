@@ -304,7 +304,7 @@ namespace serialization
 				String key;
 				if (collection.id_to_key(elem.id, key))
 				{
-					op.string(key);
+					op.word(key);
 				}
 				op.number(elem.id);
 				op.end_heading();
@@ -327,7 +327,7 @@ namespace serialization
 
 				// heading
 				op.label(tag);
-				const bool has_key = (!op.at_eol() && op.opt_string(key));
+				const bool has_key = (!op.at_eol() && op.opt_word(key));
 				const bool has_id = (!op.at_eol() && op.opt_number(id));
 				op.end_heading();
 
@@ -359,7 +359,7 @@ namespace serialization
 			String key;
 			const bool has_key = collection.id_to_key(id, key);
 			asserts(has_key);
-			op.string(key);
+			op.word(key);
 		}
 
 		template<class TOp, class TId, class TColl>
@@ -367,7 +367,7 @@ namespace serialization
 		{
 			static_assert(!std::is_const_v<TId>);
 			String key;
-			op.string(key);
+			op.word(key);
 			Id full_id;
 			const bool found = collection.key_to_id(key, full_id);
 			asserts(found);

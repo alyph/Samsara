@@ -10,6 +10,8 @@ struct SingletonRegistry
 	std::unique_ptr<ISingletonFactory> factory;
 };
 
+// TODO: this initialization order won't work, this static vector may get initlaized later than whoever is calling register_singleton
+// we should simplify the engine initlaization and simply call the needed global init functions for each apis to initialize singletons
 static std::vector<SingletonRegistry> registered_singletons;
 static size_t singleton_total_size = 0;
 static size_t max_alignment = 0;

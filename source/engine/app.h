@@ -18,15 +18,10 @@ int run_app(const AppConfig& config = {})
 	profiler::startListen();
 	scoped_engine_init();
 
-	// no need to pop, nothing outside is using it
-	// TODO: maybe a better way is to have a scoped perm allocator setup
-	// or implement the defer{}
-	push_perm_allocator(Allocator::app);
-
 	WindowCreationParams params;
 	params.width = config.window_width;
 	params.height = config.window_height;
-	params.title.store(get_executable_name());
+	params.title.store(get_executable_name(), Allocator::app);
 	auto window = Window::create(params);
 	if (!window) {
 		fprintf(stderr, "failed to create app window\n");

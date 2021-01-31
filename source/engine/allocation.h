@@ -46,7 +46,6 @@ enum class Allocator: uint8_t
 };
 
 static const constexpr size_t num_allocators = static_cast<size_t>(Allocator::max);
-static const constexpr size_t max_perm_allocator_stack_size = 16;
 
 struct AllocHeader
 {
@@ -82,8 +81,8 @@ struct AllocatorGlobals
 {
 	AllocatorData allocators[num_allocators]{};
 	Allocator current_temp_allocator = Allocator::temp;
-	Allocator perm_allocator_stack[max_perm_allocator_stack_size]{};
-	size_t perm_allocator_stack_size{};
+	Allocator current_context_allocator = Allocator::none; // only one contextual allocator at a time (this enforces explicit allocation control, so you can be sure when you push a contextual allocator, all calls after than will use the same allocator)
+	size_t context_allocator_push_count{}; // how many time the same contextual allocator gets pushed
 
 	AllocHandle allocate(Allocator allocator, size_t size);
 	void reallocate(AllocHandle& handle, size_t size);

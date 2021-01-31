@@ -46,6 +46,7 @@ public:
 	inline void emit_delim(Delimiter del);
 	template<typename T>
 	inline void emit_number(T num);
+	inline void emit_word(const String& str);
 	inline void emit_string(const String& str);
 	inline void emit_newline();
 	inline void emit_char(char ch);
@@ -65,8 +66,9 @@ public:
 	inline size_t emit_delim(Delimiter del);
 	template<typename T>
 	inline size_t emit_number(T& num);
+	inline size_t emit_word(String& str);
+	inline size_t emit_matched_word(const String& str);
 	inline size_t emit_string(String& str);
-	inline size_t emit_matched_string(const String& str);
 	inline bool emit_char(char& ch, bool stop_at_eol);
 	inline size_t emit_newline();
 	inline TokenType peek();
@@ -95,6 +97,7 @@ private:
 	inline bool test_char_at(size_t pos, char& out_ch);
 	inline Delimiter consume_delimiter();
 	inline const char* consume_number(size_t& end_pos); // end_pos is one beyond the last char of the number
+	inline const char* consume_word(size_t& len);
 	inline const char* consume_string(size_t& len);
 	inline size_t next_non_space(bool stop_at_eol);
 };
@@ -275,15 +278,33 @@ inline void FileTokenWriteStream::emit_number(T num)
 	}
 }
 
-inline void FileTokenWriteStream::emit_string(const String& str)
+inline void FileTokenWriteStream::emit_word(const String& str)
 {
+	// word is a complete string that contains no white space or punctuation
 	prepare_next_token(TokenType::string, 0);
-	// TODO: space in string etc.
 	const auto begin = str.data();
 	for (auto i = 0; i < str.size(); i++)
 	{
-		file.put(*(begin + i));
+		const auto ch = *(begin + i);
+		asserts(std::isalpha(ch) || ch == '_'); // TODO: report error, invalid character in word
+		file.put(ch);
 	}
+}
+
+inline void FileTokenWriteStream::emit_string(const String& str)
+{
+	// just pretend we are putting out one quotation token, and this should add necessary space ahead of the string and after
+	prepare_next_token(TokenType::delimiter, (char)Delimiter::quotation);
+	file.put((char)Delimiter::quotation);
+	const auto begin = str.data();
+	for (auto i = 0; i < str.size(); i++)
+	{
+		const auto ch = *(begin + i);
+		// TODO: support escaped characters
+		asserts(std::isprint(ch) && ch != (char)Delimiter::quotation && ch != '\\'); // TODO: report error, invalid char in string
+		file.put(ch);
+	}
+	file.put((char)Delimiter::quotation);
 }
 
 inline void FileTokenWriteStream::emit_newline()
@@ -321,6 +342,7 @@ inline void FileTokenWriteStream::prepare_next_token(TokenType next_type, char n
 			if (del != Delimiter::section_open &&
 				del != Delimiter::array_open &&
 				del != Delimiter::value_open &&
+				del != Delimiter::quotation &&
 				del != Delimiter::object_tag)
 			{
 				need_space = false;
@@ -395,12 +417,12 @@ inline size_t FileTokenReadStream::emit_number(T& num)
 	return current;
 }
 
-inline size_t FileTokenReadStream::emit_string(String& str)
+inline size_t FileTokenReadStream::emit_word(String& str)
 {
 	if (peek() == TokenType::string)
 	{
 		size_t len{};
-		auto start = consume_string(len);
+		auto start = consume_word(len);
 		str = String{start, len};
 	}
 	else
@@ -410,18 +432,34 @@ inline size_t FileTokenReadStream::emit_string(String& str)
 	return current;
 }
 
-inline size_t FileTokenReadStream::emit_matched_string(const String& str)
+inline size_t FileTokenReadStream::emit_matched_word(const String& str)
 {
 	if (peek() == TokenType::string)
 	{
 		const auto prev_pos = current;
 		size_t len{};
-		auto start = consume_string(len);
+		auto start = consume_word(len);
 		if (str != make_string_view(start, len))
 		{
 			asserts(false); // report error
-			current = prev_pos; // NOTE: consume_string() is not destructive but merely move the current, so it's safe to simply move the current back
+			current = prev_pos; // NOTE: consume_word() is not destructive but merely move the current, so it's safe to simply move the current back
 		}
+	}
+	else
+	{
+		asserts(false); // report error
+	}
+	return current;
+}
+
+inline size_t FileTokenReadStream::emit_string(String& str)
+{
+	Delimiter delim{};
+	if (peek_delim(delim) && delim == Delimiter::quotation)
+	{
+		size_t len{};
+		auto start = consume_string(len);
+		str = String{start, len};
 	}
 	else
 	{
@@ -649,7 +687,7 @@ inline const char* FileTokenReadStream::consume_number(size_t& end_pos)
 	return num_str;
 }
 
-inline const char* FileTokenReadStream::consume_string(size_t& len)
+inline const char* FileTokenReadStream::consume_word(size_t& len)
 {
 	auto str = reinterpret_cast<const char*>(buffer.get(next_token.begin));
 	auto pos = (next_token.begin + 1);
@@ -668,6 +706,34 @@ inline const char* FileTokenReadStream::consume_string(size_t& len)
 	len = (pos - next_token.begin);
 	current = pos; // NOTE: we are skipping past the token position, so the previous token will be auto invalidated
 	return str;
+}
+
+inline const char* FileTokenReadStream::consume_string(size_t& len)
+{
+	const auto begin = next_token.begin + 1;
+	auto pos = begin;
+	bool closed = false;
+	while (!eof(pos))
+	{
+		const auto ch = char_at(pos);
+		if (ch == (char)Delimiter::quotation)
+		{
+			closed = true;
+			break;
+		}
+		if (std::isprint(ch) && ch != '\\') // TODO: not supporting escape yet
+		{
+			pos++;
+		}
+		else
+		{
+			asserts(false); // TODO: report error (string not closed)
+			break;
+		}
+	}
+	len = (pos - begin);
+	current = closed ? (pos + 1) : pos;
+	return reinterpret_cast<const char*>(buffer.get(begin));
 }
 
 inline size_t FileTokenReadStream::next_non_space(bool stop_at_eol)

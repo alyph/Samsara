@@ -37,12 +37,31 @@ struct PresentWorker
 	uint16_t num_mouse_interact_depth[(size_t)MouseInteraction::max * 2]{};
 	Id last_finalized_elem{};
 
+	inline bool is_mouse_currently(MouseInteraction interaction)
+	{
+		return num_mouse_interact_depth[(size_t)interaction * 2] > 0;
+	}
+
+	inline bool is_mouse_currently(MouseInteraction interaction, Id elem_guid)
+	{
+		const uint16_t depth = num_mouse_interact_depth[(size_t)interaction * 2];
+		for (uint16_t i = 0; i < depth; i++)
+		{
+			if (mouse_interact_per_depth[i].interacts[(size_t)interaction].curr_elem_guid == elem_guid)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	inline bool is_mouse_currently(MouseInteraction interaction, const Element& elem)
 	{
 		return (elem.depth < num_mouse_interact_depth[(size_t)interaction * 2]) && 
 			(mouse_interact_per_depth[elem.depth].interacts[(size_t)interaction].curr_elem_guid == elem.guid);
 	}
 
+	// TODO: should remove this and just use is_mouse_currently(interaction)
 	inline bool is_mouse_currently_not(MouseInteraction interaction)
 	{
 		return num_mouse_interact_depth[(size_t)interaction * 2] == 0;
@@ -133,6 +152,9 @@ Id make_element(const Context& context, Id type_id)
 			global_elem.parent = static_cast<uint32_t>(parent_guid);
 		}
 	}
+
+	// TODO: store the elem_id in the context to mark that an element has taken this place along with the scope and global guid
+	// so next time if another make_element call to the context with a valid elem_id, we can assert
 
 	auto& new_elem = frame->elements.emplace_back();
 	new_elem.guid = scope.elem_guid;
@@ -501,6 +523,110 @@ bool was_elem_pressed(const Context& context)
 		worker->is_mouse_currently(MouseInteraction::left_down, elem);
 }
 
+// states
+
+static inline size_t get_state_ptr_idx(Buffer& buffer, ElementStateHeader* header)
+{
+	const auto header_ptr = reinterpret_cast<uint8_t*>(header);
+	asserts(header_ptr >= buffer.data);
+	return (header_ptr - buffer.data) + state_header_size;
+}
+
+static inline ElementStateHeader* first_state(Buffer& buffer)
+{
+	return buffer.empty() ? nullptr : reinterpret_cast<ElementStateHeader*>(buffer.data);
+}
+
+static inline ElementStateHeader* next_state(Buffer& buffer, ElementStateHeader* current_state)
+{
+	const auto state_data_ptr = get_state_ptr_idx(buffer, current_state);
+	const auto next_state_ptr = state_data_ptr + current_state->size;
+	return next_state_ptr >= buffer.size() ? nullptr : reinterpret_cast<ElementStateHeader*>(buffer.get(next_state_ptr));
+}
+
+static inline ElementStateHeader* get_state_header(Buffer& buffer, size_t state_data_ptr)
+{
+	asserts(state_data_ptr >= state_header_size);
+	return reinterpret_cast<ElementStateHeader*>(buffer.get(state_data_ptr - state_header_size));
+}
+
+static inline ElementStateHeader* find_focused_state(Buffer& buffer, Id state_type_id, size_t state_size)
+{
+	for (auto header = first_state(buffer); header; header = next_state(buffer, header))
+	{
+		if (header->mode == ElementStateMode::focused && header->type_id == state_type_id)
+		{
+			asserts(header->size >= state_size);
+			return header;
+		}
+	}
+	return nullptr;
+}
+
+static inline ElementStateHeader* create_state_buffer(Buffer& buffer, Id state_type_id, size_t state_size, ElementStateMode mode)
+{
+	const auto old_size = buffer.size();
+	asserts(Buffer::is_aligned(old_size));
+	const auto data_size = Buffer::get_next_aligned(state_size);
+	buffer.resize(old_size + state_header_size + data_size);
+	asserts(Buffer::is_aligned(buffer.size()));
+	std::memset(buffer.get(old_size + state_header_size), 0, data_size);
+	auto header = reinterpret_cast<ElementStateHeader*>(buffer.get(old_size));
+	asserts(data_size < std::numeric_limits<uint32_t>::max());
+	asserts(state_type_id < std::numeric_limits<uint16_t>::max());
+	header->size = static_cast<uint32_t>(data_size);
+	header->type_id = static_cast<uint16_t>(state_type_id);
+	header->mode = mode;
+	return header;
+}
+
+void* access_elem_state_buffer(const Frame& frame, Id elem_id, Id state_type_id, size_t state_size, ElementStateMode mode, bool& out_new)
+{
+	out_new = false;
+	auto globals = frame.globals;
+	Buffer& buffer = globals->states_buffer;
+	const Element& elem = get_element(frame, elem_id);
+	GlobalElement& global_elem = frame.globals->global_elems[id_to_index(elem.guid)];
+	if (mode == ElementStateMode::focused)
+	{
+		// TODO: apply some limitations on when you can access the focused state data
+		// this is because all elements of same state data type share the same block of buffer for focused mode,
+		// so we have to be careful not accidentally give the same pointer to multiple different elements
+		// here you have to be either the current focused element and no one takes next focus
+		// or you are the next focus but no one is currently focused
+		asserts((frame.curr_focused_elem == elem.guid && (frame.next_focused_elem == null_id || frame.next_focused_elem == elem.guid)) ||
+			(frame.next_focused_elem == elem.guid && frame.curr_focused_elem == null_id));
+	}
+
+	if (!global_elem.state_ptr)
+	{
+		ElementStateHeader* header{};
+		if (mode == ElementStateMode::focused)
+		{
+			header = find_focused_state(buffer, state_type_id, state_size);
+		}
+		if (!header)
+		{
+			out_new = true;
+			header = create_state_buffer(buffer, state_type_id, state_size, mode);
+		}
+		const auto state_ptr = get_state_ptr_idx(buffer, header);
+		asserts(state_ptr && state_ptr < std::numeric_limits<decltype(global_elem.state_ptr)>::max());
+		global_elem.state_ptr = static_cast<decltype(global_elem.state_ptr)>(state_ptr);
+	}
+	else
+	{
+		auto header = get_state_header(buffer, global_elem.state_ptr);
+		asserts(header->type_id == state_type_id && header->size >= state_size && header->mode == mode);
+	}
+	return buffer.get(global_elem.state_ptr);
+}
+
+static Id next_state_type_id = 1;
+Id new_state_type_id()
+{
+	return next_state_type_id++;
+}
 
 ScopedChildrenBlock::ScopedChildrenBlock(const Context& context):
 	worker(context.worker),
@@ -592,6 +718,13 @@ void Presenter::process_control(const std::vector<InputEvent>& events)
 		{
 			latest_input.mouse_wheel_pos += event.delta;
 		}
+		else if (event.type == InputEventType::character)
+		{
+			// each character input will trigger a present() call
+			// TODO: if optimization needed, can merge with the key down input
+			// although be aware of that there are repeated character input as well and we still need handle those separately
+			latest_input.char_code = event.char_code;
+		}
 		else
 		{
 			int idx{}, bit{};
@@ -660,6 +793,7 @@ void Presenter::step_frame(double dt)
 	// always store the new hit result, so even if we don't re-present() right away
 	// we will get fresh values next time we present()
 	latest_input.mouse_hit = hit_result;
+	// TODO: do we need compare other parts of the hit result e.g. uv, iuv etc.
 	if (hit_result.hit_elem_id != latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover])
 	{
 		latest_input.mouse_interact_elems[(size_t)MouseInteraction::hover] = hit_result.hit_elem_id;
@@ -681,13 +815,18 @@ void Presenter::present()
 	curr_frame.elements.clear();
 	curr_frame.inst_attr_table.clear();
 	curr_frame.post_attr_table.clear();
+	curr_frame.prev_time = curr_frame.curr_time;
+	curr_frame.curr_time = time;
 	curr_frame.prev_input = curr_frame.curr_input;
 	curr_frame.curr_input = latest_input;
+	latest_input.char_code = 0; // char_code only exist for one frame
+
+	curr_frame.prev_focused_elem = curr_frame.curr_focused_elem;
+	curr_frame.curr_focused_elem = curr_frame.next_focused_elem; // next_focused_elem then remains the same until changed
+	// TODO: remove current focus if it wasn't rendered in the last frame
 
 	// TODO: to avoid extra allocation, maybe just keep a worker around and clear everything every frame
-	// call present func to present
 	PresentWorker worker;
-
 	Context context;
 	context.frame = &curr_frame;
 	context.worker = &worker;
@@ -726,6 +865,16 @@ void Presenter::present()
 		}
 	}
 
+	// clear next focus if mouse down on other elements
+	// TODO: maybe should count right_down too
+	if (curr_frame.next_focused_elem &&
+		worker.is_mouse_currently(MouseInteraction::left_down) &&
+		!worker.is_mouse_currently(MouseInteraction::left_down, curr_frame.next_focused_elem))
+	{
+		curr_frame.next_focused_elem = null_id;
+	}
+
+	// call present func to present
 	{
 		// Create a scoped children block to ensure all elements are children of this virtual root
 		// This will insert an empty entry into the worker stack for the top level elements,

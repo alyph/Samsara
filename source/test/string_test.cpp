@@ -8,7 +8,7 @@ int main()
 	
 	scoped_engine_init();
 
-	push_perm_allocator(Allocator::app);
+	scoped_context_allocator(Allocator::app);
 
 
 	String str1 = "good man whatever ok";

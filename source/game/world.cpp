@@ -188,7 +188,7 @@ static void setup_walls(City& city, Map& map, const Globals& globals)
 
 Id create_city(World& world, const Vec2i& center, const Globals& globals)
 {
-	push_perm_allocator(world.allocator);
+	scoped_context_allocator(world.allocator);
 	City& city = world.cities.emplace();
 	city.center = center;
 	city.num_urban_cells = 1;
@@ -202,7 +202,6 @@ Id create_city(World& world, const Vec2i& center, const Globals& globals)
 	add_development(city, world.map, DevelopmentArea::urban, center, globals);
 	setup_walls(city, world.map, globals);
 	city.urban_bounds = urban_tile_bounds(city, world.map, globals);
-	pop_perm_allocator();
 	return city.id;
 }
 
@@ -1127,6 +1126,7 @@ namespace serialization
 	template<class T>
 	static void serialize(T& op, RefType<T, City> city)
 	{
+		op.prop("name", city.name);
 		op.prop("center", city.center);
 		op.prop("dev_urban", city.development_level[(int)DevelopmentArea::urban]);
 		op.prop("dev_rural", city.development_level[(int)DevelopmentArea::rural]);
@@ -1269,7 +1269,7 @@ void save_world(const World& world, const String& path, const Globals& globals)
 
 World load_world(const String& path, const Globals& globals, Allocator alloc)
 {
-	push_perm_allocator(alloc);
+	scoped_context_allocator(alloc);
 	World world;
 	world.init(alloc);
 	serialization::serialize_world<SerializeOpType::read>(world, path, globals);
@@ -1292,7 +1292,6 @@ World load_world(const String& path, const Globals& globals, Allocator alloc)
 		setup_walls(city, world.map, globals);
 		city.urban_bounds = urban_tile_bounds(city, world.map, globals);
 	}
-	pop_perm_allocator();
 	return world;
 }
 

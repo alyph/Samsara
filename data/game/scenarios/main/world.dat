@@ -1,6 +1,7 @@
 [cities]
 
 # city 1
+name "Antioch"
 center (418 242)
 dev_urban 1
 dev_rural 0
@@ -10,6 +11,7 @@ dev_tiles [(418 242)]
 vacant_tiles []
 
 # city 2
+name "Edessa"
 center (487 211)
 dev_urban 1
 dev_rural 0
@@ -19,6 +21,7 @@ dev_tiles [(487 211)]
 vacant_tiles []
 
 # city 3
+name "Damascus"
 center (427 332)
 dev_urban 1
 dev_rural 0
@@ -28,11 +31,22 @@ dev_tiles [(427 332)]
 vacant_tiles []
 
 # city 4
+name "NEW CITY"
 center (398 390)
 dev_urban 1
 dev_rural 0
 num_urban_cells 1
 cells [(99 97)]
 dev_tiles [(398 390)]
+vacant_tiles []
+
+# city 5
+name "Aleppo"
+center (445 242)
+dev_urban 1
+dev_rural 0
+num_urban_cells 1
+cells [(111 60)]
+dev_tiles [(445 242)]
 vacant_tiles []
 

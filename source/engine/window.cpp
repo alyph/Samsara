@@ -335,6 +335,16 @@ static void queue_input_event(std::vector<InputEvent>& events, UINT message, WPA
 			events.push_back(event);
 			break;
 		}
+		case WM_CHAR:
+		case WM_SYSCHAR:
+		{
+			// printf("char 0x%llx\n", wparam);
+			InputEvent event;
+			event.type = InputEventType::character;
+			event.char_code = wparam;
+			events.push_back(event);
+			break;
+		}
 		case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN:
         case WM_MBUTTONDOWN:

@@ -1,4 +1,5 @@
 #include "game.h"
+#include "common_ui.h"
 #include "engine/window.h"
 #include "engine/viewport.h"
 #include "engine/tablet.h"
@@ -76,7 +77,8 @@ Game::Game()
 	// ui_texture = create_font_texture(w, h, pages, codes, font);
 	ui_texture = load_texture_array(
 	{
-		"../../data/fonts/Lord_Nightmare-Fixedsys-03.png",
+		"../../data/fonts/unscii_8x16.png",
+		// "../../data/fonts/Lord_Nightmare-Fixedsys-03.png",
 	});
 
 	const auto make_dev_type = [&](const String& struct_key, const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> DevelopmentType&
@@ -88,7 +90,7 @@ Game::Game()
 		return dev;
 	};
 
-	const auto alloc = perm_allocator();
+	const auto alloc = app_allocator();
 
 	globals.terrain_types.alloc(64, alloc);
 	globals.terrain_types.set(0, "ocean", {0, "ocean", '~', 0x0300, 0x103060_rgb32, 0x80c0f0_rgb32, TileTypeFlags::water});
@@ -525,6 +527,109 @@ static void city_dev_palette(const Context ctx, Id sel_city, const Globals& glob
 	}
 }
 
+#if 0
+struct EditBoxStyle
+{
+	Color forecolor;
+	Color normal_backcolor;
+	Color editing_backcolor;
+};
+
+struct EditBoxState
+{
+	static const Id type_id;
+	LocalString<512> editing_str;
+	int cursor{};
+};
+const Id EditBoxState::type_id = new_state_type_id();
+
+static bool edit_box(const Context ctx, String& text, int width, const EditBoxStyle& style)
+{
+	make_element(ctx, null_id);
+
+	_attr(attrs::width, width);
+	_attr(attrs::height, 1);
+
+	if (_is_focused)
+	{
+		_attr(attrs::foreground_color, style.forecolor);
+		_attr(attrs::background_color, style.editing_backcolor);
+
+		auto& state = _focused_elem_state(EditBoxState);
+		const auto char_code = (char)_char_code;
+		if (std::isprint(char_code))
+		{
+			if (state.editing_str.length < width)
+			{
+				state.editing_str.chars[state.editing_str.length++] = (char)char_code;
+				state.cursor++;
+			}
+		}
+		else if (char_code == 0x08)
+		{
+			if (state.editing_str.length > 0)
+			{
+				state.editing_str.length--;
+				state.cursor--;
+			}
+		}
+
+		auto glyphs = make_temp_array<GlyphData>(0, width + 10);
+		const auto glyph_color = to_color32(style.forecolor);
+		// glyphs.push_back({.coords={0, -1}, .size={width, 1}, .color2=to_color32(style.editing_backcolor), .code=0xe0});
+		// glyphs.push_back({.coords={-1, 0}, .color2=glyph_color, .code='['});
+		for (int i = 0; i < state.editing_str.length; i++)
+		{
+			GlyphData glyph;
+			glyph.code = state.editing_str.chars[i];
+			// glyph.color1 = to_color32(style.editing_backcolor);
+			// glyph.color1 = 0x0055aa_rgb32;
+			glyph.color2 = glyph_color;
+			glyph.coords = {i, 0};
+			glyphs.push_back(glyph);
+		}
+		// glyphs.push_back({.coords={width, 0}, .color2=glyph_color, .code=']'});
+		const auto caret_visible = (uint64_t)std::floor(_frame_time * 2) % 2 == 0;
+		auto caret_color = glyph_color;
+		caret_color.a = caret_visible ? 255 : 0;
+		glyphs.push_back({.coords={state.cursor, 0}, .color2=caret_color, .code=0xed});
+		_attr(attrs::glyphs, glyphs.view());
+
+
+		if (char_code == 0x0d)
+		{
+			_lose_focus();
+		}
+		else if (char_code == 0x1b)
+		{
+			_lose_focus();
+			return false;
+		}
+		if (_will_lose_focused)
+		{
+			text = state.editing_str.str();
+			return true;
+		}
+	}
+	else
+	{
+		_attr(attrs::text, text);
+		_attr(attrs::foreground_color, style.forecolor);
+		_attr(attrs::background_color, style.normal_backcolor);
+
+		if (_clicked)
+		{
+			_gain_focus();
+			auto& state = _focused_elem_state(EditBoxState);
+			state.editing_str = text;
+			state.cursor = (int)text.size();
+		}
+	}
+
+	return false;
+}
+#endif
+
 void Game::present(const Context& ctx)
 {
 	using namespace elem;
@@ -553,6 +658,12 @@ void Game::present(const Context& ctx)
 		game_state,
 		editor_state,
 	};
+
+	// most of the allocation goes to the current world
+	// TODO: after we have different screens (e.g. main menu, campaign etc.),
+	// we will need change the allocator based on where we are
+	const auto world_alloc = world.allocator;
+	const auto selected_city = editor_state.selected_city_id; // use the same one through out the frame even if it's changed in the middle
 
 	Viewpoint vp;
 	vp.projection = make_orthographic(vp_width / 2, aspect, 0.f, 100.f);
@@ -642,16 +753,16 @@ void Game::present(const Context& ctx)
 			_attr(attrs::transform, map_scale_mat * to_mat44(mesh_pose));
 			_attr(attrs::texture, ref_map_texture);
 
-			// overlay
+			// tool box
 			tablet(_ctx);
-			const int left_cols = 40;
-			const float left_width = (left_cols * tablet_cell_size);
+			const int tools_cols = 6;
+			const float tools_width = (tools_cols * tablet_cell_size);
 			Pose overlay_tablet_pose;
-			overlay_tablet_pose.pos.x = -(vp_width - left_width) / 2;
+			overlay_tablet_pose.pos.x = (vp_width - tools_width) / 2; // anchored to the right
 			_attr(attrs::transform, to_mat44(overlay_tablet_pose));
-			_attr(attrs::width, left_width);
+			_attr(attrs::width, tools_width);
 			_attr(attrs::height, tablet_height);
-			_attr(attrs::tablet_columns, left_cols);
+			_attr(attrs::tablet_columns, tools_cols);
 			_attr(attrs::tablet_rows, tablet_rows);
 			_attr(attrs::texture, atlas_texture);
 			_attr(attrs::shader, tablet_shader);
@@ -671,6 +782,51 @@ void Game::present(const Context& ctx)
 					row++;
 					city_dev_palette(_ctx, editor_state.selected_city_id, globals, world, row);
 					row++;
+				}
+			}
+
+			// contextual property window
+			const bool show_properties_window = (editor_state.selected_city_id);
+			if (show_properties_window)
+			{
+				tablet(_ctx);
+				const int props_cols = 50;
+				const float props_cols_width = calc_tablet_width(props_cols, ui_rows, tablet_height, ui_texture);
+				Pose props_tablet_pose;
+				props_tablet_pose.pos.x = -(vp_width - props_cols_width) / 2;
+				_attr(attrs::transform, to_mat44(props_tablet_pose));
+				_attr(attrs::width, props_cols_width);
+				_attr(attrs::height, tablet_height);
+				_attr(attrs::tablet_columns, props_cols);
+				_attr(attrs::tablet_rows, ui_rows);
+				_attr(attrs::texture, ui_texture);
+				_attr(attrs::shader, tablet_shader);
+				_attr(attrs::quad_shader, tablet_screen_shader);
+				_attr(attrs::background_color, (Color{0.f, 0.f, 0.f, 0.5f}));
+
+				_children
+				{
+					node(_ctx);
+					_attr(attrs::placement, ElementPlacement::loose);
+					_attr(attrs::left, 1);
+					_attr(attrs::top, 1);
+
+					_children
+					{
+						EditBoxStyle edit_style;
+						edit_style.forecolor = fore_color;
+						edit_style.normal_backcolor = 0_rgba;
+						edit_style.editing_backcolor = 0x111122_rgb;
+
+						if (selected_city)
+						{
+							// TODO: if selected city changed, we need make sure all edits are commited to the old city
+							// Although right now it's kinda automatic since the mouse input that triggers the city selection
+							// will make the edit box lose focus, which then commits changes here
+							auto& city = world.cities.get(selected_city);
+							edit_box(_ctx, city.name, world_alloc, 48, edit_style);
+						}
+					}
 				}
 			}
 		}

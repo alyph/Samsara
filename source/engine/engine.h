@@ -62,25 +62,40 @@ inline Allocator temp_allocator()
 	return engine().allocators.current_temp_allocator;
 }
 
-inline Allocator perm_allocator()
+inline Allocator context_allocator()
 {
-	const auto& alloc_globals = engine().allocators;
-	return (alloc_globals.perm_allocator_stack_size > 0 ?
-		alloc_globals.perm_allocator_stack[alloc_globals.perm_allocator_stack_size-1] : Allocator::none);
+	return engine().allocators.current_context_allocator;
 }
 
-inline void push_perm_allocator(Allocator alloc)
+// you can keep pushing the same allocator on to the stack
+// but you cannot change it if there's one already set
+// this is so whoever sets the context allocator will 100% sure
+// all subsequent calls will allocate to the set allocator (if using context allocator)
+inline void push_context_allocator(Allocator alloc)
 {
+	asserts(alloc != Allocator::none);
 	auto& alloc_globals = engine().allocators;
-	asserts(alloc_globals.perm_allocator_stack_size < max_perm_allocator_stack_size);
-	alloc_globals.perm_allocator_stack[alloc_globals.perm_allocator_stack_size] = alloc;
-	alloc_globals.perm_allocator_stack_size++;
+	asserts(alloc_globals.current_context_allocator == Allocator::none || alloc_globals.current_context_allocator == alloc);
+	alloc_globals.current_context_allocator = alloc;
+	alloc_globals.context_allocator_push_count++;
 }
 
-inline void pop_perm_allocator()
+inline void pop_context_allocator()
 {
 	auto& alloc_globals = engine().allocators;
-	asserts(alloc_globals.perm_allocator_stack_size > 0);
-	alloc_globals.perm_allocator_stack_size--;
+	asserts(alloc_globals.context_allocator_push_count > 0);
+	alloc_globals.context_allocator_push_count--;
+	if (alloc_globals.context_allocator_push_count == 0)
+	{
+		alloc_globals.current_context_allocator = Allocator::none;
+	}
 }
+
+struct ScopedContextAllocator
+{
+	inline ScopedContextAllocator(Allocator alloc) { push_context_allocator(alloc); }
+	inline ~ScopedContextAllocator() { pop_context_allocator(); }
+};
+
+#define scoped_context_allocator(alloc) ScopedContextAllocator CONCAT(_engine_context_allocator_, __COUNTER__){alloc}
 

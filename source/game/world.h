@@ -8,6 +8,7 @@
 struct City
 {
 	Id id{};
+	String name = "NEW CITY";
 	Vec2i center;
 	int32_t development_level[(int)DevelopmentArea::count]{};
 	int32_t num_urban_cells{};
