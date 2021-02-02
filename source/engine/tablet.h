@@ -35,6 +35,10 @@ struct GlyphData
 	uint8_t reserved{};
 };
 
+static inline GlyphData make_glyph(uint16_t code, Color32 color, Vec2i coords) { return {.coords=coords, .color2=color, .code=code}; }
+static inline GlyphData make_glyph(uint16_t code, Color32 color, Color32 back_color, Vec2i coords) { return {.coords=coords, .color1=back_color, .color2=color, .code=code}; }
+static inline GlyphData make_glyph(uint16_t code, Color32 color, Vec2i coords, Vec2i size) { return {.coords=coords, .size=size, .color2=color, .code=code}; }
+
 struct TabletRenderBuffer
 {
 	struct Block

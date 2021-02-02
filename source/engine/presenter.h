@@ -11,6 +11,7 @@
 #include "string.h"
 #include "types.h"
 #include "input.h"
+#include "bitset.h"
 #include <functional>
 
 struct Frame;
@@ -210,6 +211,28 @@ struct RaycastResult
 	Vec2i iuv; // contextual 2d integer data
 };
 
+
+// Context is the unique piece of data passed down into each of the present, element creation functions
+// generally speaking, each function should get its own context, by declaring "const Context" in the parameter list
+// this way the caller must pass in a fresh new context, since Context is non-copyable, and with this
+// all calls (originated from the entry present()) will operate within a unique context, which represents
+// a unique scope, which can then be used to uniquely identify the elements created within it.
+
+// Some function however may take a "const Context&" (reference type), which is a measure of optimization to avoid
+// creating excessive amount of unnecessary extra scopes. However this form opens up the possiblity of passing
+// in used copy of context from other calls, and may violate a few rules that enforces the uniqueness of the scope
+// and elements.
+
+// Thus the basic rule of thumb when passing context into such functions is as follows:
+// 1. if you don't know what you are doing, always pass in "_ctx" which creates a new copy, this always works even when the function takes references
+// 2. if you decide to pass in an existing context (e.g. "ctx" without the leading underscore), you forfeit the right of using the ctx in any other way
+//    in your own function, you cannot use it to create any element, and you can not even use _ctx anymore, since that creates a new context
+//    based on the current ctx. which means the callee now owns the ctx, and current function can no longer perform any presentation related
+//    functionality other than interacting with the callee.
+// 3. make_element() is an exception for rule 2, since that function is at the leaf and all it does it creating an element in the scope signified
+//	  by the context. you can continue using _ctx to create more contexts, scopes and child elements after that, however you should not pass ctx
+//	  to other functions that takes references and you definitely should call make_element() twice with the same ctx
+// TODO: it would be great if we can enforce rule 2 somehow at the code level to emit an compile error, but probably not easy
 struct Context
 {
 	Frame* frame{};
@@ -244,6 +267,7 @@ struct Frame
 	Id next_focused_elem{};
 	PresentGlobals* globals{};
 	std::vector<Element> elements;
+	Bitset presented;
 	AttrTable inst_attr_table;
 	AttrTable post_attr_table;
 	InputState curr_input;
@@ -295,27 +319,6 @@ private:
 	InputState latest_input;
 	PresentFunc present_func;
 	void* present_func_param;
-
-
-	// void process_input()
-	// {
-	// 	// change input state -> mouse down / up, mouse hover etc.
-	// 	// derived input event -> mouse click, double click, mouse enter / exit, key down, key up
-	// 	present_frame(); // with the new input state and event
-	// }
-
-	// void present_frame()
-	// {
-	// 	new_frame(); // prepare new frame data based on previous frame data, carry over ui state, input state, event etc.
-	// 	do_frame(); // call custom presenter
-
-	// 	// analyze new input state if changed call present_frame() again (only once though)
-	// }
-
-	// void render_frame()
-	// {
-	// 	// draw using the current frame data
-	// }
 };
 
 template<class T>
@@ -330,12 +333,6 @@ void Presenter::set_present_object(T* obj)
 {
 	set_present_func(obj_present_func<T>, obj);
 }
-
-// template<typename T>
-// void set_elem_type_attr(Id type_id, const Attribute<T>& attr, const T& value)
-// {
-
-// }
 
 template<typename T> 
 inline void ElementTypeSetup::set_attr(const Attribute<T>& attr, const T& value)

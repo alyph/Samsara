@@ -3,7 +3,6 @@
 #include "engine/presenter.h"
 #include "engine/texture.h"
 #include "world.h"
-#include <chrono>
 
 enum class Brush: int
 {

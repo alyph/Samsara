@@ -143,7 +143,8 @@ Id make_element(const Context& context, Id type_id)
 	{
 		// create a new global element
 		scope.elem_guid = index_to_id(globals->global_elems.size());
-		auto& global_elem = globals->global_elems.emplace_back();		
+		auto& global_elem = globals->global_elems.emplace_back();
+		frame->presented.resize(globals->global_elems.size()); // 1 bit per each global element
 		if (depth > 0)
 		{
 			const Id parent_id = worker->elem_worker_stack[depth - 1].elem_id;
@@ -161,6 +162,11 @@ Id make_element(const Context& context, Id type_id)
 	new_elem.type = static_cast<decltype(new_elem.type)>(type_id);
 	new_elem.depth = static_cast<decltype(new_elem.depth)>(worker->elem_worker_stack.size() - 1);
 	// TODO: if we store the depth in global element, we should assert the global and local elements' depth match
+
+	// mark this element presented
+	const auto presented_idx = id_to_index(new_elem.guid);
+	asserts(!frame->presented.get(presented_idx)); // a global element can only be presented once per frame (if this is tripped, somewhere the context has messed up)
+	frame->presented.set(presented_idx, true);
 
 	const auto new_elem_id = index_to_id(new_elem_idx);
 	if (type_id && globals->elem_types[id_to_index(type_id)].as_section_root)
@@ -683,6 +689,7 @@ Presenter::Presenter()
 {
 	globals = make_globals();
 	curr_frame.globals = &globals;
+	curr_frame.presented.alloc(0, 1024, app_allocator()); // TODO: specify allocator for the presenter
 	// curr_frame.engine = &engine;
 }
 
@@ -823,7 +830,11 @@ void Presenter::present()
 
 	curr_frame.prev_focused_elem = curr_frame.curr_focused_elem;
 	curr_frame.curr_focused_elem = curr_frame.next_focused_elem; // next_focused_elem then remains the same until changed
-	// TODO: remove current focus if it wasn't rendered in the last frame
+	// remove current focus if it wasn't rendered in the last frame
+	if (curr_frame.next_focused_elem && !curr_frame.presented.get(id_to_index(curr_frame.next_focused_elem)))
+	{
+		curr_frame.next_focused_elem = null_id;
+	}
 
 	// TODO: to avoid extra allocation, maybe just keep a worker around and clear everything every frame
 	PresentWorker worker;
@@ -873,6 +884,9 @@ void Presenter::present()
 	{
 		curr_frame.next_focused_elem = null_id;
 	}
+
+	// reset the presetned flags, and will be toggled on if presented in this frame
+	curr_frame.presented.zero();
 
 	// call present func to present
 	{

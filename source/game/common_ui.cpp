@@ -44,23 +44,15 @@ bool edit_box_impl(const Context& ctx, String& text, int width, const EditBoxSty
 
 		auto glyphs = make_temp_array<GlyphData>(0, width + 10);
 		const auto glyph_color = to_color32(style.forecolor);
-		// glyphs.push_back({.coords={0, -1}, .size={width, 1}, .color2=to_color32(style.editing_backcolor), .code=0xe0});
-		// glyphs.push_back({.coords={-1, 0}, .color2=glyph_color, .code='['});
 		for (int i = 0; i < state.editing_str.length; i++)
 		{
-			GlyphData glyph;
-			glyph.code = state.editing_str.chars[i];
-			// glyph.color1 = to_color32(style.editing_backcolor);
-			// glyph.color1 = 0x0055aa_rgb32;
-			glyph.color2 = glyph_color;
-			glyph.coords = {i, 0};
-			glyphs.push_back(glyph);
+			glyphs.push_back(make_glyph(state.editing_str.chars[i], glyph_color, {i, 0}));
 		}
-		// glyphs.push_back({.coords={width, 0}, .color2=glyph_color, .code=']'});
 		const auto caret_visible = (uint64_t)std::floor(_frame_time * 2) % 2 == 0;
-		auto caret_color = glyph_color;
-		caret_color.a = caret_visible ? 255 : 0;
-		glyphs.push_back({.coords={state.cursor, 0}, .color2=caret_color, .code=0xed});
+		if (caret_visible)
+		{
+			glyphs.push_back(make_glyph(0xed, glyph_color, {state.cursor, 0}));
+		}
 		_attr(attrs::glyphs, glyphs.view());
 
 
