@@ -39,6 +39,12 @@ static constexpr inline auto rural_development_level(const City& city)
 	return city.development_level[(int)DevelopmentArea::rural];
 }
 
+static inline bool tile_has_any_struct_flags(const MapRef& ref, Vec2i tile_pos, StructureFlags flags)
+{
+	const auto& tile = ref.map.get_tile_or_empty(tile_pos);
+	return (tile.structure && has_any(ref.globals.structure_types.get(tile.structure).flags, flags));
+}
+
 static inline bool is_urban_tile(const Map& map, Vec2i tile_pos, const Globals& globals)
 {
 	const auto& tile = map.get_tile_or_empty(tile_pos);
@@ -186,21 +192,26 @@ static void setup_walls(City& city, Map& map, const Globals& globals)
 	}
 }
 
+static void add_initial_city_development(City& city, Map& map, const Globals& globals)
+{
+	city.num_urban_cells = 1;
+	city.occupied_cells.push_back(tile_to_cell_coords(city.center));
+	add_development(city, map, DevelopmentArea::urban, city.center, globals);
+	setup_walls(city, map, globals);
+}
+
 Id create_city(World& world, const Vec2i& center, const Globals& globals)
 {
 	scoped_context_allocator(world.allocator);
-	City& city = world.cities.emplace();
-	city.center = center;
-	city.num_urban_cells = 1;
-	city.occupied_cells.push_back(tile_to_cell_coords(center));
 	// TODO: everytime we create new city a new array is allocated
 	// ideally we could reuse it as the cities collection is essentially a pool
 	// maybe Array should provide a function optionally allocate (only if the handle has not been allocated)
 	// TODO: some terrains may be changed when city is placed for example forests will be cleared
 	// some terrain may remain e.g. the hilly area
 	// some terrain may prevent city from being placed e.g. mountainous, water etc.
-	add_development(city, world.map, DevelopmentArea::urban, center, globals);
-	setup_walls(city, world.map, globals);
+	City& city = world.cities.emplace();
+	city.center = center;
+	add_initial_city_development(city, world.map, globals);
 	city.urban_bounds = urban_tile_bounds(city, world.map, globals);
 	return city.id;
 }
@@ -1059,22 +1070,102 @@ static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
 	}
 }
 
-void develop_city(World& world, Id city_id, DevelopmentArea area, const Globals& globals)
+void develop_city(const WorldRef& ref, Id city_id, DevelopmentArea area, int level)
 {
-	auto& city = world.cities.get(city_id);
-	auto& map = world.map;
-	Vec2i dev_pos;
+	auto& city = ref.world.cities.get(city_id);
+	auto& map = ref.world.map;
+	const auto& globals = ref.globals;
+	for (int i = 0; i < level; i++)
+	{
+		Vec2i dev_pos;
+		if (area == DevelopmentArea::urban)
+		{
+			dev_pos = make_urban_space(city, map, globals);
+		}
+		else
+		{
+			dev_pos = make_rural_space(city, map, globals);
+		}
+		add_development(city, map, area, dev_pos, globals);
+		map.update_glyphs(to_box(dev_pos), globals);
+	}
 	if (area == DevelopmentArea::urban)
 	{
-		dev_pos = make_urban_space(city, map, globals);
+		city.urban_bounds = urban_tile_bounds(city, map, globals);
 	}
-	else
+}
+
+static void clear_urban_structures(const CityRef& ref)
+{
+	MapRef map_ref{ref.world.map, ref.globals};
+	auto& city = ref.city;
+	const auto cell_search_size = (map_cell_size + 2); // search 1 more tile
+	for (int i = 0; i < city.num_urban_cells; i++)
 	{
-		dev_pos = make_rural_space(city, map, globals);
+		const auto tile_top_left = cell_to_tile_coords(city.occupied_cells[i]) - Vec2i{1, 1};
+		auto bounds = to_box(tile_top_left + Vec2i{cell_search_size/2, cell_search_size/2});
+		for (int ti = 0; ti < cell_search_size * cell_search_size; ti++)
+		{
+			const auto tile_pos = tile_top_left + Vec2i{ti % cell_search_size, ti / cell_search_size};
+			if (tile_has_any_struct_flags(map_ref, tile_pos, StructureFlags::urban|StructureFlags::wall))
+			{
+				map_ref.map.set_structure(tile_pos, null_id);
+				expand_box(bounds, tile_pos);
+			}
+		}
+		map_ref.map.update_glyphs(bounds, map_ref.globals);
 	}
-	add_development(city, map, area, dev_pos, globals);
-	world.map.update_glyphs(to_box(dev_pos), globals);
-	city.urban_bounds = urban_tile_bounds(city, world.map, globals);
+}
+
+static void clear_rural_structures(const CityRef& ref)
+{
+	MapRef map_ref{ref.world.map, ref.globals};
+	auto& city = ref.city;
+	const auto cell_search_size = map_cell_size;
+	for (int i = city.num_urban_cells; i < city.occupied_cells.size(); i++)
+	{
+		const auto tile_top_left = cell_to_tile_coords(city.occupied_cells[i]);
+		auto bounds = to_box(tile_top_left + Vec2i{cell_search_size/2, cell_search_size/2});
+		for (int ti = 0; ti < cell_search_size * cell_search_size; ti++)
+		{
+			const auto tile_pos = tile_top_left + Vec2i{ti % cell_search_size, ti / cell_search_size};
+			if (tile_has_any_struct_flags(map_ref, tile_pos, StructureFlags::rural))
+			{
+				map_ref.map.set_structure(tile_pos, null_id);
+				expand_box(bounds, tile_pos);
+			}
+		}
+		map_ref.map.update_glyphs(bounds, map_ref.globals);
+	}
+}
+
+void reset_city_development(const WorldRef& ref, Id city_id, DevelopmentArea area, int level)
+{
+	const auto city_ref = make_city_ref(ref, city_id);
+	auto& city = city_ref.city;
+	if (area == DevelopmentArea::urban)
+	{
+		const auto old_rural_level = rural_development_level(city_ref.city);
+		clear_rural_structures(city_ref);
+		clear_urban_structures(city_ref);
+		city.development_level[(int)DevelopmentArea::urban] = 0;
+		city.development_level[(int)DevelopmentArea::rural] = 0;
+		city.dev_tiles.clear();
+		city.num_urban_cells = 0;
+		city.occupied_cells.clear();
+		add_initial_city_development(city, ref.world.map, ref.globals);
+		develop_city(ref, city_id, area, level - 1);
+		develop_city(ref, city_id, DevelopmentArea::rural, old_rural_level);
+	}
+	else if (area == DevelopmentArea::rural)
+	{
+		clear_rural_structures(city_ref);
+		city.development_level[(int)DevelopmentArea::rural] = 0;
+		city.dev_tiles.resize(urban_development_level(city));
+		city.occupied_cells.resize(city.num_urban_cells);
+		develop_city(ref, city_id, area, level);
+	}
+	// TODO: when we have buildings, we need relocate them as well
 }
 
 namespace serialization

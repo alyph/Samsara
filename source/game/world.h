@@ -27,8 +27,24 @@ struct World
 	inline void init(Allocator alloc);
 };
 
+struct WorldRef
+{
+	World& world;
+	const Globals& globals;
+};
+
+struct CityRef
+{
+	City& city;
+	World& world;
+	const Globals& globals;
+};
+
+static inline CityRef make_city_ref(const WorldRef& world_ref, Id city_id) { return { world_ref.world.cities.get(city_id), world_ref.world, world_ref.globals }; }
+
 extern Id create_city(World& world, const Vec2i& center, const Globals& globals);
-extern void develop_city(World& world, Id city_id, DevelopmentArea area, const Globals& globals);
+extern void develop_city(const WorldRef& ref, Id city_id, DevelopmentArea area, int level);
+extern void reset_city_development(const WorldRef& ref, Id city_id, DevelopmentArea area, int level);
 static inline bool valid_urban_tile(const Map& map, Vec2i tile_pos, const Globals& globals);
 static inline Box2i urban_cells_bounds(const City& city);
 static inline Box2i city_cells_bounds(const City& city);

@@ -71,6 +71,12 @@ struct Map
 	void update_glyphs(const Box2i dirty_tiles, const Globals& globals);
 };
 
+struct MapRef
+{
+	Map& map;
+	const Globals& globals;
+};
+
 static inline uint8_t calc_surrounding_structure_mask(const Map& map, Vec2i tile_pos, StructureFlags flags, const Globals& globals);
 static inline uint8_t calc_adjacent_structure_mask(const Map& map, Vec2i tile_pos, StructureFlags flags, const Globals& globals);
 static inline int count_adjacent_structures_with_any_flag(const Map& map, Vec2i tile_pos, StructureFlags flags, const Globals& globals);

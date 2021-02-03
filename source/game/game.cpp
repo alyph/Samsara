@@ -523,7 +523,7 @@ static void city_dev_palette(const Context ctx, Id sel_city, const Globals& glob
 
 	if (sel_dev_type >= 0)
 	{
-		develop_city(world, sel_city, (DevelopmentArea)sel_dev_type, globals);
+		develop_city({world, globals}, sel_city, (DevelopmentArea)sel_dev_type, 1);
 	}
 }
 
@@ -548,13 +548,8 @@ void Game::present(const Context& ctx)
 
 	Color fore_color{0.8f, 0.8f, 1.f, 1.f};
 
-	GameModel model
-	{
-		globals,
-		world,
-		game_state,
-		editor_state,
-	};
+	GameModel model{ globals, world, game_state, editor_state };
+	WorldRef world_ref{ world, globals };
 
 	// most of the allocation goes to the current world
 	// TODO: after we have different screens (e.g. main menu, campaign etc.),
@@ -686,6 +681,8 @@ void Game::present(const Context& ctx)
 			const bool show_properties_window = (editor_state.selected_city_id);
 			if (show_properties_window)
 			{
+				scoped_context_allocator(world_alloc); // all data stored in the world allocator
+
 				tablet(_ctx);
 				const int props_cols = 50;
 				const float props_cols_width = calc_tablet_width(props_cols, ui_rows, tablet_height, ui_texture);
@@ -714,6 +711,8 @@ void Game::present(const Context& ctx)
 						edit_style.forecolor = fore_color;
 						edit_style.normal_backcolor = 0_rgba;
 						edit_style.editing_backcolor = 0x111122_rgb;
+						int key_w = 20;
+						int val_w = 24;
 
 						if (selected_city)
 						{
@@ -721,7 +720,19 @@ void Game::present(const Context& ctx)
 							// Although right now it's kinda automatic since the mouse input that triggers the city selection
 							// will make the edit box lose focus, which then commits changes here
 							auto& city = world.cities.get(selected_city);
-							edit_box(_ctx, city.name, world_alloc, 48, edit_style);
+							edit_box(_ctx, city.name, 48, edit_style);
+
+							node(_ctx);
+							_attr(attrs::height, 1);
+
+							if (property_table_row(_ctx, "Urban Level", city.development_level[(int)DevelopmentArea::urban], key_w, val_w, edit_style))
+							{
+								reset_city_development(world_ref, city.id, DevelopmentArea::urban, city.development_level[(int)DevelopmentArea::urban]);
+							}
+							if (property_table_row(_ctx, "Rural Level", city.development_level[(int)DevelopmentArea::rural], key_w, val_w, edit_style))
+							{
+								reset_city_development(world_ref, city.id, DevelopmentArea::rural, city.development_level[(int)DevelopmentArea::rural]);
+							}
 						}
 					}
 				}
