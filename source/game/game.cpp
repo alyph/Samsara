@@ -761,7 +761,7 @@ void Game::present(const Context& ctx)
 				_attr(attrs::height, 2);
 
 				node(_ctx);
-				String str = "Construct farmstead";
+				String str = "In the year 1198 of God's grace";
 				_attr(attrs::text, str);
 				_attr(attrs::foreground_color, fore_color);
 
@@ -769,7 +769,23 @@ void Game::present(const Context& ctx)
 				_attr(attrs::height, 1);
 
 				node(_ctx);
-				str = "Marriage arrangement";
+				str = "The people of Outremer enjoyed the peaceful time.";
+				_attr(attrs::text, str);
+				_attr(attrs::foreground_color, fore_color);
+
+				// node(_ctx);
+				// _attr(attrs::height, 1);
+
+				node(_ctx);
+				str = "The cities were growing and farms were ploughed.";
+				_attr(attrs::text, str);
+				_attr(attrs::foreground_color, fore_color);
+
+				node(_ctx);
+				_attr(attrs::height, 2);
+
+				node(_ctx);
+				str = "Now the pages are turning, and the chronicle reads...";
 				_attr(attrs::text, str);
 				_attr(attrs::foreground_color, fore_color);
 
@@ -777,9 +793,36 @@ void Game::present(const Context& ctx)
 				_attr(attrs::height, 1);
 
 				node(_ctx);
-				str = "Military campaign";
+				str = "          ... A marriage proposal";
 				_attr(attrs::text, str);
 				_attr(attrs::foreground_color, fore_color);
+
+				node(_ctx);
+				_attr(attrs::height, 1);
+
+				node(_ctx);
+				str = "          ... An emerging farmstead";
+				_attr(attrs::text, str);
+				_attr(attrs::foreground_color, fore_color);
+
+				node(_ctx);
+				_attr(attrs::height, 1);
+
+				node(_ctx);
+				str = "          ... knights seeking employment";
+				_attr(attrs::text, str);
+				_attr(attrs::foreground_color, fore_color);
+
+				node(_ctx);
+				_attr(attrs::height, 1);
+
+				node(_ctx);
+				str = "          ... A ruse";
+				_attr(attrs::text, str);
+				_attr(attrs::foreground_color, fore_color);
+
+				node(_ctx);
+				_attr(attrs::height, 1);
 			}
 		}
 
