@@ -3,6 +3,7 @@
 #include "window.h"
 #include "input.h"
 #include "os.h"
+#include "time.h"
 #include "easy/profiler.h"
 #include <chrono>
 
@@ -12,11 +13,18 @@ struct AppConfig
 	int window_height = 768;
 };
 
+const int64_t compute_elapsed_nano_seconds(std::chrono::high_resolution_clock::duration elapsed_time)
+{
+	return std::chrono::duration_cast<std::chrono::duration<int64_t, std::nano>>(elapsed_time).count();
+}
+
 template<class AppT>
 int run_app(const AppConfig& config = {})
 {
 	profiler::startListen();
 	scoped_engine_init();
+
+	const auto app_start_time = std::chrono::high_resolution_clock::now();
 
 	WindowCreationParams params;
 	params.width = config.window_width;
@@ -47,11 +55,15 @@ int run_app(const AppConfig& config = {})
 		presenter.process_control(window->poll_events());
 		
 		auto current_update_time = std::chrono::high_resolution_clock::now();
-		const auto dt = std::chrono::duration_cast<std::chrono::duration<double>>(current_update_time - prev_update_time).count();
+		Time time
+		{
+			.current_time_ns = compute_elapsed_nano_seconds(current_update_time - app_start_time),
+			.delta_time_ns = compute_elapsed_nano_seconds(current_update_time - prev_update_time),
+		};
 		prev_update_time = current_update_time;
-		app.update(dt);
 
-		presenter.step_frame(dt);
+		app.update(time);
+		presenter.step_frame(time);
 
 		// present
 		window->present();

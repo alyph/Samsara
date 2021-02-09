@@ -783,12 +783,12 @@ void Presenter::process_control(const std::vector<InputEvent>& events)
 	}
 }
 
-void Presenter::step_frame(double dt)
+void Presenter::step_frame(const Time& time)
 {
 	EASY_FUNCTION();
 
-	// increment time with dt
-	time += dt;
+	// advance to the latest time
+	latest_time = time.current_time_seconds();
 
 	// call do_present()
 	present();
@@ -823,7 +823,7 @@ void Presenter::present()
 	curr_frame.inst_attr_table.clear();
 	curr_frame.post_attr_table.clear();
 	curr_frame.prev_time = curr_frame.curr_time;
-	curr_frame.curr_time = time;
+	curr_frame.curr_time = latest_time;
 	curr_frame.prev_input = curr_frame.curr_input;
 	curr_frame.curr_input = latest_input;
 	latest_input.char_code = 0; // char_code only exist for one frame

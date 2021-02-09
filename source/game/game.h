@@ -2,6 +2,7 @@
 
 #include "engine/presenter.h"
 #include "engine/texture.h"
+#include "engine/time.h"
 #include "world.h"
 
 enum class Brush: int
@@ -41,7 +42,7 @@ class Game
 {
 public:
 	Game();
-	void update(double dt);
+	void update(const Time& time);
 	bool ended();
 	void present(const Context& ctx);
 	void shutdown();

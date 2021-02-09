@@ -129,7 +129,7 @@ Game::Game()
 }
 
 
-void Game::update(double dt)
+void Game::update(const Time& time)
 {
 	// if (!game_state.in_editor)
 	// {
@@ -785,7 +785,7 @@ void Game::present(const Context& ctx)
 				_attr(attrs::height, 2);
 
 				node(_ctx);
-				str = "Now the pages are turning, and the chronicle reads...";
+				str = "Now the pages are turning, and the future unfolds...";
 				_attr(attrs::text, str);
 				_attr(attrs::foreground_color, fore_color);
 
@@ -859,6 +859,13 @@ void Game::present(const Context& ctx)
 			_attr(attrs::top, top);
 			_attr(attrs::foreground_color, fore_color);
 			_attr(attrs::text, map_pos_str);
+
+			// node(_ctx);
+			// _attr(attrs::placement, ElementPlacement::loose);
+			// _attr(attrs::left, left + 16);
+			// _attr(attrs::top, top);
+			// _attr(attrs::foreground_color, fore_color);
+			// _attr(attrs::text, format_str("%.3f", _frame_time));
 		}
 	}
 }

@@ -12,6 +12,7 @@
 #include "types.h"
 #include "input.h"
 #include "bitset.h"
+#include "time.h"
 #include <functional>
 
 struct Frame;
@@ -306,7 +307,7 @@ public:
 	void set_present_object(T* obj);
 	void set_present_func(PresentFunc func, void* param);
 	void process_control(const std::vector<InputEvent>& events);
-	void step_frame(double dt);
+	void step_frame(const Time& time);
 
 private:
 	void present();
@@ -314,8 +315,8 @@ private:
 	static RaycastResult raycast(const Frame& frame, double x, double y); // returned result.hit_elem_id is guid
 
 	PresentGlobals globals;
-	double time{};
 	Frame curr_frame;
+	double latest_time;
 	InputState latest_input;
 	PresentFunc present_func;
 	void* present_func_param;

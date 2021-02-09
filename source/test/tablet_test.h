@@ -10,6 +10,7 @@
 #include "engine/array.h"
 #include "engine/engine.h"
 #include "engine/presenter.h"
+#include "engine/time.h"
 #include <vector>
 #include <memory>
 #include <chrono>
@@ -47,7 +48,7 @@ class TabletTestApp
 {
 public:
 	TabletTestApp();
-	void update(double dt);
+	void update(const Time& time);
 	bool ended();
 	void present(const Context& ctx);
 	void shutdown() {}

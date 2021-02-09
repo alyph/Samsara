@@ -2,12 +2,13 @@
 
 #include "engine/presenter.h"
 #include "engine/texture.h"
+#include "engine/time.h"
 
 class TabletUIApp
 {
 public:
 	TabletUIApp();
-	void update(double dt);
+	void update(const Time& time);
 	bool ended();
 	void present(const Context& ctx);
 	void shutdown() {}
