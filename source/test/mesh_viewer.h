@@ -8,6 +8,7 @@
 #include "engine/shader.h"
 #include "engine/window.h"
 #include "engine/presenter.h"
+#include "engine/time.h"
 #include <vector>
 #include <memory>
 #include <chrono>
@@ -50,4 +51,5 @@ private:
 
 	std::chrono::system_clock::time_point start_time;
 	int frame_count{};
+	Time time{};
 };

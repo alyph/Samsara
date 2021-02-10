@@ -5,6 +5,8 @@
 
 int main()
 {
+	scoped_engine_init();
+
 	MeshViewerApp app;
 	while (!app.ended())
 	{
@@ -143,8 +145,10 @@ void MeshViewerApp::update()
 	// render stuff out
 	// renderer->render(store, model);
 
-	const double dt = 1.0 / 60.0;
-	presenter.step_frame(dt);
+	time.delta_time_ns = (int64_t)(1.e9 / 60.0);
+	time.current_time_ns += time.delta_time_ns;
+
+	presenter.step_frame(time);
 
 	// present
 	window->present();
