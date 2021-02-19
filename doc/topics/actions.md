@@ -17,6 +17,73 @@
     - stratagem + ministry - logistics related actions, building fortifications, manage military leaderships
 
 
+#### regular actions
+regular actions are the cards in the starting deck
+- regular actions normally do not need assign agents
+
+- economic development
+  - name ideas: peace and prosperity, way of prosperity, pursuit of prosperity/wealth
+  - regular bonus:
+    - money
+    - state economic level
+    - resource stockpiles
+    - commerce and industrial ideas
+    - adjustment of taxation??
+- military development
+  - name ideas: a gathering storm, way of power, pursuit of power
+  - regular bonus:
+    - manpower??
+    - state military level
+    - military resource stockpiles
+    - military ideas
+    - strategem??
+- cultural and technological development
+  - name ideas: pursuit of knowledge, way of learning
+  - regular bonus:
+    - state innovation level
+    - cultural or technology resoruce stockpiles
+    - cultural, science ideas
+    - leveling up culture, technology, innovations etc. (many culture, technology has multiple stages)
+    - increase spread
+- diplomatic influence
+  - name ideas: way of harmony, pursuit of harmony， pursuit of collaboration, pursuit of influence, pursuit of prestige/fame/renown/prominence/esteem
+  - regular bonuses
+    - improve or harm relationships
+    - state diplomacy level
+    - political ideas
+- religious influence (should we merge with diplomacy)
+  - name ideas: way of piety, pursuit of piety/reverence/faith/devotion/virtues/honor/righteousness
+  - regular bonuses:
+    - state society level
+    - humanitarian and regligious ideas
+    - increase relationship with regligious institutions
+- stability, unity and assimilation
+  - name ideas: pursuit of unity, pursuit of authority/obedience pursuit of dominance
+- espionage, scheme and intrigue
+  - name ideas: way of shadow, pursuit of shadow
+- agent recruitment???
+  - agent discovery and recruitment may be split into each of the other regular actions, e.g. military development may give you option to recruit generals
+- gain more ap, draw more cards
+  - name ideas: pursuit of destiny
+  - cost destiny points
+
+#### standard actions
+start actions are ones normally don't cost resources (except still cost ap) and there will always be some available in each turn
+
+- redraw cards
+  - always available (cost 1 ap)
+- bank a pooled action
+  - banked action goes into your regular deck and can be used once later (essentially you are paying 1 extra ap)
+  - always available (cost 1 ap)
+- (random) gain destiny points
+- (random) gain governance points
+- (random) gain idea points
+- (random) gain a random types of other resources (money, horse, armor, weapon, marble etc.)
+- (random) exchange between resources, points, ideas etc.
+- (random) guarantee to draw a number of certain category of cards next turn
+
+
+
 #### action pool
 
 | Action | Pool | Tags | Effects |

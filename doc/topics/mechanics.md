@@ -13,3 +13,13 @@ A few design choices to consider
 - provide some standard actions that can always be played and some with low or no cost
 
 
+types of cards
+- events
+  - major events that occured through out the history
+  - other names: story, episode, chapter, record, memoir, account, narrative, tale
+- regular actions
+- projects
+- unit recruitment
+- stratagems
+- innovations
+
