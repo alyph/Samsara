@@ -128,7 +128,7 @@ inline static void collection_set_key(Array<CollectionKeyEntry>& keys, Id id, co
 	asserts(hash);
 	const auto index = collection_id_to_index(id);
 	keys.expand(index + 1);
-	keys[index].name.store(key);
+	keys[index].name.store(key, keys.handle.allocator_type());
 	keys[index].hash = hash;
 }
 
@@ -324,6 +324,11 @@ namespace serialization
 				Id id{};
 				String key;
 				T elem;
+
+				if constexpr (Allocatable<T>)
+				{
+					elem.alloc(op.context.allocator);
+				}
 
 				// heading
 				op.label(tag);

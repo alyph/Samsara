@@ -24,10 +24,17 @@ struct TerrainType
 	uint32_t flags{};
 };
 
+struct StartingCard
+{
+	Id type{};
+	uint16_t count;
+};
+
 struct Defines
 {
 	Id starting_wall_type{};
 	Id urban_vacancy_type{};
+	Array<StartingCard> starting_deck{};
 };
 
 enum class StructureFlags: uint32_t
@@ -66,11 +73,21 @@ struct DevelopmentType
 	Id structure_type;
 };
 
+struct CardType
+{
+	Id id;
+	String name;
+	String phrase;
+	unsigned int weight{};
+};
+
 struct Globals
 {
 	Defines defines;
 	Collection<TerrainType> terrain_types;
 	Collection<StructureType> structure_types;
 	DevelopmentType development_types[(int)DevelopmentArea::count]{};
+
+	Collection<CardType> card_types;
 };
 

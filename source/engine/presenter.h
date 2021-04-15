@@ -139,7 +139,7 @@ extern Id new_state_type_id();
 #define _key_pressed(key, ...) (was_key_pressed(ctx, key, __VA_ARGS__))
 #define _is_focused (is_focused(ctx))
 #define _was_focused (was_focused(ctx))
-#define _will_lose_focused (will_lose_focus(ctx))
+#define _will_lose_focus (will_lose_focus(ctx))
 #define _gain_focus() (gain_focus(ctx))
 #define _lose_focus() (lose_focus(ctx))
 #define _focused_elem_state(state_type) (access_elem_state<state_type>(*ctx.frame, get_working_elem_id(ctx), ElementStateMode::focused))
@@ -232,8 +232,18 @@ struct RaycastResult
 //    functionality other than interacting with the callee.
 // 3. make_element() is an exception for rule 2, since that function is at the leaf and all it does it creating an element in the scope signified
 //	  by the context. you can continue using _ctx to create more contexts, scopes and child elements after that, however you should not pass ctx
-//	  to other functions that takes references and you definitely should call make_element() twice with the same ctx
+//	  to other functions that takes references and you definitely should notcall make_element() twice with the same ctx
+
 // TODO: it would be great if we can enforce rule 2 somehow at the code level to emit an compile error, but probably not easy
+// TODO: we should add _ctx_passthrough for the exact reason of point 2 and const Context& use case. this will copy the current context into the new context
+// and mark the current context mode to be "pass through", which means this context can no longer be used to create element or create child context (via _ctx)
+// or even create another pass through. also we should set a "registered" mode when a ctx is used to create element or child ctx, and can be checked when
+// attempting to make a pass through ctx. those two modes shall be mutually exclusive. Now we can remove the const Context& cases.
+// we also need be careful about the ScopedChildrenBlock(), do we need stop pass through context from making a children block?? 
+//   answer is probably NO. children block changes the structure but does not affect the uniqueness of the scope. the children block can be created 
+//   multiple times on the same scope along with other element or scopes created from that scope
+// one interesting point is, here we take the advantage of the fact that Context and Scope are connected but not always associated. Multiple Context
+// can point to the same Scope (in cases of pass through)
 struct Context
 {
 	Frame* frame{};

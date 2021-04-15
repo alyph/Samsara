@@ -68,7 +68,7 @@ namespace elem
 				_lose_focus();
 				return false;
 			}
-			if (_will_lose_focused)
+			if (_will_lose_focus)
 			{
 				text = state.editing_str.str();
 				return true;

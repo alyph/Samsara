@@ -90,6 +90,12 @@ struct AllocatorGlobals
 	void regular_cleanup();
 };
 
+template<typename T>
+concept Allocatable = requires (T o, Allocator allocator)
+{ 
+	o.alloc(allocator); 
+};
+
 inline const AllocHeader& access_alloc_header(const AllocatorGlobals& globals, uint32_t header_id)
 {
 	const size_t allocator = ((header_id >> 28) & 0x0000000F);

@@ -678,6 +678,9 @@ static PresentGlobals make_globals()
 	// it is here so the root context can point to some scope
 	// and conveniently scope index 0 can be treated as invalid index
 	// since any actual scope must have index > 0
+	// TODO: the root context with this root scope is passed to the present() function
+	// normally present function will call other components functions which is fine, but 
+	// if for some reason the present() function directly calls the make_element() then this will fail!
 	ScopeEntry& root_scope = globals.scopes.emplace_back();
 	root_scope.next_offset = 1; // this coincides with the total number of the scopes including this one
 	root_scope.depth = 0; // just to be explicit

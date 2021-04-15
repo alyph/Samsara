@@ -6,18 +6,18 @@
 template<class T>
 size_t random_weighted_array_index(const Array<T>& array)
 {
-	int total_score = 0;
+	int total_weight = 0;
 	for (const auto& elem : array)
 	{
-		asserts(elem.score >= 0);
-		total_score += elem.score;
+		asserts(elem.weight >= 0);
+		total_weight += elem.weight;
 	}
-	const auto roll = rand_int(total_score);
+	const auto roll = rand_int(total_weight);
 	int running = 0;
 	size_t rolled_idx = 0;
 	for (const auto& elem : array)
 	{
-		running += elem.score;
+		running += elem.weight;
 		if (roll < running)
 		{
 			break;

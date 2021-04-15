@@ -1,5 +1,7 @@
 #include "game.h"
 #include "common_ui.h"
+#include "game_ui.h"
+#include "game_utils.h"
 #include "engine/window.h"
 #include "engine/viewport.h"
 #include "engine/tablet.h"
@@ -15,6 +17,19 @@
 // TODO: hard code this vp for now, later should load from user session data
 static constexpr const Vec2i initial_map_vp{ 400, 250 };
 static const String main_scenario_dir = "../../data/game/scenarios/main";
+
+struct GameModel
+{
+	const Globals& globals;
+	World& world;
+	GameState& game;
+	EditorState& editor;
+};
+
+static void start_game(const GameRef& ref);
+static void start_turn(const GameRef& ref);
+static void start_draft_phase(const GameRef& ref);
+static void start_action_phase(const GameRef& ref);
 
 Game::Game()
 {
@@ -107,57 +122,315 @@ Game::Game()
 	const auto& wall_struct = globals.structure_types.set("wall", {0, "wall", 0x0320, 0xafafaf_rgb32, StructureFlags::wall, 0});
 	const auto& urban_vacancy = globals.structure_types.set("vacancy", {0, "vacancy", 0x00f9, 0x503010_rgb32, StructureFlags::urban|StructureFlags::vacancy, 0});
 
+	const auto make_card = [&](const String& key, const String& name, const String& phrase, unsigned int weight)
+	{
+		return globals.card_types.set(key, {.name = name, .phrase = phrase, .weight = weight});
+	};
+
+	const auto make_regular_card = [&](const String& key, const String& name, const String& phrase)
+	{
+		return make_card(key, name, phrase, 0);
+	};
+
+	const auto make_action_card = [&](const String& key, const String& name, const String& phrase)
+	{
+		return make_card(key, name, phrase, 300);
+	};
+
+	const auto make_stratagem_card = [&](const String& key, const String& name, const String& phrase)
+	{
+		return make_card(key, name, phrase, 80);
+	};
+
+	const auto make_project_card = [&](const String& key, const String& name, const String& phrase)
+	{
+		return make_card(key, name, phrase, 20);
+	};
+
+	const auto make_unit_card = [&](const String& key, const String& name, const String& phrase)
+	{
+		return make_card(key, name, phrase, 20);
+	};
+
+	const auto make_innovation_card = [&](const String& key, const String& name, const String& phrase)
+	{
+		return make_card(key, name, phrase, 20);
+	};
+
+
+
+	globals.card_types.alloc(4096, alloc);
+	const auto& card_economy = make_regular_card("reg_economy", "Economy", "a pursuit of wealth");
+	const auto& card_military = make_regular_card("reg_military", "Military", "a pursuit of power");
+	const auto& card_innovation = make_regular_card("reg_innovation", "Innovation", "a pursuit of ideas");
+	const auto& card_diplomacy = make_regular_card("reg_diplomacy", "Diplomacy", "a pursuit of influence");
+	const auto& card_statecraft = make_regular_card("reg_statecraft", "statecraft", "a pursuit of order");
+	const auto& card_intrigue = make_regular_card("reg_intrigue", "Intrigue", "a pursuit of shadow");
+	const auto& card_destiny = make_regular_card("reg_destiny", "Destiny", "a pursuit of destiny");
+
+	make_card("war", "War", "a war", 80);
+	make_action_card("relation_improve", "Relationship Improved", "a warming relationship");
+	make_action_card("relation_deteriorate", "Relationship Deteriorated", "a growing tension");
+
+	make_stratagem_card("stg_alliance", "Form Alliance", "a new ally");
+	make_stratagem_card("stg_trade_aggreement", "Trade Aggreement", "a trade aggreement");
+	make_stratagem_card("stg_marriage", "Marriage Aggrangement", "a marriage proposal");
+	make_stratagem_card("stg_incite_war", "Incite War", "a word of war");
+	make_stratagem_card("stg_incite_division", "Sow Division", "a word of division");
+	make_stratagem_card("stg_incite_discontent", "Sow Discontent", "a word of resentment");
+	make_stratagem_card("stg_incite_treachery", "Incite Treachery", "a word of betrayal");
+	make_stratagem_card("stg_incite_coup", "Incite Coup", "a word of treason");
+	make_stratagem_card("stg_spy_network", "Spy Network", "a web of whispers");
+
+	make_project_card("prj_farm", "Farmstead", "expansion of farmlands");
+	make_project_card("prj_pasture", "Pasture", "expansion of pastures");
+	make_project_card("prj_forestry", "Forestry", "expansion of forestries");
+	make_project_card("prj_hunting", "Hunting Ground", "expansion of hunting grounds");
+	make_project_card("prj_orchard", "Orchard", "expansion of orchards");
+	make_project_card("prj_vineyard", "Vineyard", "expansion of vineyards");
+	make_project_card("prj_fishery", "Fishery", "expansion of fisheries");
+	make_project_card("prj_quarry", "Quarry", "expansion of quarries");
+	make_project_card("prj_mine", "Mine", "expansion of mining network");
+	make_project_card("prj_irrigation", "Irrigation System", "construction of irrigation system");
+	
+	make_project_card("prj_harbor", "Harbor", "expansion of harbor");
+	make_project_card("prj_market", "Market", "expansion of market");
+	make_project_card("prj_tradecenter", "Trade Center", "development of trade center");
+	make_project_card("prj_masonry", "Masonry", "development of masonry");
+	make_project_card("prj_ironworks", "Ironworks Manufacture", "development of ironworks manufacture");
+	make_project_card("prj_glassworks", "Glassworks Manufacture", "development of glassworks manufacture");
+	make_project_card("prj_artisan", "Artisan Manufacture", "development of artisan manufacture");
+	make_project_card("prj_textile", "Textile Manufacture", "development of artisan manufacture");
+	make_project_card("prj_jewelry", "Jewelry Manufacture", "development of jewelry manufacture");
+	make_project_card("prj_weapons", "Weapons Manufacture", "development of weapons manufacture");
+	make_project_card("prj_shipyard", "Shipyard", "construction of shipyard");
+	make_project_card("prj_cathedral", "Cathedral", "construction of cathedral");
+	make_project_card("prj_theatre", "Theatre", "construction of theatre");
+	make_project_card("prj_palace", "Palace", "construction of palace");
+	make_project_card("prj_monastery", "Monastery", "construction of grand monastary");
+	make_project_card("prj_roads", "Road Network", "development of road network");
+	make_project_card("prj_walls", "City Wall", "construction of city wall");
+	make_project_card("prj_reserves", "Reserves", "development of reserves");
+
+	make_project_card("prj_outpost", "Outpost", "construction of outpost"); // simple fortification near the frontier
+	make_project_card("prj_castle", "Castle", "construction of castle");
+	make_project_card("prj_fortress", "Castle", "construction of fortress"); // high level castle
+	make_project_card("prj_camp", "Army Camp", "construction of army camp");
+	make_project_card("prj_base", "Army Base", "construction of army base"); // high level camp
+	make_project_card("prj_naval_base", "Naval Base", "construction of naval base");
+
+	make_unit_card("unit_slingers", "slingers", "recruitment of slingers");
+	make_unit_card("unit_javelinmen", "Javelinmen", "recruitment of javelinmen");
+	make_unit_card("unit_skirmishers", "Javelinmen", "recruitment of javelinmen");
+	make_unit_card("unit_archers", "Archers", "recruitment of archers");
+	make_unit_card("unit_light_archers", "Light Archers", "recruitment of light archers");
+	make_unit_card("unit_light_crossbowmen", "Light Crossbowmen", "recruitment of light crossbowmen");
+	make_unit_card("unit_crossbowmen", "Crossbowmen", "recruitment of crossbowmen");
+	make_unit_card("unit_armoured_crossbowmen", "Armoured Crossbowmen", "recruitment of armoured crossbowmen");
+	make_unit_card("unit_light_spearmen", "Light Spearmen", "recruitment of light spearmen");
+	make_unit_card("unit_spearmen", "Spearmen", "recruitment of spearmen");
+	make_unit_card("unit_armoured_spearmen", "Armoured Spearmen", "recruitment of armoured spearmen");
+	make_unit_card("unit_militia_spearmen", "Militia Spearmen", "recruitment of militia spearmen");
+	make_unit_card("unit_armoured_militia", "Armoured Militia", "recruitment of armoured militia");
+	make_unit_card("unit_horse_archers", "Horse Archers", "recruitment of horse archers");
+	make_unit_card("unit_mounted_crossbowmen", "Mounted Crossbowmen", "recruitment of mounted crossbowmen");
+	make_unit_card("unit_knights", "Knights", "recruitment of knights");
+	make_unit_card("unit_sergeant ", "Sergeant", "recruitment of sergeants");
+	make_unit_card("unit_armoured_cavalry", "Armoured Cavalry", "recruitment of armoured cavalry");
+	make_unit_card("unit_cavalry", "Cavalry", "recruitment of cavalry");
+
+	make_innovation_card("innov_monasticism", "Monasticism", "rise of monasticism");
+	make_innovation_card("innov_manorialism", "Manorialism", "rise of manorialism");
+	make_innovation_card("innov_feudalism", "Feudalism", "rise of feudalism");
+	make_innovation_card("innov_nobility", "Nobility", "rise of nobility");
+	make_innovation_card("innov_gavelkind", "Gavelkind", "adoption of gavelkind");
+	make_innovation_card("innov_primogeniture", "Primogeniture", "adoption of primogeniture");
+	make_innovation_card("innov_retinues", "Retinues", "adoption of retinues");
+	make_innovation_card("innov_knighthood", "Knighthood", "rise of knights");
+	make_innovation_card("innov_chivalry", "Chivalry", "rise of chivalry");
+	make_innovation_card("innov_heraldry", "Heraldry", "adoption of heraldry");
+	make_innovation_card("innov_scutage", "Scutage", "adoption of scutage");
+	make_innovation_card("innov_municipal_officials", "Municipal Officials", "establishment of municipal officials");
+	make_innovation_card("innov_assemblies", "Assemblies", "adoption of assemblies"); // Witenagemot for saxons?
+	make_innovation_card("innov_state_admin", "State Administration", "conception of state administration"); // inception? rise? ideas?
+	make_innovation_card("innov_chronicle", "Chronicle", "development of chronicle writing");
+	make_innovation_card("innov_renaissance_arts", "Renaissance Arts", "rise of the renaissance arts");
+
+	make_innovation_card("innov_two_field", "Two-field System", "adoption of two-field system");
+	make_innovation_card("innov_three_field", "Three-field System", "development of three-field system");
+	make_innovation_card("innov_hourseshoes", "Horseshoes", "invention of horseshoes");
+	make_innovation_card("innov_onagers", "Onagers", "invention of onagers");
+	make_innovation_card("innov_mangonels", "Mangonels", "invention of mangonels");
+	make_innovation_card("innov_trebuchet", "Trebuchet", "invention of trebuchet");
+	make_innovation_card("innov_bombards", "Bombards", "invention of bombards");
+	make_innovation_card("innov_castle", "Castle", "development of castle constructions");
+	make_innovation_card("innov_chainmail", "Chainmail", "development of chainmail");
+	make_innovation_card("innov_plate_armour", "Plate Armour", "development of plate armour");
+	make_innovation_card("innov_minting", "Minting", "development of minting");
+	make_innovation_card("innov_windmills", "Windmills", "development of windmills");
+	make_innovation_card("innov_banking", "Banking", "rise of banking");
+	make_innovation_card("innov_guilds", "Guilds", "rise of guilds");
+	make_innovation_card("innov_church_shooling", "Church Schooling", "rise of church schooling");
+	make_innovation_card("innov_crane", "Crane", "invention of crane");
+	make_innovation_card("innov_tournament", "Tournament", "rise of tournament");
+	make_innovation_card("innov_gunpowder", "Gunpowder", "adoption of gunpowder");
+	make_innovation_card("innov_oil_painting", "Oil Painting", "development of oil painting");
+	make_innovation_card("innov_armillary", "Armillary Sphere", "invention of armillary sphere");
+
+
+
 	globals.defines.starting_wall_type = wall_struct.id;
 	globals.defines.urban_vacancy_type = urban_vacancy.id;
+	globals.defines.starting_deck.alloc(alloc, 
+	{
+		{card_economy.id, 		1},
+		{card_military.id, 		1},
+		{card_innovation.id, 	1},
+		{card_diplomacy.id, 	1},
+		{card_statecraft.id, 	1},
+		{card_intrigue.id, 		1},
+		{card_destiny.id, 		1},
+	});
+
+	const auto is_regular_card = [](Id card_type, const Globals& globals)
+	{
+		for (const auto& starting_card : globals.defines.starting_deck)
+		{
+			if (starting_card.type == card_type)
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+
 
 	editor_state.map_vp = initial_map_vp;
 	// TODO: this is the legacy problem, we made the map based on this initial ref image offset
 	// later we should have ways to shift map as well as the ref images
 	editor_state.ref_image_offset = { (map_chunk_size / 2), -(map_chunk_size / 2) };
 	
+	const auto game_alloc = stage_allocator();
+
 	if (filesystem::exists(main_scenario_dir))
 	{
-		world = load_world(main_scenario_dir, globals, stage_allocator());
+		world = load_world(main_scenario_dir, globals, game_alloc);
 	}
 	else
 	{
-		world.init(stage_allocator());
+		world.alloc(game_alloc);
 	}
 
-	game_state.in_editor = true;
+	game_state.in_editor = false;
 	editor_state.selected_brush = (int)Brush::selection;
-}
 
+	// initialize card pools
+	// TODO: for now just add all non-regular card into the pool
+	game_state.player_card_pool.alloc(0, globals.card_types.array.size(), game_alloc);
+	for (const auto& card_type : globals.card_types)
+	{
+		if (!is_regular_card(card_type.id, globals))
+		{
+			game_state.player_card_pool.push_back({.card_type = card_type.id, .weight = card_type.weight});
+		}
+	}
+
+
+	// if turn < 0, it means the game hasn't started yet
+	if (world.turn < 0)
+	{
+		start_game({game_state, world, globals});
+	}
+}
 
 void Game::update(const Time& time)
 {
-	// if (!game_state.in_editor)
-	// {
-	// 	timer += dt;
-	// 	if (timer >= 0.1)
-	// 	{
-	// 		timer = 0.0;
+#if 0
+	if (!game_state.in_editor)
+	{
+		timer += dt;
+		if (timer >= 0.1)
+		{
+			timer = 0.0;
 
-	// 		for (auto& city : world.cities)
-	// 		{
-	// 			if (rand_int(6) < 4)
-	// 			{
-	// 				const auto area = rand_int(6) < 2 ? DevelopmentArea::urban : DevelopmentArea::rural;
-	// 				develop_city(world, city.id, area, globals);
-	// 			}
-	// 		}
-	// 	}
-	// }
+			for (auto& city : world.cities)
+			{
+				if (rand_int(6) < 4)
+				{
+					const auto area = rand_int(6) < 2 ? DevelopmentArea::urban : DevelopmentArea::rural;
+					develop_city(world, city.id, area, globals);
+				}
+			}
+		}
+	}
+#endif
 }
 
 
-struct GameModel
+
+static void draft_cards_from_pool(const GameRef& ref, int count)
 {
-	const Globals& globals;
-	World& world;
-	GameState& game;
-	EditorState& editor;
-};
+	// TODO: do we want any duplicated draft???
+	// some can be (like recruitment, projects, missions)
+	// some not (like innovations)
+	for (int i = 0; i < count; i++)
+	{
+		const auto& entry = random_weighted_array_element(ref.game.player_card_pool);
+		ref.world.player.hand.push_back({.type = static_cast<decltype(Card::type)>(entry.card_type)});
+	}
+}
+
+
+
+static void start_game(const GameRef& ref)
+{
+	// fill the player's starting deck
+	for (const auto& startingCard : ref.globals.defines.starting_deck)
+	{
+		const auto card_type = static_cast<decltype(Card::type)>(startingCard.type);
+		for (uint16_t i = 0; i < startingCard.count; i++)
+		{
+			ref.world.player.regular_deck.push_back({card_type});
+		}
+	}
+
+	ref.world.turn = 0; // first turn
+	start_turn(ref);
+}
+
+
+static void start_turn(const GameRef& ref)
+{
+	start_draft_phase(ref);
+}
+
+static void start_draft_phase(const GameRef& ref)
+{
+	ref.world.phase = TurnPhase::draft;
+
+	// TODO: stuff
+
+	const int draft_count = (ref.world.turn == 0) ? 6: 2;
+	draft_cards_from_pool(ref, draft_count);
+
+	start_action_phase(ref);
+}
+
+static void start_action_phase(const GameRef& ref)
+{
+	ref.world.phase = TurnPhase::action;
+
+	// draw cards from the deck to hand
+	// TODO: if we have discard pile, then we need dump discarded cards back to deck when it gets low
+	auto& player = ref.world.player;
+	draw_random_cards(player.regular_deck, player.regular_hand, 2);
+}
+
+
+
+
+
+
 
 
 static void paint_square(Map& map, Id terrain_type, const Vec2i& center, int radius, const Globals& globals)
@@ -740,6 +1013,12 @@ void Game::present(const Context& ctx)
 		}
 		else
 		{
+			GameRef game_ref{ game_state, world, globals };
+			TabletAsset tablet_asset{ ui_texture, tablet_shader, tablet_screen_shader };
+
+			game_ui(_ctx, game_ref, vp_width, vp_height, tablet_asset);
+
+#if 0
 			const int ui_left_cols = 100;
 			const float ui_left_width = calc_tablet_width(ui_left_cols, ui_rows, tablet_height, ui_texture);
 
@@ -824,6 +1103,7 @@ void Game::present(const Context& ctx)
 				node(_ctx);
 				_attr(attrs::height, 1);
 			}
+#endif
 		}
 
 		const int ui_full_cols = 400; // TODO: we can probably calculate this based on the widest aspect ratio we want to support, or we could add support for mutable sized tablets

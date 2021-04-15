@@ -64,7 +64,9 @@ inline Allocator temp_allocator()
 
 inline Allocator context_allocator()
 {
-	return engine().allocators.current_context_allocator;
+	auto alloc = engine().allocators.current_context_allocator;
+	asserts(alloc != Allocator::none);
+	return alloc;
 }
 
 // you can keep pushing the same allocator on to the stack

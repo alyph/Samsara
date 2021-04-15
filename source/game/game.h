@@ -12,11 +12,18 @@ enum class Brush: int
 	max,
 };
 
+struct CardPoolEntry
+{
+	Id card_type{};
+	unsigned int weight{};
+};
+
 struct GameState
 {
 	bool in_editor{};
 	bool hover_over_map{};
 	Vec2i hover_over_map_pos;
+	Array<CardPoolEntry> player_card_pool;
 };
 
 struct EditorState
@@ -37,6 +44,12 @@ struct EditorState
 	float map_scale = 1.f;
 };
 
+struct GameRef
+{
+	GameState& game;
+	World& world;
+	const Globals& globals;
+};
 
 class Game
 {

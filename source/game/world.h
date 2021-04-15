@@ -2,7 +2,7 @@
 
 #include "globals.h"
 #include "map.h"
-#include "engine/collection.h"
+#include "card.h"
 
 
 struct City
@@ -12,19 +12,59 @@ struct City
 	Vec2i center;
 	int32_t development_level[(int)DevelopmentArea::count]{};
 	int32_t num_urban_cells{};
-	Array<Vec2i> occupied_cells{0, 32};
-	Array<Vec2i> dev_tiles{0, 128};
+	Array<Vec2i> occupied_cells;
+	Array<Vec2i> dev_tiles;
 	// TODO: temporary
 	Box2i urban_bounds; // including walls
+
+	inline void alloc(Allocator allocator)
+	{
+		occupied_cells.alloc(0, 32, allocator);
+		dev_tiles.alloc(0, 128, allocator);
+	}
+};
+
+enum class TurnPhase
+{
+	none,
+	draft,
+	action,
+	resolution,
+};
+
+struct Player
+{
+	CardPile hand;
+	CardPile regular_deck;
+	CardPile regular_hand;
+
+	inline void alloc(Allocator allocator)
+	{
+		hand.alloc(0, 32, allocator);
+		regular_deck.alloc(0, 64, allocator);
+		regular_hand.alloc(0, 16, allocator);
+	}
 };
 
 struct World
 {
 	Allocator allocator;
+
+	int64_t turn = -1;
+	TurnPhase phase = TurnPhase::none;
+
 	Map map;
 	Collection<City> cities;
 
-	inline void init(Allocator alloc);
+	Player player;
+
+	inline void alloc(Allocator allocator)
+	{
+		this->allocator = allocator;
+		map.alloc(allocator);
+		cities.alloc(1024, allocator);
+		player.alloc(allocator);
+	}
 };
 
 struct WorldRef
@@ -51,17 +91,6 @@ static inline Box2i city_cells_bounds(const City& city);
 
 extern void save_world(const World& world, const String& path, const Globals& globals);
 extern World load_world(const String& path, const Globals& globals, Allocator alloc);
-
-
-inline void World::init(Allocator alloc)
-{
-	allocator = alloc;
-	// TODO: maybe should be in Map's constructor
-	map.chunks.alloc(0, 1024, alloc);
-	map.tiles.alloc(0, 512 * 512, alloc);
-	map.ground_glyphs.alloc(0, 512 * 512, alloc);
-	cities.alloc(1024, alloc);
-}
 
 static inline bool valid_urban_tile(const Map& map, Vec2i tile_pos, const Globals& globals)
 {

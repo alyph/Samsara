@@ -53,6 +53,13 @@ struct Map
 
 	static inline const Tile empty_tile{};
 
+	inline void alloc(Allocator allocator)
+	{
+		chunks.alloc(0, 1024, allocator);
+		tiles.alloc(0, 512 * 512, allocator);
+		ground_glyphs.alloc(0, 512 * 512, allocator);
+	}
+
 	inline Id tile_id(const Vec2i& coords) const;
 	inline int chunk_coords_to_idx(const Vec2i& coords) const;
 	inline Vec2i chunk_idx_to_coords(size_t idx) const;

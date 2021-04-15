@@ -192,6 +192,7 @@ public:
 	inline void pop_back();
 	inline void insert(size_t pos, const T& value);
 	inline void insert_defaults(size_t pos, size_t count);
+	inline T erase(size_t pos);
 	inline ArrayView<T> view() { return { handle, 0, size() }; }
 	static constexpr bool is_trivial() { return (std::is_trivial_v<T> || (std::is_trivially_constructible_v<T> && std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>)); }
 
@@ -212,7 +213,7 @@ class Array: public ArrayBase<T>
 {
 public:
 	inline Array() = default;
-	inline Array(size_t size, size_t capacity) noexcept { this->alloc_impl(size, capacity, context_allocator()); } // TODO: should not use default allocator, pass in a boolean to decide whether to use perm or temp allocator
+	// inline Array(size_t size, size_t capacity) noexcept { this->alloc_impl(size, capacity, context_allocator()); } // TODO: should not use default allocator, pass in a boolean to decide whether to use perm or temp allocator
 	inline Array(size_t size, Allocator allocator) noexcept { this->alloc_impl(size, size, allocator); }
 	inline Array(size_t size, size_t capacity, Allocator allocator) noexcept { this->alloc_impl(size, capacity, allocator); }
 	// inline Array(const Array<T>& other) noexcept { *this = other; } // TODO: don't implement until we really need this
@@ -220,6 +221,8 @@ public:
 	// inline Array& operator=(const Array<T>& other) noexcept; // TODO: don't implement until we really need this
 	inline Array& operator=(Array<T>&& other) noexcept; // TODO: not implemented yet, implement it if we actually need to deep copy the array
 
+	// TODO: maybe have a reserve function which is alloc(0, reserved_capacity, allocator)
+	// or should alloc(size, allocator) act like reserve()??
 	inline void alloc(size_t size, size_t capacity, Allocator allocator) { this->alloc_impl(size, capacity, allocator); }
 	inline void alloc(Allocator allocator, std::initializer_list<T> il) { this->alloc_impl(allocator, il); }
 	inline void alloc_perm(size_t size, size_t capacity) { this->alloc_impl(size, capacity, context_allocator()); }
@@ -295,6 +298,12 @@ constexpr size_t total_array_buffer_size(size_t num_items)
 template<typename T>
 inline void ArrayBase<T>::alloc_impl(size_t size, size_t capacity, Allocator allocator) noexcept
 {
+	// TODO: if the array already has a matching allocator, we should call reallocate instead
+	// and that would just be a resize() mostly, and to ensure capacity
+	// however, if so, there's no way to wipe out the data and allocate brand new block
+	// although we can still do that by calling make_array and assign that to the current array
+	// also should we just make alloc() a one time call? once called, the subsequent call must
+	// be a matching allocator, and will just act like resizing
 	asserts(size <= capacity);
 	const size_t num_bytes = total_array_buffer_size<T>(capacity);
 	auto& allocators = engine().allocators;
@@ -446,6 +455,18 @@ inline void ArrayBase<T>::insert_defaults(size_t pos, size_t count)
 	auto d = data_ptr();
 	memmove(d + pos + count, d + pos, (s - pos) * sizeof(T));
 	init_data(pos, count);
+}
+
+template<typename T>
+inline T ArrayBase<T>::erase(size_t pos)
+{
+	const auto s = size();
+	auto d = data_ptr();
+	asserts(pos < size());
+	T erased = *(d + pos);;
+	memmove(d + pos, d + pos + 1, (s - pos - 1) * sizeof(T));
+	_size--;
+	return erased;
 }
 
 template<typename T>

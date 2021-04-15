@@ -660,7 +660,7 @@ namespace serialization
 	void serialize(TOp& op, String& v)
 	{
 		op.string(v);
-		v.store(); // require a specified context allocator
+		v.store(op.context.allocator); // use the allocator specified in the context for the entire deserialization step
 	}
 }
 

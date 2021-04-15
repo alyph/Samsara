@@ -202,7 +202,7 @@ static void add_initial_city_development(City& city, Map& map, const Globals& gl
 
 Id create_city(World& world, const Vec2i& center, const Globals& globals)
 {
-	scoped_context_allocator(world.allocator);
+	// scoped_context_allocator(world.allocator);
 	// TODO: everytime we create new city a new array is allocated
 	// ideally we could reuse it as the cities collection is essentially a pool
 	// maybe Array should provide a function optionally allocate (only if the handle has not been allocated)
@@ -210,6 +210,7 @@ Id create_city(World& world, const Vec2i& center, const Globals& globals)
 	// some terrain may remain e.g. the hilly area
 	// some terrain may prevent city from being placed e.g. mountainous, water etc.
 	City& city = world.cities.emplace();
+	city.alloc(world.allocator); // TODO: maybe we can have the Collection::emplace() to auto call this, or even have the Array to call that...
 	city.center = center;
 	add_initial_city_development(city, world.map, globals);
 	city.urban_bounds = urban_tile_bounds(city, world.map, globals);
@@ -445,7 +446,7 @@ static Vec2i make_rural_space(City& city, Map& map, const Globals& globals)
 	struct Candidate
 	{
 		Vec2i pos;
-		int score;
+		int weight;
 	};
 
 	// find all existing cells that contain potential rural spaces
@@ -517,8 +518,8 @@ static Vec2i make_rural_space(City& city, Map& map, const Globals& globals)
 					const auto cell_pos = bounds.min + cell_rel_pos;
 					const auto dist = manhattan_length(cell_rel_pos - center_cell_rel);
 					// TODO: maybe count number of adjacencies as well
-					int score = (max_expansion_dist + 1 - dist); // score 1 at max dist, +1 for each step closer
-					asserts(score > 0);
+					int weight = (max_expansion_dist + 1 - dist); // weight 1 at max dist, +1 for each step closer
+					asserts(weight > 0);
 
 					// clear all available existing cells, now use new cells
 					if (!use_new_rural_cell)
@@ -526,7 +527,7 @@ static Vec2i make_rural_space(City& city, Map& map, const Globals& globals)
 						use_new_rural_cell = true;
 						available_cells.clear();
 					}
-					available_cells.push_back({cell_pos, score});
+					available_cells.push_back({cell_pos, weight});
 				}
 			}
 		}
@@ -553,8 +554,8 @@ static Vec2i make_rural_space(City& city, Map& map, const Globals& globals)
 			if (valid_rural_tile(tile_pos))
 			{
 				const auto adjacency = calc_rural_adjacency(tile_pos);
-				auto score = std::max((max_adjacency - adjacency) * (max_adjacency - adjacency) * 8, 1);
-				available_tiles.push_back({tile_pos, score});
+				auto weight = std::max((max_adjacency - adjacency) * (max_adjacency - adjacency) * 8, 1);
+				available_tiles.push_back({tile_pos, weight});
 			}
 		}
 
@@ -889,7 +890,7 @@ static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
 	struct ExpansionCell
 	{
 		Vec2i rel_pos;
-		int score;
+		int weight;
 	};
 	auto available_cells = make_temp_array<ExpansionCell>(0, (bounds_size.x + 2) * (bounds_size.y + 2) - city.num_urban_cells);
 	auto vacant_tiles = make_temp_array<Vec2i>(0, city.num_urban_cells * map_cell_size * map_cell_size);
@@ -930,7 +931,7 @@ static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
 		}
 		if (found_space_for_expansion)
 		{
-			available_cells.push_back({ rel_pos, 0 }); // score calculated later
+			available_cells.push_back({ rel_pos, 0 }); // weight calculated later
 		}
 	}
 	max_expansion_dist += 1; // max distance from potential expansion cell to the center
@@ -974,7 +975,7 @@ static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
 							const auto tile_pos = tile_top_left + Vec2i{ti % map_cell_size, ti / map_cell_size};
 							if (expandable_urban_tile(map, tile_pos, globals))
 							{
-								available_cells.push_back({rel_pos, 0}); // score calculated later
+								available_cells.push_back({rel_pos, 0}); // weight calculated later
 								break;
 							}
 
@@ -986,12 +987,12 @@ static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
 
 		if (!available_cells.empty())
 		{
-			int total_score = 0;
+			int total_weight = 0;
 			for (auto& expand_cell : available_cells)
 			{
 				const auto dist = manhattan_length(expand_cell.rel_pos - center_cell_rel);
 				// TODO: maybe count number of adjacencies as well
-				expand_cell.score = (max_expansion_dist + 1 - dist); // score 1 at max dist, +1 for each step closer
+				expand_cell.weight = (max_expansion_dist + 1 - dist); // weight 1 at max dist, +1 for each step closer
 				int num_sides_connected = 0;
 				for (const auto offset : adjacent_offsets)
 				{
@@ -1000,17 +1001,17 @@ static Vec2i make_urban_space(City& city, Map& map, const Globals& globals)
 						num_sides_connected++;
 					}
 				}
-				expand_cell.score += std::max(1, num_sides_connected) - 1;
-				total_score += expand_cell.score;
+				expand_cell.weight += std::max(1, num_sides_connected) - 1;
+				total_weight += expand_cell.weight;
 			}		
 
-			const auto roll = rand_int(total_score);
+			const auto roll = rand_int(total_weight);
 			Vec2i new_cell_pos;
 			int running = 0;
 			size_t chosen_cell_idx = 0;
 			for (const auto& cell : available_cells)
 			{
-				running += cell.score;
+				running += cell.weight;
 				if (roll < running)
 				{
 					new_cell_pos = (bounds.min + cell.rel_pos);
@@ -1339,8 +1340,9 @@ namespace serialization
 		{
 			const Globals* globals{};
 			std::remove_reference_t<decltype(world)>* world{};
+			Allocator allocator;
 		}
-		context{&globals, &world};
+		context{&globals, &world, world.allocator};
 
 		auto op = make_file_op<E>(format_str("%s/%s", path, "map.dat"), context);
 		serialize(op, world.map);
@@ -1360,9 +1362,9 @@ void save_world(const World& world, const String& path, const Globals& globals)
 
 World load_world(const String& path, const Globals& globals, Allocator alloc)
 {
-	scoped_context_allocator(alloc);
+	// scoped_context_allocator(alloc);
 	World world;
-	world.init(alloc);
+	world.alloc(alloc);
 	serialization::serialize_world<SerializeOpType::read>(world, path, globals);
 	for (auto& city : world.cities)
 	{

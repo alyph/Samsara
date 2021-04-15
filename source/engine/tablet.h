@@ -61,6 +61,13 @@ struct TabletLayout
 	int left{}, top{}, width{}, height{};
 };
 
+struct TabletAsset
+{
+	Id glyph_texture{};
+	Id tablet_shader{};
+	Id screen_shader{};
+};
+
 extern float calc_tablet_width(int cols, int rows, float height, Id texture);
 extern float calc_tablet_height(int cols, int rows, float width, Id texture);
 extern TabletRenderBuffer& access_tablet_render_buffer_and_layout(const Context& context, TabletLayout& out_layout);

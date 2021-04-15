@@ -4,6 +4,7 @@
 The goal of a card and deck system is as follows:
 1. to reduce the decision space. instead of providing all options to the players at the same time, provide only a subset of those and focus on the choice among the limited set
 2. to not completely dominate player decisions and agencies with random chances. e.g. players are not simply playing out whatever actions (cards) that are dealt to them
+3. have the excitement of drawing rare cards. for example, for projects and units cards, we need have some high level cards that gradually unlock and has lower chance to draw
 
 
 A few design choices to consider
