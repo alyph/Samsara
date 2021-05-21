@@ -1348,6 +1348,10 @@ namespace serialization
 		serialize(op, world.map);
 
 		op = make_file_op<E>(format_str("%s/%s", path, "world.dat"), context);
+		op.section("world");
+		op.prop("year", world.starting_year);
+		op.newline();
+
 		op.section("cities");
 		op.collection(world.cities, "city");
 	}

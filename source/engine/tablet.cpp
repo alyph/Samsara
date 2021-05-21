@@ -641,7 +641,7 @@ static void render_and_layout_common_element(TabletRenderBuffer& render_buffer, 
 
 	// all layout should be set now, save that in the attribute
 	asserts(layout_done(layout));
-	// is post attr now basicaclly a different bank to help minimizing insertion?
+	// is post attr now basically a different bank to help minimizing insertion?
 	set_elem_post_attr(frame, elem_id, attrs::tablet_layout, layout);
 }
 
@@ -665,6 +665,7 @@ static void finalize_parent_after_structured_children(TabletRenderBuffer& render
 		else
 		{
 			bounds = child_layout;
+			bounds_set = true;
 		}					
 		child_id = get_next_sibling(frame, child_id);
 	}
@@ -1114,14 +1115,15 @@ static Render3dType render_tablet(const Frame& frame, Id elem_id, const Mat44& t
 
 			// glBufferSubData from begin to end
 			glBufferSubData(GL_ARRAY_BUFFER, glyph_buffer_offset, num_copy_glyphs * sizeof(GlyphData), glyphs.data() + begin_glyph_idx);
-			glyph_buffer_offset += num_copy_glyphs;
+			glyph_buffer_offset += num_copy_glyphs * sizeof(GlyphData);
 			curr++;
 		}
 		// Draw all glyphs instanced
 		// TODO: another way to draw this is to draw a quad, and have the pixel shader 
 		// fill in the content based on uv
 		// 6 because of two triangles, see above indices in add_tablet()
-		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(num_glyphs));
+		asserts(num_glyphs * sizeof(GlyphData) == glyph_buffer_offset);
+		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(num_glyphs)); // TODO: this should still be num_glyphs, which should equal total added glyphs added to the sub data (should assert)
 		// glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		
 	// construct glyph data and upload

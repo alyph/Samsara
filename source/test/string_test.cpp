@@ -124,9 +124,26 @@ int main()
 	asserts(built_str.size() == str4_view.size() * 2);
 	printf("built string: %s\n", built_str.c_str());
 
+	StringBuilder builder2;
+	builder2.append_format("123456"); // short one
+	builder2.append_format("long enough to push the string builder to heap"); // long one
+	String built_str2 = builder2.to_str();
+	asserts(built_str2.str_data.layout() == StringLayout::normal_string);
+	asserts(built_str2.size() == 52);
+	printf("built string2: %s\n", built_str2.c_str());
+
+	const auto fmt_str_short = format_str("123456%s", "78901234567890abc");
+	asserts(fmt_str_short.str_data.layout() == StringLayout::short_string);
+	asserts(fmt_str_short.size() == max_short_string_size);
+
+	const auto fmt_str_normal = format_str("123456%s", "78901234567890abcdefghij");
+	asserts(fmt_str_normal.str_data.layout() == StringLayout::normal_string);
+	asserts(fmt_str_normal.size() == 30);
+
+
 	printf("String Test Done.\n");
 
-	//std::system("pause");
+	// std::system("pause");
 
 	return 0;
 }

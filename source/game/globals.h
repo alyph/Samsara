@@ -73,12 +73,23 @@ struct DevelopmentType
 	Id structure_type;
 };
 
+enum class CardGroup: uint8_t
+{
+	regular,
+	event,
+	stratagem,
+	project,
+	unit,
+	innovation,
+};
+
 struct CardType
 {
 	Id id;
 	String name;
 	String phrase;
 	unsigned int weight{};
+	CardGroup group;
 };
 
 struct Globals

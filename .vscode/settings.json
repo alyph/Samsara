@@ -79,5 +79,21 @@
         "xloctime": "cpp",
         "compare": "cpp",
         "concepts": "cpp"
-    }
+    },
+    "cSpell.languageSettings": [
+        {
+            "languageId": "cpp,c",
+            // Turn off compound words, because it is only checking strings.
+            "allowCompoundWords": true,
+            // Only check comments and strings
+            "includeRegExpList": [
+                "CStyleComment"
+                // "string"
+            ]
+            // // Exclude includes, because they are also strings.
+            // "ignoreRegExpList": [
+            //     "/#include.*/"
+            // ]
+        }
+    ]
 }

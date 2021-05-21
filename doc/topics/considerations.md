@@ -2,7 +2,7 @@
 
 #### various aspects in the medieval world
 
-- each lords or vassels may have their own opinion of the opponents and enemies, some may sympathize with them or consider them as too strong, thus reluctant to go to war against them
+- each lords or vassals may have their own opinion of the opponents and enemies, some may sympathize with them or consider them as too strong, thus reluctant to go to war against them
   - we should be able to inspect this info and take that into considerations when go to war
   - these lords may hinder the war effort either oppose the war plan or do not provide sufficient support (levies or money)
   - when the campaign goes south they are also the first to complain and abandon the post

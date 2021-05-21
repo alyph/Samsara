@@ -23,7 +23,7 @@ The growth of a development type involves the following:
 
 ### Amenities
 
-amenities represent the features, building or infrustructures (usually in a urban center) that are not represented by bigger projects. like the common courts, schools, shops, taverns, public baths, theaters, bothels, streets, sewers etc.
+amenities represent the features, building or infrastructures (usually in a urban center) that are not represented by bigger projects. like the common courts, schools, shops, taverns, public baths, theaters, bothels, streets, sewers etc.
 - what amenities are available depending on the culture, technology and the development and wealth of a city
 - some projects after becoming common may turn into amenities
 

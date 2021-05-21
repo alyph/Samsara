@@ -77,4 +77,8 @@ private:
 	// double timer = -2.0;
 };
 
+extern bool play_card(const GameRef& ref, CardId id);
+extern bool unplay_card(const GameRef& ref, CardId id);
+extern bool is_playing_card(const Player& player, CardId card_id);
+extern bool is_ephemeral_card(const Player& player, CardId card_id);
 

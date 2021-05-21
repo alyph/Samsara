@@ -79,6 +79,7 @@ enum class StringLayout : uint8_t
 
 static_assert(static_cast<uint8_t>(StringLayout::max) <= (1 << string_layout_bits));
 
+// TODO: remove this, strings are no longer ref counted
 // TODO: since this is only used by StringStore, one optimization would be not adding a header for normal String
 struct StringHeader
 {
@@ -275,7 +276,8 @@ inline void assign_stored_string(StringData& str_data, const char* start, size_t
 	else
 	{
 		// TODO: maybe we should force user to select an explicit allocator instead
-			assign_normal_string(str_data, start, size, alloc);
+		assign_normal_string(str_data, start, size, alloc);
+		// TODO: don't think we are doing ref counted strings anymore
 		str_data.header()->ref_count = 1;
 	}
 }
@@ -572,6 +574,20 @@ inline void sb_increment_size(StringData& str_data, size_t size)
 	}
 }
 
+// size not including null terminator
+// inline void sb_set_size(StringData& str_data, size_t new_size)
+// {
+// 	if (str_data.is_short())
+// 	{
+// 		asserts(new_size <= max_short_string_size);
+// 		str_data.short_data.remaining_capacity = (uint8_t)(max_short_string_size - new_size);
+// 	}
+// 	else
+// 	{
+// 		str_data.normal_data.size = (uint32_t)new_size;
+// 	}
+// }
+
 // size including null terminator
 extern void sb_expand_buffer(StringData& str_data, size_t size);
 
@@ -583,20 +599,23 @@ inline void StringBuilder::append_format(const String& fmt, const Ts&... args)
 	// https://github.com/fmtlib/fmt
 	// https://fmt.dev/Text%20Formatting.html
 	auto end = sb_buffer_end(str_data);
-	auto buffer_size = sb_buffer_remaining(str_data);
-	auto orig_remaining = str_data.short_data.remaining_capacity;
+	const auto buffer_size = sb_buffer_remaining(str_data);
+	const auto orig_remaining = str_data.short_data.remaining_capacity;
+	// const auto orig_size = str_data.size();
 	int str_size = std::snprintf(end, buffer_size, fmt.c_str(), format_arg_wrapper(args)...);
+	// no need to check if it's short string
+	// because if it's normal string the str_data itself shouldn't change
+	// but for short string, all data will be modified by the previous snprintf
+	str_data.short_data.remaining_capacity = orig_remaining;
+	asserts(str_size >= 0); // < 0 means error occurred, which we are not expecting
 	if (str_size >= buffer_size)
 	{
-		// no need to check if it's short string
-		// because if it's normal string the str_data itself shouldn't change
-		// but for short string, all data will be modified by the previous snprintf
-		str_data.short_data.remaining_capacity = orig_remaining;
 		sb_expand_buffer(str_data, str_size + 1);
 		end = sb_buffer_end(str_data);
 		std::snprintf(end, str_size + 1, fmt.c_str(), format_arg_wrapper(args)...);
 	}
 	sb_increment_size(str_data, str_size);
+	// sb_set_size(str_data, (orig_size + str_size));
 }
 
 inline String StringBuilder::to_str()

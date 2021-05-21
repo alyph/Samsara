@@ -1,4 +1,6 @@
 #include "font.h"
+#include "image_utils.h"
+#include "filesystem.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -60,8 +62,10 @@ Id create_font_texture(int width, int height, int pages, const Array<uint32_t>& 
 	asserts((width * height * pages) == codes.size());
 	FT_Face font_face = reinterpret_cast<FT_Face>(font.handle);
 
+	// TODO: a lot of these +1, -1 thing added to the right and bottom can be removed, if we just consider right and bottom are one pixel outside of the bounding box.
 	const int glyph_width = advance > 0 ? advance : (font_face->size->metrics.max_advance >> 6);
-	const int glyph_height = round_fixed26_6_to_pixel(FT_MulFix(font_face->height, font_face->size->metrics.y_scale));
+	// const int glyph_height = round_fixed26_6_to_pixel(FT_MulFix(font_face->height, font_face->size->metrics.y_scale));
+	const int glyph_height = round_fixed26_6_to_pixel(FT_MulFix(font_face->ascender - font_face->descender, font_face->size->metrics.y_scale));
 	const int glyph_left = 0;
 	const int glyph_right = glyph_left + glyph_width - 1;
 	const int glyph_top = round_fixed26_6_to_pixel(FT_MulFix(font_face->ascender, font_face->size->metrics.y_scale));
@@ -98,7 +102,14 @@ Id create_font_texture(int width, int height, int pages, const Array<uint32_t>& 
 			// }
 
 			const auto char_code = codes[page * num_glyphs + i];
-			FT_Load_Char(font_face, char_code, FT_LOAD_RENDER);
+			const auto char_index = FT_Get_Char_Index(font_face, char_code);
+			if (char_index == 0)
+			{
+				continue;
+			}
+
+    		FT_Load_Glyph(font_face, char_index, FT_LOAD_RENDER);
+			// FT_Load_Char(font_face, char_code, FT_LOAD_RENDER);
 
 			int clipped_left = std::max(font_face->glyph->bitmap_left, glyph_left);
 			int clipped_right = std::min(font_face->glyph->bitmap_left + (int)font_face->glyph->bitmap.width - 1, glyph_right);
@@ -126,15 +137,17 @@ Id create_font_texture(int width, int height, int pages, const Array<uint32_t>& 
 		}
 	}
 
-	// Image image;
-	// image.format = TextureFormat::Mono;
-	// image.width = pixels_per_row;
-	// image.height = pixel_height;
-	// size_t size = (image.width * image.height);
-	// image.data.resize(size);
-	// memcpy(image.data.data(), bitmap.data(), size);
-
-	// save_image("./test/font_texture.png", image, true);
+#if 0
+	Image image;
+	image.format = TextureFormat::Mono;
+	image.width = pixels_per_row;
+	image.height = pixel_height;
+	size_t size = (image.width * image.height);
+	image.data.resize(size);
+	memcpy(image.data.data(), bitmap.data(), size);
+	filesystem::create_directories("./test");
+	save_image("./test/font_texture.png", image, true);
+#endif
 
 	TextureDesc tex_desc;
 	tex_desc.width = pixels_per_row;

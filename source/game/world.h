@@ -32,17 +32,25 @@ enum class TurnPhase
 	resolution,
 };
 
+struct CardAction
+{
+	CardId card_id{};
+};
+
 struct Player
 {
 	CardPile hand;
 	CardPile regular_deck;
-	CardPile regular_hand;
+	Array<CardId> ephemeral_cards;
+	Array<CardAction> actions;
+	int action_size = 3;
 
 	inline void alloc(Allocator allocator)
 	{
 		hand.alloc(0, 32, allocator);
 		regular_deck.alloc(0, 64, allocator);
-		regular_hand.alloc(0, 16, allocator);
+		ephemeral_cards.alloc(0, 8, allocator);
+		actions.alloc(0, 16, allocator);
 	}
 };
 
@@ -52,6 +60,7 @@ struct World
 
 	int64_t turn = -1;
 	TurnPhase phase = TurnPhase::none;
+	int starting_year = 0;
 
 	Map map;
 	Collection<City> cities;

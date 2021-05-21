@@ -30,6 +30,10 @@ static void start_game(const GameRef& ref);
 static void start_turn(const GameRef& ref);
 static void start_draft_phase(const GameRef& ref);
 static void start_action_phase(const GameRef& ref);
+static void start_resolution_phase(const GameRef& ref);
+static void next_turn(const GameRef& ref);
+
+static bool is_regular_card(const Globals& globals, Id card_type);
 
 Game::Game()
 {
@@ -92,9 +96,14 @@ Game::Game()
 	// ui_texture = create_font_texture(w, h, pages, codes, font);
 	ui_texture = load_texture_array(
 	{
-		"../../data/fonts/unscii_8x16.png",
+		"../../data/fonts/unscii_16_ascii.png",
+		"../../data/fonts/unscii_16_box.png",
+		// "../../data/fonts/unscii_8x16.png",
 		// "../../data/fonts/Lord_Nightmare-Fixedsys-03.png",
 	});
+
+	// const auto font = create_font("../../data/fonts/unscii-16-full.ttf", 0, 16);
+	// create_font_glyph_page(0x0, font);
 
 	const auto make_dev_type = [&](const String& struct_key, const String& name, DevelopmentArea area, uint16_t glyph, const Color32& color) -> DevelopmentType&
 	{
@@ -122,39 +131,39 @@ Game::Game()
 	const auto& wall_struct = globals.structure_types.set("wall", {0, "wall", 0x0320, 0xafafaf_rgb32, StructureFlags::wall, 0});
 	const auto& urban_vacancy = globals.structure_types.set("vacancy", {0, "vacancy", 0x00f9, 0x503010_rgb32, StructureFlags::urban|StructureFlags::vacancy, 0});
 
-	const auto make_card = [&](const String& key, const String& name, const String& phrase, unsigned int weight)
+	const auto make_card = [&](const String& key, const String& name, const String& phrase, unsigned int weight, CardGroup group)
 	{
-		return globals.card_types.set(key, {.name = name, .phrase = phrase, .weight = weight});
+		return globals.card_types.set(key, {.name = name, .phrase = phrase, .weight = weight, .group = group});
 	};
 
 	const auto make_regular_card = [&](const String& key, const String& name, const String& phrase)
 	{
-		return make_card(key, name, phrase, 0);
+		return make_card(key, name, phrase, 0, CardGroup::regular);
 	};
 
-	const auto make_action_card = [&](const String& key, const String& name, const String& phrase)
+	const auto make_event_card = [&](const String& key, const String& name, const String& phrase)
 	{
-		return make_card(key, name, phrase, 300);
+		return make_card(key, name, phrase, 120, CardGroup::event);
 	};
 
 	const auto make_stratagem_card = [&](const String& key, const String& name, const String& phrase)
 	{
-		return make_card(key, name, phrase, 80);
+		return make_card(key, name, phrase, 80, CardGroup::stratagem);
 	};
 
 	const auto make_project_card = [&](const String& key, const String& name, const String& phrase)
 	{
-		return make_card(key, name, phrase, 20);
+		return make_card(key, name, phrase, 20, CardGroup::project);
 	};
 
 	const auto make_unit_card = [&](const String& key, const String& name, const String& phrase)
 	{
-		return make_card(key, name, phrase, 20);
+		return make_card(key, name, phrase, 20, CardGroup::unit);
 	};
 
 	const auto make_innovation_card = [&](const String& key, const String& name, const String& phrase)
 	{
-		return make_card(key, name, phrase, 20);
+		return make_card(key, name, phrase, 20, CardGroup::innovation);
 	};
 
 
@@ -168,13 +177,13 @@ Game::Game()
 	const auto& card_intrigue = make_regular_card("reg_intrigue", "Intrigue", "a pursuit of shadow");
 	const auto& card_destiny = make_regular_card("reg_destiny", "Destiny", "a pursuit of destiny");
 
-	make_card("war", "War", "a war", 80);
-	make_action_card("relation_improve", "Relationship Improved", "a warming relationship");
-	make_action_card("relation_deteriorate", "Relationship Deteriorated", "a growing tension");
+	make_card("war", "War", "a war!", 80, CardGroup::event);
+	make_event_card("relation_improve", "Relationship Improved", "a warming relationship");
+	make_event_card("relation_deteriorate", "Relationship Deteriorated", "a growing tension");
 
 	make_stratagem_card("stg_alliance", "Form Alliance", "a new ally");
-	make_stratagem_card("stg_trade_aggreement", "Trade Aggreement", "a trade aggreement");
-	make_stratagem_card("stg_marriage", "Marriage Aggrangement", "a marriage proposal");
+	make_stratagem_card("stg_trade_agreement", "Trade Agreement", "a trade agreement");
+	make_stratagem_card("stg_marriage", "Marriage Proposal", "a marriage proposal");
 	make_stratagem_card("stg_incite_war", "Incite War", "a word of war");
 	make_stratagem_card("stg_incite_division", "Sow Division", "a word of division");
 	make_stratagem_card("stg_incite_discontent", "Sow Discontent", "a word of resentment");
@@ -192,7 +201,7 @@ Game::Game()
 	make_project_card("prj_quarry", "Quarry", "expansion of quarries");
 	make_project_card("prj_mine", "Mine", "expansion of mining network");
 	make_project_card("prj_irrigation", "Irrigation System", "construction of irrigation system");
-	
+
 	make_project_card("prj_harbor", "Harbor", "expansion of harbor");
 	make_project_card("prj_market", "Market", "expansion of market");
 	make_project_card("prj_tradecenter", "Trade Center", "development of trade center");
@@ -292,17 +301,7 @@ Game::Game()
 		{card_destiny.id, 		1},
 	});
 
-	const auto is_regular_card = [](Id card_type, const Globals& globals)
-	{
-		for (const auto& starting_card : globals.defines.starting_deck)
-		{
-			if (starting_card.type == card_type)
-			{
-				return true;
-			}
-		}
-		return false;
-	};
+
 
 
 	editor_state.map_vp = initial_map_vp;
@@ -329,7 +328,7 @@ Game::Game()
 	game_state.player_card_pool.alloc(0, globals.card_types.array.size(), game_alloc);
 	for (const auto& card_type : globals.card_types)
 	{
-		if (!is_regular_card(card_type.id, globals))
+		if (!is_regular_card(globals, card_type.id))
 		{
 			game_state.player_card_pool.push_back({.card_type = card_type.id, .weight = card_type.weight});
 		}
@@ -367,18 +366,60 @@ void Game::update(const Time& time)
 }
 
 
+static uint32_t used_card_id = 0;
 
-static void draft_cards_from_pool(const GameRef& ref, int count)
+static inline Card make_card(Id card_type_id)
 {
+	return { .id = (++used_card_id), .type = static_cast<decltype(Card::type)>(card_type_id) };
+}
+
+static Array<CardId> draft_cards_from_pool(const GameRef& ref, int count)
+{
+	auto cards = make_temp_array<CardId>(count);
+
 	// TODO: do we want any duplicated draft???
 	// some can be (like recruitment, projects, missions)
 	// some not (like innovations)
 	for (int i = 0; i < count; i++)
 	{
 		const auto& entry = random_weighted_array_element(ref.game.player_card_pool);
-		ref.world.player.hand.push_back({.type = static_cast<decltype(Card::type)>(entry.card_type)});
+		const auto card = make_card(entry.card_type);
+		cards[i] = card.id;
+		ref.world.player.hand.push_back(card);
+	}
+	return cards;
+}
+
+static void discard_card(const GameRef& ref, CardId id)
+{
+	auto& player = ref.world.player;
+	for (size_t i = 0; i < player.hand.size(); i++)
+	{
+		const auto& card = player.hand[i];
+		if (card.id == id)
+		{
+			// regular cards go back to regular deck, other cards are destroyed
+			if (is_regular_card(ref.globals, card.type))
+			{
+				player.regular_deck.push_back(card);
+			}
+			player.hand.erase(i);
+			break;
+		}
 	}
 }
+
+static bool is_regular_card(const Globals& globals, Id card_type)
+{
+	for (const auto& starting_card : globals.defines.starting_deck)
+	{
+		if (starting_card.type == card_type)
+		{
+			return true;
+		}
+	}
+	return false;
+};
 
 
 
@@ -387,10 +428,9 @@ static void start_game(const GameRef& ref)
 	// fill the player's starting deck
 	for (const auto& startingCard : ref.globals.defines.starting_deck)
 	{
-		const auto card_type = static_cast<decltype(Card::type)>(startingCard.type);
 		for (uint16_t i = 0; i < startingCard.count; i++)
 		{
-			ref.world.player.regular_deck.push_back({card_type});
+			ref.world.player.regular_deck.push_back(make_card(startingCard.type));
 		}
 	}
 
@@ -401,7 +441,14 @@ static void start_game(const GameRef& ref)
 
 static void start_turn(const GameRef& ref)
 {
-	start_draft_phase(ref);
+	if (ref.world.turn % 4 == 0)
+	{
+		start_draft_phase(ref);
+	}
+	else
+	{
+		start_action_phase(ref);
+	}
 }
 
 static void start_draft_phase(const GameRef& ref)
@@ -409,10 +456,12 @@ static void start_draft_phase(const GameRef& ref)
 	ref.world.phase = TurnPhase::draft;
 
 	// TODO: stuff
-
-	const int draft_count = (ref.world.turn == 0) ? 6: 2;
-	draft_cards_from_pool(ref, draft_count);
-
+	const int hand_limit = 8;
+	const int draft_count = std::clamp((ref.world.turn == 0) ? 4: 2, 0, hand_limit - (int)ref.world.player.hand.size());
+	if (draft_count > 0)
+	{
+		draft_cards_from_pool(ref, draft_count);
+	}
 	start_action_phase(ref);
 }
 
@@ -423,12 +472,113 @@ static void start_action_phase(const GameRef& ref)
 	// draw cards from the deck to hand
 	// TODO: if we have discard pile, then we need dump discarded cards back to deck when it gets low
 	auto& player = ref.world.player;
-	draw_random_cards(player.regular_deck, player.regular_hand, 2);
+
+	const int num_ephemeral_cards = 2;
+	const int num_regular_cards = 2;
+
+	// draft ephemeral cards
+	const auto ephemerals = draft_cards_from_pool(ref, num_ephemeral_cards);
+
+	// draw regular cards
+	const auto regulars = draw_random_cards(player.regular_deck, player.hand, 2);
+
+	player.ephemeral_cards.concat(ephemerals);
+	player.ephemeral_cards.concat(regulars);
 }
 
 
+static void start_resolution_phase(const GameRef& ref)
+{
+	ref.world.phase = TurnPhase::resolution;
+
+	// discard all ephemeral cards
+	auto& player = ref.world.player;
+	for (const auto eph_card_id : player.ephemeral_cards)
+	{
+		discard_card(ref, eph_card_id);
+	}
+	player.ephemeral_cards.clear();
+
+	// start the next turn
+	next_turn(ref);
+}
+
+static void next_turn(const GameRef& ref)
+{
+	ref.world.turn++;
+	start_turn(ref);
+}
 
 
+bool has_card_in_hand(const Player& player, CardId id)
+{
+	for (const auto& card : player.hand)
+	{
+		if (card.id == id)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool play_card(const GameRef& ref, CardId id)
+{
+	auto& player = ref.world.player;
+	if (!has_card_in_hand(player, id))
+	{
+		return false;
+	}
+	// TODO: execute actions
+	discard_card(ref, id);
+	start_resolution_phase(ref);
+	return true;
+}
+
+bool unplay_card(const GameRef& ref, CardId id)
+{
+	auto& player = ref.world.player;
+	size_t idx = -1;
+	for (size_t i = 0; i < player.actions.size(); i++)
+	{
+		if (player.actions[i].card_id == id)
+		{
+			idx = i;
+			break;
+		}
+	}
+	if (idx != -1)
+	{
+		player.actions.erase(idx);
+		return true;
+	}
+	return false;
+}
+
+bool is_playing_card(const Player& player, CardId card_id)
+{
+	for (const auto& action : player.actions)
+	{
+		if (action.card_id == card_id)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool is_ephemeral_card(const Player& player, CardId card_id)
+{
+	for (const auto& eph_card_id : player.ephemeral_cards)
+	{
+		if (eph_card_id == card_id)
+		{
+			return true;
+		}
+	}
+	return false;
+
+}
 
 
 
@@ -854,7 +1004,7 @@ void Game::present(const Context& ctx)
 		editor_state.map_scale += _mouse_wheel_delta * 0.001f;
 		const auto map_scale = editor_state.map_scale = std::clamp(editor_state.map_scale, 1/max_zoom, 1/min_zoom);
 		
-		// TODO: code below and serveral other places will not work if the map cells are not square
+		// TODO: code below and several other places will not work if the map cells are not square
 		// it should employ a more generalized algorithem:
 		// 1. calculate the new map tablet position based on the new mouse position and real number cell coordinates (ruv?) it's dragging on 
 		// 2. offset this new map position with the new map_vp, so the map position never goes over one cell

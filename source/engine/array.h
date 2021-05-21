@@ -192,6 +192,7 @@ public:
 	inline void pop_back();
 	inline void insert(size_t pos, const T& value);
 	inline void insert_defaults(size_t pos, size_t count);
+	inline void concat(const ArrayBase<T>& other);
 	inline T erase(size_t pos);
 	inline ArrayView<T> view() { return { handle, 0, size() }; }
 	static constexpr bool is_trivial() { return (std::is_trivial_v<T> || (std::is_trivially_constructible_v<T> && std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>)); }
@@ -455,6 +456,17 @@ inline void ArrayBase<T>::insert_defaults(size_t pos, size_t count)
 	auto d = data_ptr();
 	memmove(d + pos + count, d + pos, (s - pos) * sizeof(T));
 	init_data(pos, count);
+}
+
+template<typename T>
+inline void ArrayBase<T>::concat(const ArrayBase<T>& other)
+{
+	const auto other_size = other.size();
+	const auto s = size();
+	ensure_capacity(s + other_size);
+	_size = (s + other_size);
+	auto d = data_ptr();
+	memcpy(d + s, other.data_ptr(), other_size * sizeof(T));
 }
 
 template<typename T>

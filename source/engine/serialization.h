@@ -462,6 +462,7 @@ public:
 
 	inline void newline()
 	{
+		// TODO: should be optional
 		token_stream.emit_newline();
 	}
 
