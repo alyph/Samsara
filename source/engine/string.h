@@ -22,7 +22,7 @@
 // by the application (usually until next frame). References to these Strings should not be kept, but 
 // should be safe to pass into or return from function calls 
 //
-// StringView is a trivially copiable references to a String. They are not ref counted and valid as long as
+// StringView is a trivially copyable references to a String. They are not ref counted and valid as long as
 // the referenced Strings are valid. Generally it can be considered as safe and valid for the same life
 // time as a temporarily allocated String. Even if a String (persistent) is deallocated, the String buffer
 // can still be accessed until the memory is reclaimed (which is normally until next frame)

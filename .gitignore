@@ -2,3 +2,4 @@
 /bin/
 /external/easy_profiler/bin/easy_profiler_stream.cache
 /.vscode/ipch/
+/tools/.vs/

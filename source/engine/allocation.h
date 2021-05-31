@@ -55,6 +55,7 @@ struct AllocHeader
 	size_t size{};
 };
 
+// TODO: maybe we should make this a template class to avoid void*
 struct AllocHandle
 {
 	void* ptr{};

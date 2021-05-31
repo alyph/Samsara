@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Array&lt;*&gt;">
+  	<DisplayString>{{ size={_size} }}</DisplayString>
+	  <Expand>
+        <Item Name="[size]" ExcludeView="simple">_size</Item>
+        <Item Name="[capacity]" ExcludeView="simple">_capacity</Item>
+		    <Item Name="[handle]" ExcludeView="simple">handle</Item>
+        <ArrayItems>
+            <Size>_size</Size>
+            <ValuePointer>($T1*)handle.ptr</ValuePointer>
+        </ArrayItems>
+    </Expand>
+    <!-- <Intrinsic Name="size" Expression="_size" />
+    <Intrinsic Name="capacity" Expression="_capacity" />
+    <DisplayString>{{ size={size()} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]" ExcludeView="simple">size()</Item>
+      <Item Name="[capacity]" ExcludeView="simple">capacity()</Item>
+      <Item Name="[allocator]" ExcludeView="simple">(Allocator)((handle.header >> 28) &amp; 0x0000000F)</Item>
+      <ArrayItems>
+        <Size>size()</Size>
+        <ValuePointer>handle.ptr</ValuePointer>
+        </ArrayItems>
+    </Expand> -->
+  </Type>
+
+  <Type Name="Collection&lt;*&gt;">
+  	<DisplayString>{{ size={array._size} }}</DisplayString>
+	  <Expand>
+      <!-- <Item Name="[size]" ExcludeView="simple">array._size</Item>
+      <Item Name="[capacity]" ExcludeView="simple">array._capacity</Item>
+      <Item Name="[allocator]" ExcludeView="simple">(Allocator)((array.handle.header >> 28) &amp; 0x0000000F)</Item> -->
+      <ExpandedItem>array</ExpandedItem>
+      <Synthetic Name="[keys]" Condition="keys._size > 0">
+        <DisplayString>{keys._size}</DisplayString>
+        <Expand>
+          <ExpandedItem>keys,view(simple)</ExpandedItem>
+        </Expand>
+      </Synthetic>
+      <!-- <CustomListItems MaxItemsPerView="5000">
+        <Variable Name="index" InitialValue="0" />
+        <Size>array._size</Size>
+        <Loop>
+          <If Condition="keys._size > index">
+            <Item Name="[{index} {((CollectionKeyEntry*)keys.handle.ptr)[index].name}]">(($T1*)array.handle.ptr)[index]</Item>
+          </If>
+          <Else>
+            <Item>(($T1*)array.handle.ptr)[index]</Item>
+          </Else>
+          <Exec>index++</Exec>
+        </Loop>
+      </CustomListItems> -->
+    </Expand>
+  </Type>
+
+  <Type Name="StringData">
+    <Intrinsic Name="_is_short" Expression="short_data.layout == 0" />
+    <Intrinsic Name="_is_normal" Expression="short_data.layout == 1" />
+    <Intrinsic Name="_is_literal" Expression="short_data.layout == 2" />
+    <Intrinsic Name="_str_size" Expression="_is_short() ? (23-short_data.remaining_capacity) : (normal_data.size)" />
+    <Intrinsic Name="_str_ptr" Expression="_is_short()
+      ? ((const char*)short_data.chars)
+      : (_is_normal()
+        ? ((const char*)((uint8_t*)normal_data.alloc_handle.ptr + sizeof(StringHeader) + normal_data.start))
+        : (literal_data.ptr + literal_data.start))" />
+    
+    <DisplayString>{_str_ptr(),[_str_size()]na}</DisplayString>
+    <StringView>_str_ptr(),[_str_size()]na</StringView>
+    
+    <Expand>
+      <Item Name="[layout]" ExcludeView="simple">(StringLayout)short_data.layout</Item>
+      <Item Name="[size]" ExcludeView="simple">_str_size()</Item>
+      <Item Name="[start]" Condition="!_is_short()" ExcludeView="simple">normal_data.start</Item>
+      <Item Name="[handle]" Condition="_is_normal()" ExcludeView="simple">normal_data.alloc_handle</Item>
+      <ArrayItems>
+          <Size>_str_size()</Size>
+          <ValuePointer>_str_ptr()</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="String">
+    <!-- <Intrinsic Name="isShort" Expression="str_data.short_data.layout == 0" />
+    <Intrinsic Name="isNormal" Expression="str_data.short_data.layout == 1" />
+    <Intrinsic Name="isLiteral" Expression="str_data.short_data.layout == 2" />
+    <DisplayString Condition="isShort()">{(const char*)str_data.short_data.chars,na}</DisplayString> -->
+    <!-- <DisplayString>{(str_data.literal_data.ptr + str_data.literal_data.start),na}</DisplayString> -->
+    <!-- <DisplayString>{(str_data.literal_data.ptr + str_data.literal_data.start),su}</DisplayString> -->
+    <Intrinsic Name="_is_short" Expression="str_data.short_data.layout == 0" />
+    <Intrinsic Name="_is_normal" Expression="str_data.short_data.layout == 1" />
+    <Intrinsic Name="_is_literal" Expression="str_data.short_data.layout == 2" />
+    <Intrinsic Name="_str_size" Expression="_is_short() ? (23-str_data.short_data.remaining_capacity) : (str_data.normal_data.size)" />
+    <Intrinsic Name="_str_ptr" Expression="_is_short()
+      ? ((const char*)str_data.short_data.chars)
+      : (_is_normal()
+        ? ((const char*)((uint8_t*)str_data.normal_data.alloc_handle.ptr + sizeof(StringHeader) + str_data.normal_data.start))
+        : (str_data.literal_data.ptr + str_data.literal_data.start))" />
+    <!-- <Intrinsic Name="strsize" Condition="!isShort()" Expression="str_data.normal_data.size" /> -->
+    <!-- <DisplayString Condition="_is_short()">{(const char*)str_data.short_data.chars,na}</DisplayString>
+    <DisplayString Condition="_is_normal()">{(const char*)((uint8_t*)str_data.normal_data.alloc_handle.ptr + sizeof(StringHeader) + str_data.normal_data.start),na}</DisplayString>
+    <DisplayString Condition="_is_literal()">{(str_data.literal_data.ptr + str_data.literal_data.start),na}</DisplayString>
+    <StringView Condition="_is_short()">(const char*)str_data.short_data.chars,na</StringView>
+    <StringView Condition="_is_normal()">(const char*)((uint8_t*)str_data.normal_data.alloc_handle.ptr + sizeof(StringHeader) + str_data.normal_data.start),na</StringView>
+    <StringView Condition="_is_literal()">(str_data.literal_data.ptr + str_data.literal_data.start),na</StringView> -->
+    
+    <DisplayString>{_str_ptr(),[_str_size()]na}</DisplayString>
+    <StringView>_str_ptr(),[_str_size()]na</StringView>
+    
+    <Expand>
+      <Item Name="[layout]" ExcludeView="simple">(StringLayout)str_data.short_data.layout</Item>
+      <Item Name="[size]" ExcludeView="simple">_str_size()</Item>
+      <Item Name="[start]" Condition="!_is_short()" ExcludeView="simple">str_data.normal_data.start</Item>
+      <Item Name="[handle]" Condition="_is_normal()" ExcludeView="simple">str_data.normal_data.alloc_handle</Item>
+      <ArrayItems>
+          <Size>_str_size()</Size>
+          <ValuePointer>_str_ptr()</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="AllocHandle">
+    <Intrinsic Name="_allocator_type" Expression="(Allocator)((header >> 28) &amp; 0x0000000F)" />
+    <Intrinsic Name="_ptr" Expression="(uint8_t*)ptr" />
+    <DisplayString>{{ {_allocator_type()},{ptr} }}</DisplayString>
+    <Expand>
+      <Item Name="[allocator]" ExcludeView="simple">_allocator_type()</Item>
+      <Item Name="[ptr]" ExcludeView="simple">_ptr()</Item>
+      <Item Name="[batch]" ExcludeView="simple">alloc_id</Item>
+      <Item Name="[header index]" ExcludeView="simple">((header) &amp; 0x0FFFFFFF)</Item>
+    </Expand>
+  </Type>
+</AutoVisualizer>
+
